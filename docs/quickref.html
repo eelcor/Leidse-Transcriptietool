@@ -8,101 +8,109 @@
   :root{
     --bg:#f6f7fb;--surface:#fff;--surface-2:#f3f4f9;--text:#1a1d2b;--soft:#4a5065;--muted:#7c8397;
     --line:#e5e8f0;--accent:#6d5efc;--accent-2:#8b7bff;--accent-soft:#eeecff;--warn:#f59e0b;--warn-soft:#fdf4e3;
-    --font:"Inter",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--mono:ui-monospace,Menlo,Consolas,monospace;
+    --font:"Inter",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   }
-  @media (prefers-color-scheme:dark){:root{--bg:#0c0e16;--surface:#161926;--surface-2:#1d2130;--text:#eef0f7;
-    --soft:#b6bdd0;--muted:#828aa3;--line:#262b3b;--accent:#8b7bff;--accent-2:#a394ff;--accent-soft:#211f3d;--warn-soft:#2a2416;}}
   *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font);line-height:1.5}
-  .card{max-width:900px;margin:24px auto;background:var(--surface);border:1px solid var(--line);
-    border-radius:18px;padding:30px 34px;box-shadow:0 12px 40px rgba(40,30,90,.12)}
-  .head{display:flex;align-items:center;gap:14px;border-bottom:1px solid var(--line);padding-bottom:18px;margin-bottom:22px}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font);line-height:1.5;font-size:14px}
+  .page{max-width:900px;margin:22px auto;background:var(--surface);border:1px solid var(--line);
+    border-radius:18px;padding:30px 34px;box-shadow:0 12px 40px rgba(40,30,90,.10)}
+  .head{display:flex;align-items:center;gap:14px;margin-bottom:6px}
   .logo{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;font-size:22px;
     background:linear-gradient(140deg,var(--accent),var(--accent-2))}
-  .head h1{font-size:22px;margin:0;letter-spacing:-.02em}
-  .head p{margin:2px 0 0;color:var(--muted);font-size:13px}
-  .grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
-  @media(max-width:680px){.grid{grid-template-columns:1fr}}
-  .box{border:1px solid var(--line);border-radius:14px;padding:16px 18px;background:var(--surface-2)}
-  .box h2{font-size:15px;margin:0 0 10px;display:flex;align-items:center;gap:9px}
-  .box h2 .i{width:26px;height:26px;border-radius:8px;background:var(--accent-soft);color:var(--accent);
-    display:grid;place-items:center;font-size:14px}
-  ol,ul{margin:0;padding-left:20px} li{margin:4px 0;font-size:13.5px;color:var(--soft)}
-  li b{color:var(--text)}
-  .btns{display:flex;flex-wrap:wrap;gap:7px;margin-top:4px}
+  h1{font-size:21px;margin:0;letter-spacing:-.02em}
+  .head p{margin:2px 0 0;color:var(--muted);font-size:12.5px}
+  h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:24px 0 12px;font-weight:700}
+
+  /* 3 stappen */
+  .steps{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+  @media(max-width:640px){.steps{grid-template-columns:1fr}}
+  .step{border:1px solid var(--line);border-radius:14px;padding:16px 16px 18px;background:var(--surface-2);position:relative}
+  .step .num{width:26px;height:26px;border-radius:50%;background:var(--accent);color:#fff;display:grid;
+    place-items:center;font-weight:700;font-size:14px;margin-bottom:9px}
+  .step h3{margin:0 0 4px;font-size:15px}
+  .step p{margin:0;color:var(--soft);font-size:13px}
+  .step .tip{margin-top:8px;font-size:12px;color:var(--muted)}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+  @media(max-width:640px){.grid2{grid-template-columns:1fr}}
+  .rows{display:flex;flex-direction:column;gap:9px}
+  .row{display:flex;gap:11px;align-items:flex-start}
+  .row .ic{flex:0 0 24px;height:24px;border-radius:7px;background:var(--accent-soft);color:var(--accent);
+    display:grid;place-items:center;font-size:13px}
+  .row b{display:block;font-size:13.5px}
+  .row span{color:var(--soft);font-size:12.5px}
+
+  .btns{display:flex;flex-wrap:wrap;gap:7px;margin-top:2px}
   .b{font-size:12px;font-weight:600;border-radius:999px;padding:4px 11px;border:1px solid var(--line);background:var(--surface)}
   .b.rec{background:#fdecec;color:#e0344b;border-color:#f6c9cf}
   .b.go{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;border-color:transparent}
-  .b.gray{color:var(--soft)}
-  .full{grid-column:1/-1}
-  .kv{display:flex;gap:8px;font-size:13px;margin:5px 0} .kv b{min-width:120px;color:var(--text)} .kv span{color:var(--soft)}
-  .note{background:var(--warn-soft);border:1px solid color-mix(in srgb,var(--warn) 40%,transparent);
-    border-radius:10px;padding:9px 13px;font-size:12.5px;margin-top:12px}
-  code{font-family:var(--mono);background:var(--surface);border:1px solid var(--line);border-radius:5px;padding:0 5px;font-size:.9em}
-  @media print{body{background:#fff}.card{box-shadow:none;border:none;margin:0;max-width:100%}}
+
+  .warn{margin-top:22px;background:var(--warn-soft);border:1px solid color-mix(in srgb,var(--warn) 40%,transparent);
+    border-radius:12px;padding:13px 16px;font-size:12.5px;color:var(--text);line-height:1.6}
+  .warn b{color:var(--text)}
+  @media print{body{background:#fff}.page{box-shadow:none;border:none;margin:0;max-width:100%}}
 </style>
 </head>
 <body>
-<div class="card">
+<div class="page">
   <div class="head">
     <div class="logo">🎙️</div>
-    <div><h1>Anoniem transcriberen — Quick reference</h1>
-      <p>Spraak naar tekst · geen login · automatisch verwijderd na 2 werkdagen</p></div>
+    <div><h1>Anoniem transcriberen — spiekbriefje</h1>
+      <p>Gesprekken omzetten naar tekst en een verslag. Geen account, geen login.</p></div>
   </div>
 
-  <div class="grid">
-    <div class="box">
-      <h2><span class="i">📁</span> Bestand uploaden</h2>
-      <ol>
-        <li>Kies een bestand <span class="b gray">wav/mp3/m4a/ogg/webm/flac</span></li>
-        <li>Laat <b>Audio optimaliseren</b> aan</li>
-        <li><span class="b go">Uploaden &amp; transcriberen</span></li>
-      </ol>
+  <h2>Zo werkt het — 3 stappen</h2>
+  <div class="steps">
+    <div class="step">
+      <div class="num">1</div>
+      <h3>Geluid erin</h3>
+      <p><b>Upload</b> een geluidsbestand of klik op <b>Nu opnemen</b> om direct op te nemen.</p>
+      <div class="tip">Laat “Audio optimaliseren” aan staan.</div>
     </div>
+    <div class="step">
+      <div class="num">2</div>
+      <h3>Verslag kiezen</h3>
+      <p>Kies onderaan wat je wilt: <b>Volledig verslag</b>, losse onderdelen, of <b>geen verslag</b>.</p>
+      <div class="tip">Dit draait automatisch ná de transcriptie.</div>
+    </div>
+    <div class="step">
+      <div class="num">3</div>
+      <h3>Wachten & klaar</h3>
+      <p>Het <b>transcript</b> en het <b>verslag</b> verschijnen vanzelf op het scherm.</p>
+      <div class="tip">Geen verversen nodig.</div>
+    </div>
+  </div>
 
-    <div class="box">
-      <h2><span class="i">🔴</span> Opnemen</h2>
-      <ol>
-        <li><b>Microfoon inschakelen</b> → toestemming geven</li>
-        <li>Stel af op de <b>niveaumeter</b> (in het groen)</li>
-      </ol>
-      <div class="btns" style="margin-top:8px">
+  <div class="grid2">
+    <div>
+      <h2>Opnemen: de knoppen</h2>
+      <div class="btns">
         <span class="b rec">● Opnemen</span>
         <span class="b">⏸ Pauzeren</span>
         <span class="b go">■ Stop &amp; verstuur</span>
-        <span class="b gray">🗑 Weggooien</span>
+        <span class="b">🗑 Weggooien</span>
+      </div>
+      <div class="rows" style="margin-top:12px">
+        <div class="row"><span class="ic">🎚️</span><div><b>Stel het geluid goed af</b><span>Houd de balk in het groen — niet te zacht, niet in het rood.</span></div></div>
+        <div class="row"><span class="ic">💾</span><div><b>Opname lokaal bewaren</b><span>Zet “Audio lokaal opslaan” aan als je de opname ook op je apparaat wilt.</span></div></div>
       </div>
     </div>
-
-    <div class="box">
-      <h2><span class="i">📋</span> Verslag</h2>
-      <ul>
-        <li><b>Vooraf kiezen</b> op het startscherm → draait automatisch na de transcriptie</li>
-        <li><b>✨ Volledig verslag</b>, <b>losse secties</b> of <b>eigen prompt</b> (+ context)</li>
-        <li>Resultaatscherm: <b>Verslag opnieuw maken</b> met andere opties</li>
-      </ul>
+    <div>
+      <h2>Opslaan &amp; downloaden</h2>
+      <div class="rows">
+        <div class="row"><span class="ic">🔑</span><div><b>Sessie-code = je sleutel</b><span>Bewaar hem goed. Kwijt = niet meer bij je resultaat. Later terug via “Ophalen via code”.</span></div></div>
+        <div class="row"><span class="ic">⬇️</span><div><b>Downloaden</b><span>Audio, transcript (.txt), en het verslag als Word of Markdown.</span></div></div>
+        <div class="row"><span class="ic">🗑️</span><div><b>Zelf wissen</b><span>Op het resultaat: “Nu verwijderen” gooit alles direct weg.</span></div></div>
+      </div>
     </div>
+  </div>
 
-    <div class="box">
-      <h2><span class="i">⬇</span> Downloaden</h2>
-      <ul>
-        <li>Audio → <b>⬇ Audio</b> (bij de sessie-code)</li>
-        <li>Transcript → <b>.txt</b></li>
-        <li>Verslag → <b>Word (.docx)</b> of <b>.md</b></li>
-        <li>Of gebruik <b>Kopieer</b></li>
-      </ul>
-    </div>
-
-    <div class="box full">
-      <h2><span class="i">🔑</span> Sessie-code &amp; privacy</h2>
-      <div class="kv"><b>Sessie-code</b><span>Geheime sleutel tot je resultaat — bewaar goed, deel alleen bewust.</span></div>
-      <div class="kv"><b>Later ophalen</b><span><b>Ophalen via code</b> → plak de code → <b>Ophalen</b>.</span></div>
-      <div class="kv"><b>Bewaartermijn</b><span>Audio + transcript + verslag verdwijnen <b>2 werkdagen na verwerking</b> (weekend telt niet mee).</span></div>
-      <div class="kv"><b>Direct wissen</b><span>Tijdens opnemen: <b>Stop &amp; weggooien</b> · op het resultaat: <b>🗑 Nu verwijderen</b>.</span></div>
-      <div class="kv"><b>Lokaal opslaan</b><span>Recorder-optie <b>Audio lokaal opslaan</b> (standaard uit) downloadt de opname ook.</span></div>
-      <div class="kv"><b>Resultaat</b><span>Verschijnt <b>automatisch</b> zodra transcript én verslag klaar zijn — geen refresh nodig.</span></div>
-      <div class="note">Geen account · geen tracking · geen persoonsgegevens · de recorder vereist een https-verbinding.</div>
-    </div>
+  <div class="warn">
+    <b>Goed om te weten.</b>
+    Alles wordt <b>na 2 werkdagen automatisch verwijderd</b> (weekend telt niet mee).
+    Geen account, geen tracking, geen persoonsgegevens — je bent anoniem.
+    <b>Controleer belangrijke namen, bedragen en data zelf</b>: automatische transcriptie kan fouten maken.
+    Gebruik de tool <b>binnen je interne netwerk</b>.
   </div>
 </div>
 </body>
