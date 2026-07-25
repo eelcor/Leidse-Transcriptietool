@@ -261,6 +261,7 @@ async function openSession(sessionId) {
       el('span', { class: 'lbl' }, '🔑 Sessie-code (bewaar als geheim): '),
       el('code', { id: 'sid-code' }, sessionId),
       el('button', { class: 'btn ghost sm', onclick: (e) => { navigator.clipboard.writeText(sessionId); e.target.textContent = '✓ Gekopieerd'; } }, 'Kopieer'),
+      el('a', { class: 'btn ghost sm', href: `/api/sessions/${sessionId}/audio`, download: '' }, '⬇ Audio'),
     ),
     el('div', { class: 'statebar' },
       el('div', { class: 'spinner', id: 'status-spinner' }),

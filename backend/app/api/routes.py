@@ -292,6 +292,21 @@ async def session_events(session_id: str, request: Request, db: AsyncSession = D
 # --------------------------------------------------------------------------
 # Downloads
 # --------------------------------------------------------------------------
+@router.get("/sessions/{session_id}/audio")
+async def download_audio(session_id: str, db: AsyncSession = Depends(get_db)):
+    """Download het (originele) geüploade/opgenomen audiobestand."""
+    obj = await _get_session_or_404(db, session_id)
+    raw = storage.raw_audio_path(session_id)
+    if not raw.exists():
+        raise HTTPException(status_code=404, detail="Audio niet (meer) beschikbaar.")
+    filename = obj.audio_filename or f"audio-{session_id[:8]}"
+    return FileResponse(
+        str(raw),
+        media_type=obj.audio_mime or "application/octet-stream",
+        filename=filename,
+    )
+
+
 @router.get("/sessions/{session_id}/transcript.txt", response_class=PlainTextResponse)
 async def download_transcript(session_id: str, db: AsyncSession = Depends(get_db)) -> Response:
     obj = await _get_session_or_404(db, session_id)
