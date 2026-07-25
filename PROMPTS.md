@@ -35,8 +35,13 @@ Harde regels:
 - Het transcript is automatisch gegenereerd en kan hoor- of herkenfouten bevatten.
   Corrigeer duidelijke spraak-naar-tekstfouten stilzwijgend als de bedoeling evident is;
   gok niet bij namen, getallen, bedragen of data — markeer die als onzeker met [?].
-- Neem geen letterlijke versprekingen, stopwoorden of herhalingen over; vat bondig samen
-  in correct, zakelijk Nederlands.
+- Schrijf in correct, zakelijk Nederlands en laat letterlijke versprekingen, stopwoorden
+  en herhalingen weg. Wees bondig in formulering, maar volledig in inhoud: comprimeer de
+  taal, niet de inhoud. Neem álle inhoudelijke punten, standpunten, argumenten (voor én
+  tegen), overwegingen, voorbeelden, getallen, termijnen en afspraken op die in het gesprek
+  aan de orde komen. Beknoptheid mag nooit betekenen dat je inhoud weglaat; laat de lengte
+  van het verslag meegroeien met de rijkheid van het transcript. Bij twijfel of een punt
+  erin hoort: neem het op.
 - Als het transcript sprekers onderscheidt, respecteer die toewijzing; zo niet, schrijf
   dan neutraal ("een deelnemer", "de voorzitter") zonder namen te verzinnen.
 - Antwoord in het Nederlands en uitsluitend in Markdown, zonder inleidende of afsluitende
@@ -65,12 +70,18 @@ Uitvoer:
 ## 2. Verslag (uitgewerkt)
 
 ```
-Taak: maak een gestructureerd, leesbaar gespreksverslag.
+Taak: maak een gestructureerd, leesbaar én volledig gespreksverslag.
 
-- Deel het verslag op in thematische kopjes die de besproken onderwerpen volgen.
-- Geef per onderwerp weer wat er is besproken, welke standpunten/argumenten er waren en
-  waar men op uitkwam. Vermijd woordelijke weergave; vat zakelijk samen.
-- Behoud de logische volgorde van het gesprek. Benoem open eindes expliciet.
+- Deel het verslag op in thematische kopjes die de besproken onderwerpen volgen. Dek
+  élk besproken onderwerp en subpunt af; sla niets inhoudelijks over.
+- Werk per onderwerp uit: de aanleiding/context, wát er is besproken, welke
+  standpunten en argumenten (voor én tegen) er waren en door wie ze zijn ingebracht
+  (voor zover te herleiden), de relevante details (getallen, bedragen, termijnen,
+  voorbeelden) en waar men op uitkwam. Benoem open eindes en onduidelijkheden expliciet.
+- Vermijd woordelijke weergave (citeer geen versprekingen of stopwoorden), maar niet ten
+  koste van de inhoud: het gaat om beknopte formulering, niet om het weglaten van punten.
+- Behoud de logische volgorde van het gesprek. Laat de lengte meegroeien met het
+  transcript; een uitgebreid gesprek hoort een uitgebreider verslag op te leveren.
 
 Uitvoer:
 ## Verslag
@@ -157,7 +168,10 @@ Eén prompt die de meeste secties in één keer produceert. Handig als standaard
 ```
 Taak: stel een compleet vergaderverslag samen met de onderstaande secties, in deze
 volgorde. Laat een sectie weg alléén als er echt niets over te melden is, en zet er dan
-"— geen —" onder in plaats van te verzinnen.
+"— geen —" onder in plaats van te verzinnen. Streef naar volledigheid: neem alle
+besproken onderwerpen, standpunten, argumenten, overwegingen, getallen en afspraken op.
+De "Besproken onderwerpen"-sectie is de kern en mag uitgebreid zijn — laat de lengte
+meegroeien met het transcript; comprimeer de taal, niet de inhoud.
 
 Uitvoer:
 # Verslag
@@ -169,7 +183,9 @@ meegegeven context bekend; anders weglaten._
 
 ## Besproken onderwerpen
 ### <onderwerp>
-<samenvattende tekst per onderwerp>
+<uitgewerkte weergave per onderwerp: aanleiding/context, ingebrachte standpunten en
+argumenten (voor én tegen, met wie indien te herleiden), relevante details (getallen,
+bedragen, termijnen, voorbeelden) en de uitkomst of het open eind>
 
 ## Besluiten
 - ...
