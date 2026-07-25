@@ -335,8 +335,9 @@ async function openSession(sessionId) {
   const render = (st) => {
     $('#status-text').textContent = STATUS_LABEL[st.status] || st.status;
     if (st.status === 'transcribed' || st.status === 'failed') {
-      $('#status-spinner').hidden = true;
-      if (!done) { done = true; loadResult(sessionId); }
+      // Toon het resultaat pas als een eventueel (vooraf gevraagd) verslag óók klaar is,
+      // zodat de gebruiker niet een 'klaar'-scherm ziet terwijl het verslag nog draait.
+      if (!done) { done = true; finishWhenReady(sessionId); }
     }
   };
   try {
@@ -347,6 +348,27 @@ async function openSession(sessionId) {
   } catch {
     pollStatus(sessionId, render);
   }
+}
+
+// Wacht met het tonen van het resultaat tot transcript + (vooraf gevraagd) verslag klaar zijn.
+async function finishWhenReady(sessionId) {
+  const txt = $('#status-text');
+  const spin = $('#status-spinner');
+  const check = async () => {
+    let res;
+    try { res = await API.result(sessionId); }
+    catch { if (txt) txt.textContent = 'Sessie niet gevonden of verlopen.'; if (spin) spin.hidden = true; return; }
+    if (res.status === 'failed') { if (spin) spin.hidden = true; loadResult(sessionId); return; }
+    const pending = (res.reports || []).some((r) => r.status !== 'done' && r.status !== 'failed');
+    if (pending) {
+      if (txt) txt.textContent = 'Transcript klaar — verslag maken…';
+      setTimeout(check, 2000);
+    } else {
+      if (spin) spin.hidden = true;
+      loadResult(sessionId);
+    }
+  };
+  check();
 }
 
 async function pollStatus(sessionId, render) {
@@ -365,6 +387,8 @@ async function pollStatus(sessionId, render) {
 async function loadResult(sessionId) {
   let res;
   try { res = await API.result(sessionId); } catch { return; }
+  const sb = document.querySelector('.statebar');
+  if (sb) sb.hidden = true;   // statusbalk weg; het resultaat spreekt voor zich
   const area = $('#result-area');
   area.innerHTML = '';
 
