@@ -208,6 +208,37 @@ docker compose up -d --scale worker=3           # meer STT/LLM-doorvoer
 ```
 STT-concurrency per worker staat op 1 (`STT_CONCURRENCY`) om piek-VRAM te beperken.
 
+## Automatisch starten bij boot (systemd-service)
+
+De containers draaien met `restart: unless-stopped`, dus na een reboot komen ze
+sowieso terug (mits de Docker-daemon op boot start). Voor **expliciete controle**
+(`systemctl start/stop/status`) en de garantie dat `docker compose up -d` ook draait
+wanneer de stack ooit met `compose down` is platgelegd, is er een kant-en-klare unit:
+[`deploy/transcribe.service`](transcribe.service).
+
+Installeren (pas `User`/`Group` en `WorkingDirectory` in de unit aan als je pad/account
+anders is; de gebruiker moet in de `docker`-group zitten):
+
+```bash
+sudo cp deploy/transcribe.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now transcribe.service    # nu starten én bij boot
+systemctl status transcribe.service
+```
+
+Beheer daarna:
+
+```bash
+sudo systemctl stop transcribe.service      # docker compose down
+sudo systemctl start transcribe.service     # docker compose up -d
+sudo systemctl restart transcribe.service   # herstart de stack
+```
+
+De unit is `Type=oneshot` met `RemainAfterExit=yes`: `up -d` start de containers en de
+service blijft "active", zodat `stop` netjes `docker compose down` aanroept. Na een
+update (`./deploy/update.sh`) hoef je de unit niet te herstarten — dat script beheert de
+containers zelf; de unit bepaalt alleen het gedrag bij boot en handmatig start/stop.
+
 ## Updaten
 
 Gebruik het update-script (volumes blijven behouden):

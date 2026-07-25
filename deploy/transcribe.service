@@ -1,0 +1,29 @@
+[Unit]
+# Leidse Transcriptietool als systemd-service: beheert de docker compose-stack.
+# De containers hebben zelf al `restart: unless-stopped` (komen na een reboot terug),
+# maar deze unit geeft expliciete lifecycle-controle (start/stop/status via systemctl)
+# en garandeert dat `docker compose up -d` bij boot draait — ook als de stack ooit
+# met `compose down` is gestopt.
+Description=Leidse Transcriptietool (Docker Compose stack)
+Documentation=https://github.com/eelcor/Leidse-Transcriptietool
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+# Draait als je gewone gebruiker (moet in de docker-group zitten). Pas User/Group aan
+# als je een andere account gebruikt; laat ze weg om als root te draaien.
+User=eelcor
+Group=eelcor
+# Map met docker-compose.yml én .env:
+WorkingDirectory=/home/eelcor/transcribe_service
+ExecStart=/usr/bin/docker compose up -d --remove-orphans
+ExecStop=/usr/bin/docker compose down
+ExecReload=/usr/bin/docker compose up -d --remove-orphans
+# Image-pull/-build bij eerste start mag lang duren:
+TimeoutStartSec=0
+
+[Install]
+WantedBy=multi-user.target
