@@ -31,7 +31,7 @@ class Settings(BaseSettings):
     cleanup_interval_seconds: int = 3600
 
     # --- STT (spraak-naar-tekst) ---
-    # "faster_whisper" (default, licht/CPU-vriendelijk) of "canary" (NeMo, vastgelegde keuze).
+    # "faster_whisper" (default) | "canary" (NeMo) | "openai" (extern STT-endpoint).
     stt_backend: str = "faster_whisper"
     # faster_whisper: b.v. "large-v2"; canary: b.v. "nvidia/canary-1b-v2"
     stt_model: str = "large-v2"
@@ -39,6 +39,13 @@ class Settings(BaseSettings):
     stt_compute_type: str = "int8"   # faster-whisper: int8 | int8_float16 | float16 | float32
     stt_concurrency: int = 1         # max gelijktijdige STT-jobs (VRAM-bescherming)
     stt_word_timestamps: bool = True
+
+    # --- STT via extern OpenAI-compatibel endpoint (STT_BACKEND=openai) ---
+    # Bv. whisper.cpp-server of een faster-whisper OpenAI-wrapper. De worker heeft
+    # dan zelf geen STT-model/torch nodig (STT_MODEL = de modelnaam die dat endpoint verwacht).
+    stt_openai_base_url: str = "http://host.docker.internal:8035/v1"
+    stt_openai_api_key: str = "not-needed"
+    stt_openai_timeout_seconds: int = 600
 
     # --- Verslag-LLM (bestaand OpenAI-compatibel endpoint, NIET zelf hosten) ---
     llm_base_url: str = "http://localhost:8001/v1"

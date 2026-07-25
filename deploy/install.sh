@@ -87,9 +87,19 @@ ask WEB_HTTPS_PORT     "HTTPS-poort (verhoog als er al een proxy op 443 draait)"
 # STT-engine: faster_whisper is robuust (klein/begrensd geheugen). Canary geeft
 # topkwaliteit NL maar heeft een grote inferentie-piek (~8-9GB) -> een GPU die niet
 # met een groot LLM gedeeld wordt, of veel vrije VRAM.
-ask STT_BACKEND        "STT-engine (faster_whisper | canary)" "faster_whisper"
-if [ "$STT_BACKEND" = "canary" ]; then STT_MODEL_DEF="nvidia/canary-1b-v2"; else STT_MODEL_DEF="large-v2"; fi
+# "openai" offload't STT naar een extern OpenAI-compatibel endpoint (geen lokaal model/torch).
+ask STT_BACKEND        "STT-engine (faster_whisper | canary | openai)" "faster_whisper"
+case "$STT_BACKEND" in
+  canary) STT_MODEL_DEF="nvidia/canary-1b-v2" ;;
+  openai) STT_MODEL_DEF="whisper-1" ;;
+  *)      STT_MODEL_DEF="large-v2" ;;
+esac
 ask STT_MODEL          "STT-model" "$STT_MODEL_DEF"
+if [ "$STT_BACKEND" = "openai" ]; then
+  ask STT_OPENAI_BASE_URL "Extern STT-endpoint (OpenAI-compatibel)" "http://host.docker.internal:8035/v1"
+  ask STT_OPENAI_API_KEY  "STT API key (of 'not-needed')" "not-needed"
+  STT_DEVICE=cpu; STT_COMPUTE_TYPE=int8   # niet relevant; model draait extern
+fi
 
 # --- 4) .env schrijven ------------------------------------------------------
 c "==> .env schrijven"
@@ -123,6 +133,9 @@ STT_DEVICE=${STT_DEVICE}
 STT_COMPUTE_TYPE=${STT_COMPUTE_TYPE}
 STT_CONCURRENCY=1
 STT_WORD_TIMESTAMPS=true
+STT_OPENAI_BASE_URL=${STT_OPENAI_BASE_URL:-http://host.docker.internal:8035/v1}
+STT_OPENAI_API_KEY=${STT_OPENAI_API_KEY:-not-needed}
+STT_OPENAI_TIMEOUT_SECONDS=600
 AUDIO_OPTIMIZE_DEFAULT=true
 
 LLM_BASE_URL=${LLM_BASE_URL}

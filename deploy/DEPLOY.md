@@ -85,6 +85,20 @@ of ruime vrije VRAM.
     timestamps-model over, waardoor alleen het hoofdmodel (~2GB fp16) op de GPU past.
     Snel (~0,7s/clip), maar zonder woord/segment-timestamps.
 
+## STT via een extern endpoint (`STT_BACKEND=openai`)
+
+Wil je STT niet in de worker draaien maar op een aparte server (net als de LLM)? Zet
+`STT_BACKEND=openai`. De worker POST't dan de audio naar een **OpenAI-compatibel
+`/v1/audio/transcriptions`-endpoint** en heeft zelf **geen STT-model, torch of GPU** nodig
+(alleen ffmpeg). Zet dan ook `INSTALL_NEMO=0`.
+
+- **Endpoint-opties:** whisper.cpp-server (`whisper-server`), of een faster-whisper
+  OpenAI-wrapper (`faster-whisper-server` / `speaches`).
+- **Config:** `STT_OPENAI_BASE_URL` (bv. `http://host.docker.internal:8035/v1`),
+  `STT_OPENAI_API_KEY`, en `STT_MODEL` = de modelnaam die dat endpoint verwacht (bv. `whisper-1`).
+- De backend probeert `verbose_json` (met segment-timestamps) en valt terug op `json`
+  (alleen tekst) als de server dat formaat niet ondersteunt.
+
 ## Handmatige installatie
 
 ```bash

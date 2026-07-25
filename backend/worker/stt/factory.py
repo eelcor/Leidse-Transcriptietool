@@ -26,6 +26,13 @@ def get_backend() -> STTBackend:
         _instance = FasterWhisperBackend(
             model=s.stt_model, device=s.stt_device, compute_type=s.stt_compute_type
         )
+    elif s.stt_backend == "openai":
+        from .openai_backend import OpenAISTTBackend
+
+        _instance = OpenAISTTBackend(
+            base_url=s.stt_openai_base_url, model=s.stt_model,
+            api_key=s.stt_openai_api_key, timeout=s.stt_openai_timeout_seconds,
+        )
     else:
         raise ValueError(f"Onbekende STT_BACKEND: {s.stt_backend!r}")
     return _instance

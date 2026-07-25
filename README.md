@@ -26,8 +26,9 @@ transcriptie en schaalbaarheid.
 >   eigen prompt). Mogelijk een toekomstige feature — houd daar rekening mee bij
 >   vertrouwelijk of extern materiaal.
 
-- **STT:** NVIDIA **Canary 1B v2** (via NeMo) óf **faster-whisper** (large-v2) —
-  schakelbaar via `STT_BACKEND`. Achter één abstracte interface.
+- **STT:** **faster-whisper** (large-v2), NVIDIA **Canary 1B v2** (via NeMo), óf een
+  extern **OpenAI-compatibel `/v1/audio/transcriptions`-endpoint** (`openai`) — zodat je
+  STT net als de LLM kunt offloaden. Schakelbaar via `STT_BACKEND`, achter één interface.
 - **Verslag-LLM:** hergebruikt het **bestaande, OpenAI-compatibele Qwen3.6-27b
   endpoint** (er wordt geen nieuwe LLM gehost).
 - **Bewaartermijn:** alles wordt automatisch verwijderd **2 werkdagen ná de
