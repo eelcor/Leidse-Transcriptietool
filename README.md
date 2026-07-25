@@ -1,9 +1,30 @@
-# Anonieme transcriptie-webapp
+# Leidse Transcriptietool
 
 Laagdrempelige, **anonieme** webapp (geen login) waarmee collega's audio laten
 transcriberen en er optioneel een verslag van laten maken. Privacy en
 anonimiteit staan voorop; daarna laagdrempeligheid, kwaliteit van Nederlandse
 transcriptie en schaalbaarheid.
+
+## Waarom deze tool?
+
+- We zoeken een **laagdrempelige manier waarop álle collega's betrouwbare en
+  vertrouwelijke AI** kunnen gebruiken voor transcriptie en verslagen.
+- We wachten al een tijd op **TINA** (gemeente Leeuwarden) en hopen dat die ooit als
+  open source vrijkomt. Tot die tijd moet dit mensen eenvoudig helpen om gesprekken —
+  óók vertrouwelijke — goed te transcriberen en om te zetten naar functionele verslagen.
+- In Leiden zit nu **~10% van de medewerkers in ons AI-netwerk**. Met deze tool hopen
+  we de overige **90%** ook verantwoord gebruik te laten maken van AI, voor iets waar
+  bijna iedereen behoefte aan heeft.
+- We ontwikkelen er niet superhard aan, maar we zorgen dat het **zo veilig mogelijk** is.
+
+> ⚠️ **Belangrijk om te weten**
+> - **Draai dit binnen je interne netwerk.** Niet zomaar open op het publieke internet zetten.
+> - **De tool is niet perfect.** Lees de [handleiding](docs/handleiding.html) en de
+>   [quick reference card](docs/quickref.html). **Maak altijd zelf aantekeningen** en
+>   **bewaar de audio** — die optie zit er niet voor niets in.
+> - **Nog niet beschermd tegen prompt injectie** (via de inhoud van een transcript of een
+>   eigen prompt). Mogelijk een toekomstige feature — houd daar rekening mee bij
+>   vertrouwelijk of extern materiaal.
 
 - **STT:** NVIDIA **Canary 1B v2** (via NeMo) óf **faster-whisper** (large-v2) —
   schakelbaar via `STT_BACKEND`. Achter één abstracte interface.
