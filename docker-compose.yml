@@ -26,6 +26,9 @@ services:
       - ./frontend:/srv:ro
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
+      # Eigen certificaat gebruiken (geen browserwaarschuwing): leg cert+key in ./certs
+      # en zet CADDY_TLS="/certs/cert.pem /certs/key.pem". Zie deploy/DEPLOY.md.
+      - ./certs:/certs:ro
     restart: unless-stopped
 
   api:

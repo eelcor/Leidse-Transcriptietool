@@ -4,9 +4,11 @@
 #   SITE_ADDRESS  - het domein/host waarop de site draait
 #                   lokaal: jouw-host.local   prod: transcriptie.jouwdomein.nl
 #   CADDY_TLS     - TLS-modus:
-#                   "internal"          -> Caddy's lokale CA (dev; browser-waarschuwing,
-#                                          maar wél een https secure context voor de recorder)
-#                   "jij@jouwdomein.nl" -> automatische Let's Encrypt-certificaten (prod)
+#                   "internal"                    -> Caddy's lokale CA (browser-waarschuwing,
+#                                                    tenzij je die root-CA op de clients vertrouwt)
+#                   "jij@jouwdomein.nl"           -> automatische Let's Encrypt-certificaten (prod)
+#                   "/certs/cert.pem /certs/key.pem" -> je eigen certificaat (geen waarschuwing als
+#                                                    de clients de uitgevende CA vertrouwen)
 #
 # getUserMedia (microfoon) vereist een secure context: https of localhost. Daarom
 # draait alles hier standaard over https.

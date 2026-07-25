@@ -125,6 +125,38 @@ docker compose logs -f worker    # eerste start: Canary-model (~2GB) wordt gedow
 - `CADDY_TLS=internal` → self-signed lokale CA (dev/intern; browserwaarschuwing, maar
   wél een https secure context — nodig voor de in-browser recorder / microfoon).
 
+## Geen browserwaarschuwing (certificaat)
+
+De waarschuwing komt doordat `CADDY_TLS=internal` een self-signed certificaat gebruikt.
+Drie manieren om ervan af te komen:
+
+1. **Eigen certificaat (aanbevolen voor intern) — geen client-config.**
+   Gebruik een certificaat dat je clients al vertrouwen: één van je **interne CA**
+   (in veel organisaties via AD/GPO uitgerold) of een **publiek certificaat** voor een
+   echt (sub)domein. Leg `cert.pem` (fullchain) en `key.pem` in `./certs/` en zet:
+   ```
+   SITE_ADDRESS=transcriptie.jouwdomein.nl
+   CADDY_TLS=/certs/cert.pem /certs/key.pem
+   ```
+   Op **beheerde apparaten** die de uitgevende CA al vertrouwen: nul waarschuwingen,
+   niets te installeren.
+
+2. **Publiek domein + Let's Encrypt** (`CADDY_TLS=jij@domein.nl`). Zero-config en
+   globaal vertrouwd, maar poort 80/443 moeten publiek bereikbaar zijn (of gebruik een
+   DNS-01-challenge voor een intern-only host).
+
+3. **De interne CA vertrouwen op de clients** (bij `CADDY_TLS=internal`). Caddy's root-CA
+   staat in het `caddy_data`-volume op `pki/authorities/local/root.crt`. Haal 'm op met:
+   ```bash
+   docker compose cp web:/data/caddy/pki/authorities/local/root.crt caddy-root.crt
+   ```
+   en installeer 'm in de trust-store van de clients (handmatig, of centraal via GPO/MDM):
+   - **Windows:** dubbelklik → *Install Certificate* → *Local Machine* → *Trusted Root Certification Authorities*.
+   - **macOS:** open in Keychain Access → *System* → dubbelklik → *Always Trust*.
+   - **Linux:** kopieer naar `/usr/local/share/ca-certificates/` → `sudo update-ca-certificates`.
+   - **Firefox** (eigen store): Instellingen → Certificaten → Importeren → "vertrouw voor websites".
+   Herstart daarna de browser. Let op: dit maakt álle door die Caddy-CA uitgegeven certificaten vertrouwd.
+
 ## Naast een bestaande reverse proxy (bv. OpenWebUI's Caddy)
 
 Draait er al iets op poort 80/443? Twee opties:
