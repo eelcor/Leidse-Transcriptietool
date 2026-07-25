@@ -156,6 +156,24 @@ De tests draaien zonder Redis/GPU: SQLite + een nep-queue.
   verloopt dinsdag). Feestdagen zijn bewust niet meegenomen (uitbreidbaar in
   `app/workdays.py`).
 
+## Isolatie & security
+
+Elke sessie is volledig geïsoleerd; er lekt geen data tussen gebruikers. Geverifieerd
+met een concurrency-test (meerdere gelijktijdige uploads met verschillende teksten en
+een eigen prompt) plus negatieve checks:
+
+- **Onvoorspelbare sleutel:** de sessie-code is een 256-bits token; onbekende/geraden
+  codes geven `404`.
+- **Geen enumeratie:** er is geen endpoint dat sessies opsomt (`GET /api/sessions` → 405).
+- **Per-sessie opslag & queries:** bestanden staan onder de sessie-id; report-endpoints
+  matchen op zowel sessie- als report-id.
+- **Geen path traversal:** endpoints doen eerst de DB-lookup (onbekende id → 404); de
+  reverse proxy normaliseert `../` naar de SPA-fallback (geen bestandsuitlever).
+- **Geen XSS:** verslagen worden als Markdown gerenderd met een eigen renderer die alle
+  HTML escaped.
+- **Concurrency:** STT is begrensd (`STT_CONCURRENCY`), LLM-verslagen draaien parallel;
+  elke job werkt uitsluitend op zijn eigen sessie/rij (geen gedeelde mutable state).
+
 ## Audio-kwaliteit (waarom zo)
 
 De veilige default aan de opnamekant is **browser-AGC + lichte noiseSuppression +

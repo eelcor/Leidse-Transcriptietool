@@ -96,9 +96,11 @@ c "==> .env schrijven"
 [ -f .env ] && { cp .env ".env.bak.$(date +%s 2>/dev/null || echo old)" 2>/dev/null || true; warn "   bestaande .env geback-upt"; }
 # default_sni = eerste hostnaam uit SITE_ADDRESS (voor toegang via IP, dat geen SNI stuurt).
 DEFAULT_SNI=${DEFAULT_SNI:-${SITE_ADDRESS%% *}}
+# NeMo/Canary alleen meebouwen als die engine gekozen is (scheelt anders een zware build).
+INSTALL_NEMO=$([ "$STT_BACKEND" = "canary" ] && echo 1 || echo 0)
 cat > .env <<EOF
 # Gegenereerd door deploy/install.sh
-INSTALL_NEMO=1
+INSTALL_NEMO=${INSTALL_NEMO}
 TORCH_VARIANT=${TORCH_VARIANT}
 WORKER_GPU_DEVICE=${WORKER_GPU_DEVICE}
 SITE_ADDRESS=${SITE_ADDRESS}
@@ -134,7 +136,8 @@ c "   .env klaar:"; sed 's/^/     /' .env
 
 # --- 5) Bouwen & starten ----------------------------------------------------
 if [ "$YES" != 1 ]; then read -r -p "Nu bouwen en starten? [Y/n]: " go || true; [ "${go:-Y}" = "n" ] && { c "Gestopt. Start later met: docker compose up -d --build"; exit 0; }; fi
-c "==> Images bouwen (kan lang duren: NeMo + torch)"
+if [ "$INSTALL_NEMO" = "1" ]; then c "==> Images bouwen (Canary/NeMo: kan lang duren, ~torch + NeMo download)";
+else c "==> Images bouwen"; fi
 docker compose build
 c "==> Stack starten"
 docker compose up -d
