@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Quick reference — Anoniem transcriberen</title>
+<style>
+  :root{
+    --bg:#f6f7fb;--surface:#fff;--surface-2:#f3f4f9;--text:#1a1d2b;--soft:#4a5065;--muted:#7c8397;
+    --line:#e5e8f0;--accent:#6d5efc;--accent-2:#8b7bff;--accent-soft:#eeecff;--warn:#f59e0b;--warn-soft:#fdf4e3;
+    --font:"Inter",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--mono:ui-monospace,Menlo,Consolas,monospace;
+  }
+  @media (prefers-color-scheme:dark){:root{--bg:#0c0e16;--surface:#161926;--surface-2:#1d2130;--text:#eef0f7;
+    --soft:#b6bdd0;--muted:#828aa3;--line:#262b3b;--accent:#8b7bff;--accent-2:#a394ff;--accent-soft:#211f3d;--warn-soft:#2a2416;}}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font);line-height:1.5}
+  .card{max-width:900px;margin:24px auto;background:var(--surface);border:1px solid var(--line);
+    border-radius:18px;padding:30px 34px;box-shadow:0 12px 40px rgba(40,30,90,.12)}
+  .head{display:flex;align-items:center;gap:14px;border-bottom:1px solid var(--line);padding-bottom:18px;margin-bottom:22px}
+  .logo{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;font-size:22px;
+    background:linear-gradient(140deg,var(--accent),var(--accent-2))}
+  .head h1{font-size:22px;margin:0;letter-spacing:-.02em}
+  .head p{margin:2px 0 0;color:var(--muted);font-size:13px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  @media(max-width:680px){.grid{grid-template-columns:1fr}}
+  .box{border:1px solid var(--line);border-radius:14px;padding:16px 18px;background:var(--surface-2)}
+  .box h2{font-size:15px;margin:0 0 10px;display:flex;align-items:center;gap:9px}
+  .box h2 .i{width:26px;height:26px;border-radius:8px;background:var(--accent-soft);color:var(--accent);
+    display:grid;place-items:center;font-size:14px}
+  ol,ul{margin:0;padding-left:20px} li{margin:4px 0;font-size:13.5px;color:var(--soft)}
+  li b{color:var(--text)}
+  .btns{display:flex;flex-wrap:wrap;gap:7px;margin-top:4px}
+  .b{font-size:12px;font-weight:600;border-radius:999px;padding:4px 11px;border:1px solid var(--line);background:var(--surface)}
+  .b.rec{background:#fdecec;color:#e0344b;border-color:#f6c9cf}
+  .b.go{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;border-color:transparent}
+  .b.gray{color:var(--soft)}
+  .full{grid-column:1/-1}
+  .kv{display:flex;gap:8px;font-size:13px;margin:5px 0} .kv b{min-width:120px;color:var(--text)} .kv span{color:var(--soft)}
+  .note{background:var(--warn-soft);border:1px solid color-mix(in srgb,var(--warn) 40%,transparent);
+    border-radius:10px;padding:9px 13px;font-size:12.5px;margin-top:12px}
+  code{font-family:var(--mono);background:var(--surface);border:1px solid var(--line);border-radius:5px;padding:0 5px;font-size:.9em}
+  @media print{body{background:#fff}.card{box-shadow:none;border:none;margin:0;max-width:100%}}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="head">
+    <div class="logo">🎙️</div>
+    <div><h1>Anoniem transcriberen — Quick reference</h1>
+      <p>Spraak naar tekst · geen login · automatisch verwijderd na 2 werkdagen</p></div>
+  </div>
+
+  <div class="grid">
+    <div class="box">
+      <h2><span class="i">📁</span> Bestand uploaden</h2>
+      <ol>
+        <li>Kies een bestand <span class="b gray">wav/mp3/m4a/ogg/webm/flac</span></li>
+        <li>Laat <b>Audio optimaliseren</b> aan</li>
+        <li><span class="b go">Uploaden &amp; transcriberen</span></li>
+      </ol>
+    </div>
+
+    <div class="box">
+      <h2><span class="i">🔴</span> Opnemen</h2>
+      <ol>
+        <li><b>Microfoon inschakelen</b> → toestemming geven</li>
+        <li>Stel af op de <b>niveaumeter</b> (in het groen)</li>
+      </ol>
+      <div class="btns" style="margin-top:8px">
+        <span class="b rec">● Opnemen</span>
+        <span class="b">⏸ Pauzeren</span>
+        <span class="b go">■ Stop &amp; verstuur</span>
+        <span class="b gray">🗑 Weggooien</span>
+      </div>
+    </div>
+
+    <div class="box">
+      <h2><span class="i">📋</span> Verslag maken</h2>
+      <ul>
+        <li><b>✨ Volledig verslag</b> — alles in één</li>
+        <li>Of kies <b>losse secties</b> (chips) → <b>Genereer</b></li>
+        <li><b>Eigen prompt</b> + optioneel <b>Context</b></li>
+      </ul>
+    </div>
+
+    <div class="box">
+      <h2><span class="i">⬇</span> Downloaden</h2>
+      <ul>
+        <li>Transcript → <b>.txt</b></li>
+        <li>Verslag → <b>Word (.docx)</b> of <b>.md</b></li>
+        <li>Of gebruik <b>Kopieer</b></li>
+      </ul>
+    </div>
+
+    <div class="box full">
+      <h2><span class="i">🔑</span> Sessie-code &amp; privacy</h2>
+      <div class="kv"><b>Sessie-code</b><span>Geheime sleutel tot je resultaat — bewaar goed, deel alleen bewust.</span></div>
+      <div class="kv"><b>Later ophalen</b><span><b>Ophalen via code</b> → plak de code → <b>Ophalen</b>.</span></div>
+      <div class="kv"><b>Bewaartermijn</b><span>Audio + transcript + verslag verdwijnen <b>2 werkdagen na verwerking</b> (weekend telt niet mee).</span></div>
+      <div class="kv"><b>Direct wissen</b><span>Tijdens opnemen: <b>Stop &amp; weggooien</b>.</span></div>
+      <div class="note">Geen account · geen tracking · geen persoonsgegevens · de recorder vereist een https-verbinding.</div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

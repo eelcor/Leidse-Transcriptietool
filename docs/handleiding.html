@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Handleiding — Anoniem transcriberen</title>
+<style>
+  :root{
+    --bg:#f6f7fb; --surface:#fff; --surface-2:#f3f4f9; --text:#1a1d2b; --soft:#4a5065;
+    --muted:#7c8397; --line:#e5e8f0; --accent:#6d5efc; --accent-2:#8b7bff; --accent-soft:#eeecff;
+    --ok:#22c55e; --warn:#f59e0b; --warn-soft:#fdf4e3; --radius:16px;
+    --shadow:0 4px 12px rgba(30,34,60,.06),0 12px 32px rgba(30,34,60,.07);
+    --font:"Inter",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    --mono:ui-monospace,Menlo,Consolas,monospace;
+  }
+  @media (prefers-color-scheme:dark){:root{
+    --bg:#0c0e16;--surface:#161926;--surface-2:#1d2130;--text:#eef0f7;--soft:#b6bdd0;
+    --muted:#828aa3;--line:#262b3b;--accent:#8b7bff;--accent-2:#a394ff;--accent-soft:#211f3d;
+    --warn:#eab452;--warn-soft:#2a2416;--shadow:0 6px 20px rgba(0,0,0,.35);}}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:var(--font);color:var(--text);line-height:1.6;
+    background:radial-gradient(1000px 500px at 85% -10%,var(--accent-soft),transparent 60%),var(--bg);}
+  .wrap{max-width:960px;margin:0 auto;padding:48px 24px 80px}
+  header.hero{text-align:center;margin-bottom:40px}
+  .logo{width:56px;height:56px;border-radius:16px;display:inline-grid;place-items:center;font-size:30px;
+    background:linear-gradient(140deg,var(--accent),var(--accent-2));box-shadow:var(--shadow);margin-bottom:14px}
+  h1{font-size:38px;letter-spacing:-.03em;margin:.1em 0}
+  .lede{color:var(--soft);font-size:18px;max-width:600px;margin:6px auto 0}
+  .toc{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:22px}
+  .toc a{font-size:13.5px;text-decoration:none;color:var(--accent);background:var(--surface);
+    border:1px solid var(--line);padding:6px 12px;border-radius:999px}
+  section{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+    padding:28px 30px;margin:20px 0;box-shadow:var(--shadow)}
+  h2{font-size:24px;letter-spacing:-.02em;margin:0 0 6px;display:flex;align-items:center;gap:12px}
+  h2 .n{width:32px;height:32px;border-radius:9px;background:var(--accent-soft);color:var(--accent);
+    display:grid;place-items:center;font-size:16px;font-weight:800;flex:0 0 auto}
+  h3{font-size:17px;margin:22px 0 8px}
+  p{color:var(--soft)} .wrap>section p:first-of-type{margin-top:4px}
+  img{max-width:100%;border-radius:12px;border:1px solid var(--line);box-shadow:var(--shadow);margin:14px 0;display:block}
+  img.crop{max-width:520px}
+  ol,ul{color:var(--soft);padding-left:22px} li{margin:5px 0}
+  kbd{font-family:var(--mono);background:var(--surface-2);border:1px solid var(--line);border-radius:6px;
+    padding:1px 7px;font-size:.9em;color:var(--text)}
+  .tag{display:inline-block;background:var(--accent-soft);color:var(--accent);border-radius:6px;
+    padding:1px 8px;font-size:.85em;font-weight:600}
+  .note{background:var(--warn-soft);border:1px solid color-mix(in srgb,var(--warn) 40%,transparent);
+    border-radius:12px;padding:12px 16px;margin:14px 0;color:var(--text);font-size:14.5px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  @media(max-width:720px){.grid2{grid-template-columns:1fr}}
+  footer{text-align:center;color:var(--muted);font-size:13px;margin-top:30px}
+  a{color:var(--accent)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="hero">
+    <div class="logo">🎙️</div>
+    <h1>Anoniem transcriberen</h1>
+    <p class="lede">Spraak naar tekst — zonder account of login. Deze handleiding legt in een paar
+      stappen uit hoe je een opname laat transcriberen en er een verslag van maakt.</p>
+    <nav class="toc">
+      <a href="#start">Aan de slag</a>
+      <a href="#uploaden">Uploaden</a>
+      <a href="#opnemen">Opnemen</a>
+      <a href="#optim">Audio-optimalisatie</a>
+      <a href="#resultaat">Resultaat</a>
+      <a href="#verslag">Verslag &amp; export</a>
+      <a href="#code">Code &amp; later ophalen</a>
+      <a href="#privacy">Privacy</a>
+    </nav>
+  </header>
+
+  <section id="start">
+    <h2><span class="n">1</span> Aan de slag</h2>
+    <p>Open de site in je browser. Je hoeft niet in te loggen en geeft geen persoonsgegevens op.
+      Er zijn twee manieren om te beginnen: een <b>bestand uploaden</b> of <b>direct opnemen</b>.</p>
+    <img src="screenshots/home.png" alt="Startpagina" />
+  </section>
+
+  <section id="uploaden">
+    <h2><span class="n">2</span> Bestand uploaden</h2>
+    <ol>
+      <li>Klik op <b>Choose File</b> en kies een audiobestand (wav, mp3, m4a, ogg, webm of flac).</li>
+      <li>Laat <b>Audio optimaliseren voor transcriptie</b> aan staan (aanbevolen — zie §4).</li>
+      <li>Klik op <b>Uploaden &amp; transcriberen</b>.</li>
+    </ol>
+    <img class="crop" src="screenshots/upload-card.png" alt="Upload-kaart" />
+    <div class="note">Maximale bestandsgrootte staat bovenaan de pagina vermeld (standaard 200 MB).</div>
+  </section>
+
+  <section id="opnemen">
+    <h2><span class="n">3</span> Direct opnemen</h2>
+    <p>Neem rechtstreeks in de browser op. Klik eerst op <b>Microfoon inschakelen</b> en geef
+      toestemming voor de microfoon.</p>
+    <img class="crop" src="screenshots/recorder-idle.png" alt="Recorder klaar" />
+    <h3>Opnemen, pauzeren en stoppen</h3>
+    <ul>
+      <li><span class="tag">● Opnemen</span> start de opname. Je ziet de <b>timer</b> lopen en de
+        <b>niveaumeter</b> bewegen — houd die in het groen voor de beste kwaliteit.</li>
+      <li><span class="tag">⏸ Pauzeren</span> pauzeert tijdelijk; klik nogmaals om te hervatten.</li>
+      <li><span class="tag">■ Stop &amp; verstuur</span> stopt de opname en stuurt hem ter transcriptie.</li>
+      <li><span class="tag">🗑 Stop &amp; weggooien</span> stopt en verwijdert de opname direct — er wordt
+        niets verstuurd.</li>
+    </ul>
+    <div class="grid2">
+      <img src="screenshots/recorder-stage.png" alt="Timer en niveaumeter" />
+      <img src="screenshots/recorder-buttons.png" alt="Opname-knoppen" />
+    </div>
+    <div class="note">De recorder werkt alleen op een <b>beveiligde verbinding</b> (https). Onder de
+      knoppen kun je desgewenst de microfoon-instellingen en gevoeligheid fijn afstellen.</div>
+  </section>
+
+  <section id="optim">
+    <h2><span class="n">4</span> Audio optimaliseren voor transcriptie</h2>
+    <p>Deze optie (standaard <b>aan</b>) verbetert de audio server-side vóór transcriptie met een
+      lichte <b>hoogdoorlaat</b> (weg met bromtonen) en <b>niveau-normalisatie</b> (consistent volume).
+      Dit maakt de herkenning robuuster zonder de stem te beschadigen. Laat 'm gewoon aan staan,
+      tenzij je precies weet dat je het niet wilt.</p>
+  </section>
+
+  <section id="resultaat">
+    <h2><span class="n">5</span> Wachten op het resultaat</h2>
+    <p>Na het versturen zie je een statuspagina. Je kunt wachten tot het transcript klaar is, of de
+      <b>sessie-code</b> kopiëren en later terugkomen (zie §7). Bovenaan staat je code; daaronder de
+      status en straks het transcript.</p>
+    <img src="screenshots/result.png" alt="Resultaatpagina" />
+  </section>
+
+  <section id="verslag">
+    <h2><span class="n">6</span> Verslag maken &amp; exporteren</h2>
+    <p>Naast het transcript kun je een verslag laten uitwerken door de taalmodel-assistent:</p>
+    <ol>
+      <li>Klik op <b>✨ Volledig verslag</b> voor een compleet verslag (samenvatting, onderwerpen,
+        besluiten, afspraken, actiepunten, aandachtspunten), of</li>
+      <li>kies losse secties via de <b>chips</b> en klik op <b>Genereer gekozen secties</b>, of</li>
+      <li>gebruik <b>Eigen prompt</b> voor een vrije instructie. Optioneel geef je <b>Context</b> mee
+        (onderwerp, datum, deelnemers).</li>
+    </ol>
+    <p>Elk verslag kun je <b>kopiëren</b> of downloaden als <b>Word (.docx)</b> of <b>.md</b>:</p>
+    <img class="crop" src="screenshots/report-actions.png" alt="Kopieer / Word / .md" />
+  </section>
+
+  <section id="code">
+    <h2><span class="n">7</span> Sessie-code &amp; later ophalen</h2>
+    <p>Elke opname krijgt een unieke, geheime <b>sessie-code</b>. Bewaar die goed: het is de enige
+      sleutel tot jouw resultaat. Wil je later terugkomen, ga dan naar <b>Ophalen via code</b>, plak
+      de code en klik op <b>Ophalen</b>.</p>
+    <div class="grid2">
+      <img src="screenshots/result-code.png" alt="Sessie-code" />
+      <img src="screenshots/retrieve.png" alt="Ophalen via code" />
+    </div>
+  </section>
+
+  <section id="privacy">
+    <h2><span class="n">8</span> Privacy &amp; bewaartermijn</h2>
+    <ul>
+      <li><b>Anoniem:</b> geen account, geen login, geen persoonsgegevens, geen tracking.</li>
+      <li><b>Automatisch verwijderen:</b> audio, transcript en verslag worden verwijderd
+        <b>2 werkdagen na de verwerking</b> (weekenden tellen niet mee).</li>
+      <li><b>Zelf verwijderen:</b> met <b>Stop &amp; weggooien</b> gooi je een opname meteen weg.</li>
+      <li>De sessie-code is een geheim — deel hem alleen met wie het transcript mag zien.</li>
+    </ul>
+  </section>
+
+  <footer>Anoniem transcriberen · handleiding</footer>
+</div>
+</body>
+</html>

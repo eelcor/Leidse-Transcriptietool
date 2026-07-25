@@ -1,0 +1,14 @@
+.env
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+data/
+*.db
+*.sqlite3
+.DS_Store
+docker-compose.override.yml
+
+# Claude Code / editor
+.claude/

@@ -1,0 +1,13 @@
+# Worker = basis + STT-afhankelijkheden.
+-r requirements.txt
+
+# --- Default STT-backend: faster-whisper (licht, CPU/GPU) ---
+faster-whisper==1.1.1
+
+# --- Optionele backend: NVIDIA Canary via NeMo (vastgelegde keuze) ---
+# NeMo is zwaar en GPU/CUDA-gevoelig; installeer alleen als STT_BACKEND=canary.
+# In de worker-Dockerfile staat een build-arg INSTALL_NEMO om dit aan te zetten.
+# End-to-end getest met nemo_toolkit 2.7.3 + torch 2.13 (canary-1b-v2 laadt als
+# EncDecMultiTaskModel; de backend regelt dat automatisch, incl. CPU-fallback).
+# nemo_toolkit[asr]==2.7.3
+# torch  (CUDA-build passend bij je GPU; zie README)

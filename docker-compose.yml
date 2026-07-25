@@ -1,0 +1,110 @@
+# Anonieme transcriptie-webapp — één VM, opschaalbaar naar meer workers / GPU-node.
+#
+# Schaal-as: `docker compose up -d --scale worker=3` zet meer STT/LLM-workers bij.
+# Voor productie-TLS: zie Caddyfile (automatische certificaten met een domeinnaam).
+
+services:
+  # Frontend + reverse proxy (static files + /api -> api)
+  web:
+    image: caddy:2-alpine
+    depends_on: [api]
+    environment:
+      # Domein + TLS-modus voor Caddy (zie Caddyfile).
+      # Lokaal/intern: SITE_ADDRESS=jouw-host.local, CADDY_TLS=internal (self-signed)
+      # Prod: SITE_ADDRESS=transcriptie.jouwdomein.nl, CADDY_TLS=jij@jouwdomein.nl (ACME)
+      SITE_ADDRESS: "${SITE_ADDRESS:-localhost}"
+      CADDY_TLS: "${CADDY_TLS:-internal}"
+      # Certificaat voor SNI-loze verbindingen (IP-toegang). Zet op je hoofd-hostnaam.
+      DEFAULT_SNI: "${DEFAULT_SNI:-localhost}"
+    ports:
+      # Poorten configureerbaar zodat je naast een bestaande reverse-proxy kunt
+      # draaien (prod met OpenWebUI-Caddy: zet bv. WEB_HTTP_PORT=8080, WEB_HTTPS_PORT=8443,
+      # of laat de bestaande proxy naar de api proxien — zie DEPLOY.md).
+      - "${WEB_HTTP_PORT:-80}:80"     # http -> https redirect
+      - "${WEB_HTTPS_PORT:-443}:443"  # https
+    volumes:
+      - ./frontend:/srv:ro
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.api
+    env_file: .env
+    depends_on:
+      db: { condition: service_healthy }
+      redis: { condition: service_started }
+    volumes:
+      - audiodata:/data
+      - ./PROMPTS.md:/app/PROMPTS.md:ro
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.worker
+      args:
+        # NeMo/Canary meebouwen (zwaar). TORCH_VARIANT: "default" (nieuwe GPU's,
+        # o.a. RTX Pro 6000) of "cu124" (Tesla V100/Volta). install.sh zet dit juist.
+        INSTALL_NEMO: "${INSTALL_NEMO:-1}"
+        TORCH_VARIANT: "${TORCH_VARIANT:-default}"
+    env_file: .env
+    environment:
+      # Beperkt VRAM-fragmentatie bij GPU-runs op krappe/gedeelde kaarten.
+      PYTORCH_CUDA_ALLOC_CONF: "expandable_segments:True"
+    depends_on:
+      db: { condition: service_healthy }
+      redis: { condition: service_started }
+    # Bereik het bestaande Qwen-endpoint dat op de HOST draait (LLM_BASE_URL kan
+    # dan http://host.docker.internal:8033/v1 gebruiken).
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - audiodata:/data
+      - ./PROMPTS.md:/app/PROMPTS.md:ro
+      - hf_cache:/root/.cache        # model-cache (faster-whisper / HF / NeMo)
+    restart: unless-stopped
+    # --- GPU via CDI (geen nvidia-runtime registratie / daemon-restart nodig) ---
+    # WORKER_GPU_DEVICE kiest de GPU (CDI): "nvidia.com/gpu=all", of een index
+    # "nvidia.com/gpu=0". install.sh zet dit in .env.
+    devices:
+      - "${WORKER_GPU_DEVICE:-nvidia.com/gpu=all}"
+
+  cleanup:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.api
+    command: ["python", "-m", "cleanup.cleanup"]
+    env_file: .env
+    depends_on:
+      db: { condition: service_healthy }
+    volumes:
+      - audiodata:/data
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: transcribe
+      POSTGRES_PASSWORD: transcribe
+      POSTGRES_DB: transcribe
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U transcribe"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  audiodata:
+  caddy_data:
+  hf_cache:

@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex, nofollow" />
+  <meta name="theme-color" content="#6d5efc" />
+  <title>Anoniem transcriberen</title>
+  <link rel="stylesheet" href="/css/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="logo">🎙️</span> Anoniem transcriberen</div>
+    <nav>
+      <button id="nav-new" class="btn ghost">Nieuw</button>
+      <button id="nav-retrieve" class="btn ghost">Ophalen via code</button>
+    </nav>
+  </header>
+
+  <main class="wrap">
+    <!-- HOME -->
+    <section id="view-home" class="view">
+      <div class="hero">
+        <h1>Spraak naar tekst — anoniem</h1>
+        <p>Upload een opname of neem direct op. Geen account, geen login. Je krijgt een geheime
+           code en een transcript, met optioneel een uitgewerkt verslag.</p>
+        <span class="pill"><span class="dot"></span>
+          Automatisch verwijderd na <strong>&nbsp;<span id="retention">2</span> werkdagen</strong>&nbsp;· max <span id="max-size">200</span> MB
+        </span>
+      </div>
+
+      <div class="cards">
+        <!-- Uploaden -->
+        <div class="card">
+          <h2><span class="ico">📁</span> Bestand uploaden</h2>
+          <p class="sub">wav, mp3, m4a, ogg, webm of flac.</p>
+          <label class="field"><input type="file" id="file-input" accept="audio/*,.wav,.mp3,.m4a,.ogg,.webm,.flac" /></label>
+
+          <label class="switch">
+            <input type="checkbox" id="opt-upload" checked />
+            <span class="track"></span>
+            <span class="txt"><b>Audio optimaliseren voor transcriptie</b><small>Niveau-normalisatie + hoogdoorlaat (aanbevolen)</small></span>
+          </label>
+
+          <button id="upload-btn" class="btn primary block lg">Uploaden &amp; transcriberen</button>
+          <progress id="upload-progress" value="0" max="100" hidden style="margin-top:12px"></progress>
+        </div>
+
+        <!-- Opnemen -->
+        <div class="card">
+          <h2><span class="ico">🔴</span> Nu opnemen</h2>
+          <p class="sub">Neem direct in de browser op.</p>
+
+          <button id="rec-enable" class="btn primary block lg">Microfoon inschakelen</button>
+
+          <div id="rec-controls" class="recorder" hidden>
+            <label class="field"><span>Microfoon</span><select id="mic-select"></select></label>
+
+            <div class="rec-stage">
+              <div class="rec-timer" id="rec-time">00:00</div>
+              <div class="rec-state" id="rec-state"><span class="live"></span><span id="rec-state-txt">Klaar om op te nemen</span></div>
+              <div class="vu" id="vu" data-zone="low"><div class="vu-fill" id="vu-fill"></div></div>
+              <div class="vu-legend"><span>te zacht</span><span>goed</span><span>te hard</span></div>
+            </div>
+
+            <div class="rec-controls">
+              <button id="rec-start" class="btn danger lg">● Opnemen</button>
+              <button id="rec-pause" class="btn outline" hidden>⏸ Pauzeren</button>
+              <button id="rec-stop" class="btn primary" hidden>■ Stop &amp; verstuur</button>
+              <button id="rec-discard" class="btn ghost" hidden>🗑 Stop &amp; weggooien</button>
+            </div>
+
+            <div class="field" id="sensitivity-wrap">
+              <span>Gevoeligheid</span>
+              <input type="range" id="sensitivity" min="0.2" max="4" step="0.1" value="1" />
+              <small id="gain-hint" class="muted"></small>
+            </div>
+
+            <label class="switch">
+              <input type="checkbox" id="opt-record" checked />
+              <span class="track"></span>
+              <span class="txt"><b>Audio optimaliseren voor transcriptie</b><small>Server-side niveau-normalisatie + hoogdoorlaat</small></span>
+            </label>
+
+            <details class="opts">
+              <summary>Microfoon-instellingen</summary>
+              <label class="chk"><input type="checkbox" id="tg-agc" /> Automatische versterking (AGC)</label>
+              <label class="chk"><input type="checkbox" id="tg-echo" /> Echo-onderdrukking</label>
+              <label class="chk"><input type="checkbox" id="tg-noise" /> Ruisonderdrukking (licht)</label>
+              <label class="chk"><input type="checkbox" id="tg-hp" /> Hoogdoorlaat (~80 Hz)</label>
+              <label class="chk"><input type="checkbox" id="tg-vad" /> Stiltes trimmen (VAD)</label>
+              <small class="muted">Tip: laat zware denoising uit — dat verslechtert de transcriptie.</small>
+            </details>
+
+            <a id="rec-download" class="btn ghost sm" hidden>⬇ Download opname lokaal</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- STATUS / RESULTAAT -->
+    <section id="view-status" class="view" hidden>
+      <div id="status-box"></div>
+    </section>
+
+    <!-- OPHALEN -->
+    <section id="view-retrieve" class="view" hidden>
+      <div class="card" style="max-width:520px;margin:0 auto">
+        <h2><span class="ico">🔑</span> Resultaat ophalen</h2>
+        <p class="sub">Plak je sessie-code om transcript en verslag te bekijken.</p>
+        <label class="field"><input type="text" id="retrieve-input" placeholder="sessie-code" /></label>
+        <button id="retrieve-btn" class="btn primary block">Ophalen</button>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    Privacy by design · geen tracking · minimale logging · audio en tekst worden automatisch verwijderd
+  </footer>
+
+  <script type="module" src="/js/app.js"></script>
+</body>
+</html>

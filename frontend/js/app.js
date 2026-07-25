@@ -1,0 +1,468 @@
+import { API } from './api.js';
+import { Recorder, listMics, loadSettings } from './recorder.js';
+
+let CONFIG = { max_upload_mb: 200, retention_workdays: 2, default_language: 'nl', word_timestamps: true };
+let SECTIONS = [];
+let recorder = null;
+let sse = null;
+
+const $ = (sel) => document.querySelector(sel);
+const el = (tag, attrs = {}, ...kids) => {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === 'class') n.className = v;
+    else if (k === 'html') n.innerHTML = v;
+    else if (k.startsWith('on')) n.addEventListener(k.slice(2), v);
+    else n.setAttribute(k, v);
+  }
+  for (const kid of kids) n.append(kid?.nodeType ? kid : document.createTextNode(kid ?? ''));
+  return n;
+};
+
+function show(view) {
+  document.querySelectorAll('.view').forEach((v) => (v.hidden = true));
+  $('#view-' + view).hidden = false;
+}
+
+function fmtDate(iso) {
+  if (!iso) return '—';
+  try {
+    return new Date(iso).toLocaleString('nl-NL', { dateStyle: 'full', timeStyle: 'short' });
+  } catch { return iso; }
+}
+
+const STATUS_LABEL = {
+  created: 'Aangemaakt', queued: 'In de wachtrij', transcribing: 'Bezig met transcriberen…',
+  transcribed: 'Transcript klaar', failed: 'Mislukt',
+};
+
+// -------------------------------------------------------------------------
+// Init
+// -------------------------------------------------------------------------
+async function init() {
+  try { CONFIG = await API.config(); } catch {}
+  try { SECTIONS = (await API.prompts()).sections; } catch {}
+  $('#max-size').textContent = CONFIG.max_upload_mb;
+  $('#retention').textContent = CONFIG.retention_workdays;
+  const optDefault = CONFIG.audio_optimize_default !== false;
+  $('#opt-upload').checked = optDefault;
+  $('#opt-record').checked = optDefault;
+
+  // Navigatie
+  $('#nav-new').addEventListener('click', () => show('home'));
+  $('#nav-retrieve').addEventListener('click', () => show('retrieve'));
+
+  setupUpload();
+  setupRecorder();
+  setupRetrieve();
+
+  // Diep-link: #s=<sessionId>
+  const m = location.hash.match(/s=([^&]+)/);
+  if (m) { openSession(decodeURIComponent(m[1])); } else { show('home'); }
+}
+
+// -------------------------------------------------------------------------
+// Bestand uploaden
+// -------------------------------------------------------------------------
+function setupUpload() {
+  const input = $('#file-input');
+  const btn = $('#upload-btn');
+  const prog = $('#upload-progress');
+  btn.addEventListener('click', async () => {
+    const file = input.files[0];
+    if (!file) { alert('Kies eerst een bestand.'); return; }
+    const maxBytes = CONFIG.max_upload_mb * 1024 * 1024;
+    if (file.size > maxBytes) { alert(`Bestand te groot (max ${CONFIG.max_upload_mb} MB).`); return; }
+    const optimize = $('#opt-upload').checked;
+    btn.disabled = true;
+    prog.hidden = false;
+    try {
+      const res = await API.uploadFile(file, CONFIG.default_language, optimize, (f) => {
+        prog.value = Math.round(f * 100);
+      });
+      openSession(res.id);
+    } catch (e) {
+      alert('Upload mislukt: ' + e.message);
+    } finally {
+      btn.disabled = false;
+    }
+  });
+}
+
+// -------------------------------------------------------------------------
+// Opnemen
+// -------------------------------------------------------------------------
+function setupRecorder() {
+  const s = loadSettings();
+  const startBtn = $('#rec-start');
+  const stopBtn = $('#rec-stop');
+  const pauseBtn = $('#rec-pause');
+  const meter = $('#vu-fill');
+  const meterWrap = $('#vu');
+  const timeEl = $('#rec-time');
+  const dl = $('#rec-download');
+
+  // Toggles koppelen aan settings
+  const bind = (id, key) => {
+    const cb = $('#' + id);
+    cb.checked = !!s[key];
+    cb.addEventListener('change', async () => {
+      if (recorder) await recorder.applyConstraints({ [key]: cb.checked });
+      else { const st = loadSettings(); st[key] = cb.checked; localStorage.setItem('transcribe.recorder.settings.v1', JSON.stringify(st)); }
+      if (key === 'autoGainControl') updateGainHint();
+    });
+  };
+  bind('tg-agc', 'autoGainControl');
+  bind('tg-echo', 'echoCancellation');
+  bind('tg-noise', 'noiseSuppression');
+  bind('tg-hp', 'highpass');
+  bind('tg-vad', 'vadTrim');
+
+  const gain = $('#sensitivity');
+  gain.value = s.gain;
+  const updateGainHint = () => {
+    const agc = $('#tg-agc').checked;
+    $('#sensitivity-wrap').classList.toggle('dimmed', agc);
+    $('#gain-hint').textContent = agc
+      ? 'AGC staat aan — de browser regelt het niveau; deze schuif is fijnafstemming.'
+      : 'Praat even en zet de schuif zo dat de balk in het groen piekt.';
+  };
+  gain.addEventListener('input', () => { if (recorder) recorder.setGain(parseFloat(gain.value)); });
+  updateGainHint();
+
+  let startTs = 0, timer = null, uploadChain = Promise.resolve(), sessionId = null, chunkErr = false;
+
+  async function refreshMics() {
+    try {
+      const mics = await listMics();
+      const sel = $('#mic-select');
+      sel.innerHTML = '';
+      mics.forEach((m, i) => sel.append(el('option', { value: m.deviceId }, m.label || `Microfoon ${i + 1}`)));
+      if (s.deviceId) sel.value = s.deviceId;
+      sel.onchange = async () => { if (recorder) await recorder.applyConstraints({ deviceId: sel.value }); };
+    } catch {}
+  }
+
+  $('#rec-enable').addEventListener('click', async () => {
+    try {
+      recorder = new Recorder();
+      recorder.onLevel(({ rms, peak }) => {
+        const pct = Math.min(100, Math.round(rms * 300));
+        meter.style.width = pct + '%';
+        let zone = 'ok';
+        if (peak > 0.97) zone = 'clip';
+        else if (rms < 0.03) zone = 'low';
+        meterWrap.dataset.zone = zone;
+      });
+      await recorder.openStream();
+      await refreshMics();
+      $('#rec-enable').hidden = true;
+      $('#rec-controls').hidden = false;
+    } catch (e) {
+      alert('Microfoon niet beschikbaar: ' + e.message);
+    }
+  });
+
+  const stateEl = $('#rec-state');
+  const stateTxt = $('#rec-state-txt');
+  const discardBtn = $('#rec-discard');
+  const setState = (cls, txt) => { stateEl.className = 'rec-state' + (cls ? ' ' + cls : ''); stateTxt.textContent = txt; };
+
+  // Zet de knoppen terug naar de begin-toestand (klaar om (opnieuw) op te nemen).
+  function resetRecUI() {
+    clearInterval(timer);
+    startBtn.hidden = false; startBtn.disabled = false;
+    pauseBtn.hidden = true; pauseBtn.disabled = false; pauseBtn.textContent = '⏸ Pauzeren';
+    stopBtn.hidden = true; stopBtn.disabled = false;
+    discardBtn.hidden = true; discardBtn.disabled = false;
+    timeEl.textContent = '00:00';
+    setState('', 'Klaar om op te nemen');
+  }
+
+  startBtn.addEventListener('click', async () => {
+    chunkErr = false;
+    startBtn.disabled = true;
+    try {
+      const optimize = $('#opt-record').checked;
+      const sess = await API.createSession(CONFIG.default_language, optimize);
+      sessionId = sess.id;
+      uploadChain = Promise.resolve();
+      // Chunk-callback ZETTEN vóór start(): elke chunk direct uploaden (in volgorde).
+      recorder.onChunk((blob) => {
+        uploadChain = uploadChain.then(() =>
+          API.uploadChunk(sessionId, blob, blob.type || 'audio/webm', 'opname.webm')
+            .catch((e) => { chunkErr = true; console.error(e); })
+        );
+      });
+      recorder.start();
+      startTs = Date.now();
+      timer = setInterval(() => {
+        const sec = Math.floor((Date.now() - startTs) / 1000);
+        timeEl.textContent = `${String(Math.floor(sec / 60)).padStart(2, '0')}:${String(sec % 60).padStart(2, '0')}`;
+      }, 500);
+      startBtn.hidden = true;
+      pauseBtn.hidden = false; stopBtn.hidden = false; discardBtn.hidden = false;
+      $('#rec-download').hidden = true;
+      setState('recording', 'Opnemen…');
+    } catch (e) {
+      alert('Kon opname niet starten: ' + e.message);
+      resetRecUI();
+    }
+  });
+
+  pauseBtn.addEventListener('click', () => {
+    if (recorder.mediaRecorder && recorder.mediaRecorder.state === 'recording') {
+      recorder.pause(); pauseBtn.textContent = '● Hervatten'; setState('paused', 'Gepauzeerd');
+    } else {
+      recorder.resume(); pauseBtn.textContent = '⏸ Pauzeren'; setState('recording', 'Opnemen…');
+    }
+  });
+
+  stopBtn.addEventListener('click', async () => {
+    stopBtn.disabled = true; pauseBtn.disabled = true; discardBtn.disabled = true;
+    clearInterval(timer);
+    setState('', 'Uploaden…');
+    try {
+      const blob = await recorder.stop();
+      await uploadChain; // wacht tot alle gestreamde chunks binnen zijn
+      if (chunkErr) throw new Error('upload van een deel van de opname is mislukt');
+      // Lokale download aanbieden.
+      const url = URL.createObjectURL(blob);
+      dl.href = url; dl.download = 'opname.webm'; dl.hidden = false;
+      await API.complete(sessionId);
+      openSession(sessionId);
+    } catch (e) {
+      alert('Verzenden mislukt: ' + e.message + '. Probeer het opnieuw.');
+      resetRecUI();
+    }
+  });
+
+  discardBtn.addEventListener('click', async () => {
+    if (!confirm('Opname weggooien? De opgenomen audio wordt niet verstuurd en direct verwijderd.')) return;
+    discardBtn.disabled = true; stopBtn.disabled = true; pauseBtn.disabled = true;
+    clearInterval(timer);
+    setState('', 'Weggooien…');
+    try { await recorder.stop(); } catch {}
+    if (sessionId) { await API.deleteSession(sessionId); sessionId = null; }
+    resetRecUI();
+  });
+}
+
+// -------------------------------------------------------------------------
+// Sessie openen: status volgen + resultaat tonen
+// -------------------------------------------------------------------------
+async function openSession(sessionId) {
+  location.hash = 's=' + encodeURIComponent(sessionId);
+  show('status');
+  const box = $('#status-box');
+  box.innerHTML = '';
+  box.append(
+    el('div', { class: 'sesh' },
+      el('span', { class: 'lbl' }, '🔑 Sessie-code (bewaar als geheim): '),
+      el('code', { id: 'sid-code' }, sessionId),
+      el('button', { class: 'btn ghost sm', onclick: (e) => { navigator.clipboard.writeText(sessionId); e.target.textContent = '✓ Gekopieerd'; } }, 'Kopieer'),
+    ),
+    el('div', { class: 'statebar' },
+      el('div', { class: 'spinner', id: 'status-spinner' }),
+      el('div', { class: 'txt', id: 'status-text' }, 'Laden…'),
+    ),
+    el('div', { id: 'result-area' }),
+  );
+
+  // Verbind SSE voor live updates; val terug op polling.
+  if (sse) { sse.close(); sse = null; }
+  let done = false;
+  const render = (st) => {
+    $('#status-text').textContent = STATUS_LABEL[st.status] || st.status;
+    if (st.status === 'transcribed' || st.status === 'failed') {
+      $('#status-spinner').hidden = true;
+      if (!done) { done = true; loadResult(sessionId); }
+    }
+  };
+  try {
+    sse = new EventSource(`/api/sessions/${sessionId}/events`);
+    sse.onmessage = (e) => render(JSON.parse(e.data));
+    sse.addEventListener('gone', () => { $('#status-text').textContent = 'Sessie niet gevonden of verlopen.'; sse.close(); });
+    sse.onerror = () => { sse.close(); pollStatus(sessionId, render); };
+  } catch {
+    pollStatus(sessionId, render);
+  }
+}
+
+async function pollStatus(sessionId, render) {
+  const tick = async () => {
+    try {
+      const st = await API.status(sessionId);
+      render(st);
+      if (st.status !== 'transcribed' && st.status !== 'failed') setTimeout(tick, 2000);
+    } catch {
+      $('#status-text').textContent = 'Sessie niet gevonden of verlopen.';
+    }
+  };
+  tick();
+}
+
+async function loadResult(sessionId) {
+  let res;
+  try { res = await API.result(sessionId); } catch { return; }
+  const area = $('#result-area');
+  area.innerHTML = '';
+
+  if (res.status === 'failed') {
+    area.append(el('div', { class: 'error' }, 'De verwerking is mislukt: ' + (res.error || 'onbekende fout')));
+    return;
+  }
+
+  area.append(el('div', { class: 'expiry' },
+    `⏳ Deze gegevens (audio + transcript + verslag) worden automatisch verwijderd op ${fmtDate(res.expires_at)}.`));
+
+  // Twee kolommen: transcript | verslag
+  const cols = el('div', { class: 'columns' });
+  const left = el('div', { class: 'panel' });
+  const right = el('div', { class: 'panel' });
+  cols.append(left, right);
+  area.append(cols);
+
+  // Transcript
+  left.append(el('div', { class: 'panel-head' },
+    el('h3', {}, '📝 Transcript'),
+    el('div', { class: 'panel-actions' },
+      el('button', { class: 'btn ghost sm', onclick: () => copy(res.transcript) }, 'Kopieer'),
+      el('a', { class: 'btn ghost sm', href: `/api/sessions/${sessionId}/transcript.txt` }, 'Download .txt'),
+    ),
+  ));
+  const tbox = el('div', { class: 'transcript' });
+  tbox.textContent = res.transcript || '';
+  left.append(tbox);
+  if (res.segments && res.segments.length) {
+    const tgl = el('button', { class: 'btn ghost sm', style: 'margin-top:10px' }, 'Toon tijdcodes');
+    let showing = false;
+    tgl.addEventListener('click', () => {
+      showing = !showing;
+      tgl.textContent = showing ? 'Verberg tijdcodes' : 'Toon tijdcodes';
+      tbox.innerHTML = '';
+      if (showing) {
+        res.segments.forEach((s) => {
+          tbox.append(el('div', { class: 'seg' },
+            el('span', { class: 'ts' }, s.start != null ? `[${fmtTime(s.start)}]` : ''), ' ' + s.text));
+        });
+      } else { tbox.textContent = res.transcript || ''; }
+    });
+    left.append(tgl);
+  }
+
+  // Verslag-generator
+  right.append(el('div', { class: 'panel-head' }, el('h3', {}, '📋 Verslag maken')));
+  right.append(buildReportControls(sessionId));
+  const reportsWrap = el('div', { id: 'reports-wrap' });
+  right.append(reportsWrap);
+  res.reports.forEach((r) => renderReport(sessionId, r, reportsWrap));
+}
+
+function fmtTime(sec) {
+  const m = Math.floor(sec / 60), s = Math.floor(sec % 60);
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+function buildReportControls(sessionId) {
+  const wrap = el('div', { class: 'report-controls' });
+  const chips = el('div', { class: 'chips' });
+  const boxes = {};
+  SECTIONS.filter((s) => s.key !== 'volledig').forEach((s) => {
+    const cb = el('input', { type: 'checkbox' });
+    boxes[s.key] = cb;
+    const chip = el('label', { class: 'chip' }, cb, s.label);
+    cb.addEventListener('change', () => chip.classList.toggle('on', cb.checked));
+    chips.append(chip);
+  });
+  wrap.append(
+    el('button', { class: 'btn primary block', onclick: () => start(['volledig']) }, '✨ Volledig verslag (aanbevolen)'),
+    el('p', { class: 'muted small', style: 'margin:2px 0' }, 'of kies losse secties:'),
+    chips,
+    el('button', { class: 'btn outline block', onclick: () => {
+      const kinds = Object.entries(boxes).filter(([, cb]) => cb.checked).map(([k]) => k);
+      if (!kinds.length) { alert('Kies minstens één sectie.'); return; }
+      start(kinds);
+    } }, 'Genereer gekozen secties'),
+    el('details', { class: 'opts' },
+      el('summary', {}, 'Eigen prompt'),
+      el('textarea', { id: 'custom-prompt', rows: '3', placeholder: 'Bijv. "Vat samen in 5 bullets voor het MT."', style: 'margin:8px 0' }),
+      el('button', { class: 'btn outline sm', onclick: () => {
+        const t = $('#custom-prompt').value.trim();
+        if (!t) { alert('Typ een prompt.'); return; }
+        start(null, t);
+      } }, 'Toepassen'),
+    ),
+    el('details', { class: 'opts' },
+      el('summary', {}, 'Context meegeven (optioneel)'),
+      el('textarea', { id: 'ctx', rows: '2', placeholder: 'Onderwerp, datum, deelnemers…', style: 'margin:8px 0' }),
+    ),
+  );
+
+  async function start(kinds, custom) {
+    const context = ($('#ctx') && $('#ctx').value.trim()) || null;
+    try {
+      const r = await API.createReport(sessionId, { kinds, custom_prompt: custom || null, context });
+      const rw = $('#reports-wrap');
+      renderReport(sessionId, r, rw, true);
+    } catch (e) { alert(e.message); }
+  }
+
+  return wrap;
+}
+
+function renderReport(sessionId, report, wrap, poll = false) {
+  let card = document.getElementById('rep-' + report.id);
+  if (!card) {
+    card = el('div', { class: 'report-card', id: 'rep-' + report.id });
+    wrap.prepend(card);
+  }
+  const title = report.custom_prompt ? 'Eigen prompt'
+    : (report.kinds || []).map((k) => (SECTIONS.find((s) => s.key === k) || {}).label || k).join(', ');
+  card.innerHTML = '';
+  const head = el('div', { class: 'panel-head' }, el('strong', {}, title || 'Verslag'));
+  card.append(head);
+
+  if (report.status === 'done') {
+    head.append(el('div', { class: 'panel-actions' },
+      el('button', { class: 'btn ghost sm', onclick: () => copy(report.content) }, 'Kopieer'),
+      el('a', { class: 'btn ghost sm', href: `/api/sessions/${sessionId}/reports/${report.id}/download.docx` }, '⬇ Word'),
+      el('a', { class: 'btn ghost sm', href: `/api/sessions/${sessionId}/reports/${report.id}/download.md` }, '.md'),
+    ));
+    const body = el('div', { class: 'report-body' });
+    body.textContent = report.content || '';
+    card.append(body);
+  } else if (report.status === 'failed') {
+    card.append(el('div', { class: 'error' }, report.error || 'Verslag mislukt.'));
+  } else {
+    card.append(el('div', { class: 'muted small' }, '⏳ Bezig…'), el('progress'));
+    if (poll || report.status !== 'done') pollReport(sessionId, report.id, wrap);
+  }
+}
+
+async function pollReport(sessionId, reportId, wrap) {
+  const tick = async () => {
+    try {
+      const r = await API.getReport(sessionId, reportId);
+      if (r.status === 'done' || r.status === 'failed') { renderReport(sessionId, r, wrap); return; }
+    } catch {}
+    setTimeout(tick, 2000);
+  };
+  setTimeout(tick, 2000);
+}
+
+// -------------------------------------------------------------------------
+// Ophalen via sessie-ID
+// -------------------------------------------------------------------------
+function setupRetrieve() {
+  $('#retrieve-btn').addEventListener('click', () => {
+    const id = $('#retrieve-input').value.trim();
+    if (!id) return;
+    openSession(id);
+  });
+}
+
+// -------------------------------------------------------------------------
+function copy(text) { navigator.clipboard.writeText(text || ''); }
+
+init();

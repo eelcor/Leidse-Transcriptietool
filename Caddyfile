@@ -1,0 +1,41 @@
+# Caddy: serveert de statische frontend en proxyt de API, met HTTPS.
+#
+# Domein en TLS-modus komen uit env-vars (gezet in .env, doorgegeven via compose):
+#   SITE_ADDRESS  - het domein/host waarop de site draait
+#                   lokaal: jouw-host.local   prod: transcriptie.jouwdomein.nl
+#   CADDY_TLS     - TLS-modus:
+#                   "internal"          -> Caddy's lokale CA (dev; browser-waarschuwing,
+#                                          maar wél een https secure context voor de recorder)
+#                   "jij@jouwdomein.nl" -> automatische Let's Encrypt-certificaten (prod)
+#
+# getUserMedia (microfoon) vereist een secure context: https of localhost. Daarom
+# draait alles hier standaard over https.
+
+# Globale opties: default_sni zorgt dat verbindingen ZONDER SNI (bv. toegang via
+# een IP-adres, want IP's mogen niet in SNI) toch een certificaat/site krijgen.
+{
+	default_sni {$DEFAULT_SNI:localhost}
+}
+
+{$SITE_ADDRESS:localhost} {
+	tls {$CADDY_TLS:internal}
+	encode gzip
+
+	# API en SSE naar de FastAPI-service. flush_interval -1 houdt SSE realtime.
+	handle /api/* {
+		reverse_proxy api:8000 {
+			flush_interval -1
+		}
+	}
+
+	# Statische frontend.
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+
+	request_body {
+		max_size 300MB
+	}
+}
