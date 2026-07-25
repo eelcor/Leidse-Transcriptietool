@@ -187,7 +187,7 @@ Gebruik het update-script (volumes blijven behouden):
 Nieuwe **tabellen** worden bij de start automatisch aangemaakt (via `create_all`).
 Voegt een release **kolommen** toe op bestaande tabellen, voer dan de `ALTER TABLE`
 uit de release-notes uit — deze versie gebruikt nog geen automatische migraties
-(Alembic staat op de roadmap). Voorbeeld voor deze release:
+(Alembic staat op de roadmap: issue #2). Voorbeeld voor deze release:
 
 ```sql
 ALTER TABLE sessions ADD COLUMN IF NOT EXISTS source varchar(12);

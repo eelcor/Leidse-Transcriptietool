@@ -7,6 +7,11 @@ transcriptie en schaalbaarheid.
 
 ## Waarom deze tool?
 
+Wij in Leiden geloven dat je mensen moet **verleiden** om verantwoord én effectief met AI
+om te gaan. De opname-en-samenvatknop is zó gevonden in Teams; wij wilden iets dat bijna
+net zo laagdrempelig is. En heb je geen dictafoon of memorecorder? Dan doe je het gewoon
+**veilig via je browser**.
+
 - We zoeken een **laagdrempelige manier waarop álle collega's betrouwbare en
   vertrouwelijke AI** kunnen gebruiken voor transcriptie en verslagen.
 - We wachten al een tijd op **TINA** (gemeente Leeuwarden) en hopen dat die ooit als
@@ -22,9 +27,12 @@ transcriptie en schaalbaarheid.
 > - **De tool is niet perfect.** Lees de [handleiding](docs/handleiding.html) en de
 >   [quick reference card](docs/quickref.html). **Maak altijd zelf aantekeningen** en
 >   **bewaar de audio** — die optie zit er niet voor niets in.
-> - **Nog niet beschermd tegen prompt injectie** (via de inhoud van een transcript of een
->   eigen prompt). Mogelijk een toekomstige feature — houd daar rekening mee bij
->   vertrouwelijk of extern materiaal.
+> - **Nog niet beschermd tegen prompt injectie.** Het verslag wordt door een taalmodel gemaakt
+>   op basis van de **transcript-inhoud** (wat er gezegd is), een eventuele **eigen prompt** en
+>   meegegeven **context**. Al die tekst kan instructies bevatten die het model proberen te
+>   sturen ("negeer het bovenstaande en…"). Wees dus voorzichtig met extern/onbekend
+>   audiomateriaal en controleer verslagen. Mitigatie staat op de roadmap
+>   ([#1](https://github.com/eelcor/Leidse-Transcriptietool/issues/1)).
 
 - **STT:** **faster-whisper** (large-v2), NVIDIA **Canary 1B v2** (via NeMo), óf een
   extern **OpenAI-compatibel `/v1/audio/transcriptions`-endpoint** (`openai`) — zodat je
