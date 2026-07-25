@@ -145,12 +145,13 @@ Drie manieren om ervan af te komen:
    globaal vertrouwd, maar poort 80/443 moeten publiek bereikbaar zijn (of gebruik een
    DNS-01-challenge voor een intern-only host).
 
-3. **De interne CA vertrouwen op de clients** (bij `CADDY_TLS=internal`). Caddy's root-CA
-   staat in het `caddy_data`-volume op `pki/authorities/local/root.crt`. Haal 'm op met:
-   ```bash
-   docker compose cp web:/data/caddy/pki/authorities/local/root.crt caddy-root.crt
-   ```
-   en installeer 'm in de trust-store van de clients (handmatig, of centraal via GPO/MDM):
+3. **De interne CA vertrouwen op de clients** (bij `CADDY_TLS=internal`). De app serveert
+   Caddy's root-CA automatisch op **`/caddy-root.crt`** (bijv. `https://<host>/caddy-root.crt`),
+   en toont onderin de pagina een subtiel linkje **"Certificaatwaarschuwing? Installeer ons
+   certificaat"** — dat linkje verschijnt alleen als er zo'n interne CA is. Gebruikers
+   downloaden 'm daar; centraal uitrollen kan ook (haal 'm op met
+   `docker compose cp web:/data/caddy/pki/authorities/local/root.crt caddy-root.crt`).
+   Installeer 'm in de trust-store van de clients (handmatig, of centraal via GPO/MDM):
    - **Windows:** dubbelklik → *Install Certificate* → *Local Machine* → *Trusted Root Certification Authorities*.
    - **macOS:** open in Keychain Access → *System* → dubbelklik → *Always Trust*.
    - **Linux:** kopieer naar `/usr/local/share/ca-certificates/` → `sudo update-ca-certificates`.

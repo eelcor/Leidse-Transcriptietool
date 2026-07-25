@@ -53,6 +53,12 @@ async function init() {
   const hours = (CONFIG.max_upload_mb * 1024 * 1024 * 8) / recBitrate / 3600;
   $('#max-dur').textContent = `(± ${Math.round(hours)} uur opname)`;
 
+  // Toon het "certificaat installeren"-linkje alleen als er een interne CA beschikbaar is
+  // (dus bij een self-signed opzet; op prod met een echt certificaat blijft het verborgen).
+  fetch('/caddy-root.crt', { method: 'HEAD' })
+    .then((r) => { if (r.ok) { const n = $('#cert-note'); if (n) n.hidden = false; } })
+    .catch(() => {});
+
   // Navigatie
   $('#nav-new').addEventListener('click', () => show('home'));
   $('#nav-retrieve').addEventListener('click', () => show('retrieve'));

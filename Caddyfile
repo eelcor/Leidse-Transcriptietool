@@ -30,6 +30,16 @@
 		}
 	}
 
+	# Serveer Caddy's interne root-CA (alleen aanwezig bij CADDY_TLS=internal), zodat
+	# gebruikers 'm kunnen installeren om de browserwaarschuwing weg te nemen.
+	handle /caddy-root.crt {
+		root * /data/caddy/pki/authorities/local
+		rewrite * /root.crt
+		header Content-Type application/x-x509-ca-cert
+		header Content-Disposition "attachment; filename=leidse-transcriptietool-ca.crt"
+		file_server
+	}
+
 	# Statische frontend.
 	handle {
 		root * /srv

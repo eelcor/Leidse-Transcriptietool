@@ -12,6 +12,5 @@ docker-compose.override.yml
 
 # Claude Code / editor
 .claude/
-frontend/caddy-root.crt
 certs/*.pem
 certs/*.key
