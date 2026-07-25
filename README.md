@@ -12,7 +12,7 @@ transcriptie en schaalbaarheid.
 - We wachten al een tijd op **TINA** (gemeente Leeuwarden) en hopen dat die ooit als
   open source vrijkomt. Tot die tijd moet dit mensen eenvoudig helpen om gesprekken —
   óók vertrouwelijke — goed te transcriberen en om te zetten naar functionele verslagen.
-- In Leiden zit nu **~10% van de medewerkers in ons AI-netwerk**. Met deze tool hopen
+- In de Leidse Regio zit nu **~10% van de medewerkers in ons AI-netwerk**. Met deze tool hopen
   we de overige **90%** ook verantwoord gebruik te laten maken van AI, voor iets waar
   bijna iedereen behoefte aan heeft.
 - We ontwikkelen er niet superhard aan, maar we zorgen dat het **zo veilig mogelijk** is.
