@@ -18,8 +18,8 @@ tar --exclude='.git' \
     --exclude='.venv' --exclude='venv' \
     --exclude='node_modules' \
     -czf "$OUT" \
-    docker-compose.yml Caddyfile .env.example PROMPTS.md README.md \
-    backend frontend deploy
+    docker-compose.yml Caddyfile .env.example PROMPTS.md README.md LICENSE \
+    backend frontend deploy docs
 
 echo "Archief geschreven: $OUT"
 echo "Op de prod-machine:  tar xzf $(basename "$OUT") && cd <map> && ./deploy/install.sh"
