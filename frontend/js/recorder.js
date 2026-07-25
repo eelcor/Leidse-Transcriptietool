@@ -17,6 +17,7 @@ export const defaultSettings = {
   highpass: true,
   gain: 1.0,        // handmatige gevoeligheid (fijnafstemming)
   vadTrim: false,   // optioneel; client-side stilte trimmen (stub-hint)
+  bitrate: 48000,   // Opus-bitrate; 48 kbps = goede balans voor vergaderingen
 };
 
 export function loadSettings() {
@@ -106,6 +107,11 @@ export class Recorder {
     saveSettings(this.settings);
   }
 
+  setBitrate(v) {
+    this.settings.bitrate = v;   // geldt vanaf de volgende opname
+    saveSettings(this.settings);
+  }
+
   setHighpass(on) {
     this.settings.highpass = on;
     if (this.highpass) this.highpass.frequency.value = on ? 80 : 0;
@@ -140,7 +146,7 @@ export class Recorder {
   start() {
     this.chunks = [];
     this.mimeType = pickMimeType();
-    const opts = { audioBitsPerSecond: 32000 };
+    const opts = { audioBitsPerSecond: this.settings.bitrate || 48000 };
     if (this.mimeType) opts.mimeType = this.mimeType;
     this.mediaRecorder = new MediaRecorder(this.destNode.stream, opts);
     // NIET this._ondata resetten: de app zet de chunk-callback via onChunk() vóór start().

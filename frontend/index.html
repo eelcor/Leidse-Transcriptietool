@@ -25,7 +25,8 @@
         <p>Upload een opname of neem direct op. Geen account, geen login. Je krijgt een geheime
            code en een transcript, met optioneel een uitgewerkt verslag.</p>
         <span class="pill"><span class="dot"></span>
-          Automatisch verwijderd na <strong>&nbsp;<span id="retention">2</span> werkdagen</strong>&nbsp;· max <span id="max-size">200</span> MB
+          Automatisch verwijderd na <strong>&nbsp;<span id="retention">2</span> werkdagen</strong>&nbsp;·
+          max <span id="max-size">200</span> MB <span class="muted" id="max-dur"></span>
         </span>
       </div>
 
@@ -80,6 +81,15 @@
               <input type="checkbox" id="opt-record" checked />
               <span class="track"></span>
               <span class="txt"><b>Audio optimaliseren voor transcriptie</b><small>Server-side niveau-normalisatie + hoogdoorlaat</small></span>
+            </label>
+
+            <label class="field">
+              <span>Opnamekwaliteit</span>
+              <select id="rec-quality">
+                <option value="32000">Spraak — 32 kbps (kleinste bestand)</option>
+                <option value="48000" selected>Vergadering — 48 kbps (aanbevolen)</option>
+                <option value="64000">Hoog — 64 kbps</option>
+              </select>
             </label>
 
             <details class="opts">

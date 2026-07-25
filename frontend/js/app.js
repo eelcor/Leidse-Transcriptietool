@@ -47,6 +47,10 @@ async function init() {
   const optDefault = CONFIG.audio_optimize_default !== false;
   $('#opt-upload').checked = optDefault;
   $('#opt-record').checked = optDefault;
+  // Indicatie hoe lang je bij de max-grootte kunt opnemen (op basis van 48 kbps opname).
+  const recBitrate = (loadSettings().bitrate || 48000);
+  const hours = (CONFIG.max_upload_mb * 1024 * 1024 * 8) / recBitrate / 3600;
+  $('#max-dur').textContent = `(± ${Math.round(hours)} uur opname)`;
 
   // Navigatie
   $('#nav-new').addEventListener('click', () => show('home'));
@@ -129,6 +133,15 @@ function setupRecorder() {
   };
   gain.addEventListener('input', () => { if (recorder) recorder.setGain(parseFloat(gain.value)); });
   updateGainHint();
+
+  // Opnamekwaliteit (bitrate)
+  const quality = $('#rec-quality');
+  if (s.bitrate) quality.value = String(s.bitrate);
+  quality.addEventListener('change', () => {
+    const v = parseInt(quality.value, 10);
+    if (recorder) recorder.setBitrate(v);
+    else { const st = loadSettings(); st.bitrate = v; localStorage.setItem('transcribe.recorder.settings.v1', JSON.stringify(st)); }
+  });
 
   let startTs = 0, timer = null, uploadChain = Promise.resolve(), sessionId = null, chunkErr = false;
 

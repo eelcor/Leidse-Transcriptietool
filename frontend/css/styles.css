@@ -210,7 +210,7 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .vu[data-zone="low"] .vu-fill { background: linear-gradient(90deg, #94a3b8, #64748b); }
 .vu[data-zone="ok"] .vu-fill { background: linear-gradient(90deg, #34d399, #22c55e); }
 .vu[data-zone="clip"] .vu-fill { background: linear-gradient(90deg, #fb923c, #ef4444); }
-.vu-legend { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-top: 5px; }
+.vu-legend { display: flex; justify-content: space-between; width: 100%; font-size: 11px; color: var(--muted); margin-top: 5px; }
 
 details.opts { border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 4px 14px; background: var(--surface-2); }
 details.opts summary { cursor: pointer; font-weight: 600; font-size: 14px; padding: 10px 0; color: var(--text-soft); list-style: none; display: flex; align-items: center; gap: 8px; }
