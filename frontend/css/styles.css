@@ -240,7 +240,24 @@ details.opts[open] summary::before { transform: rotate(90deg); }
 @keyframes spin { to { transform: rotate(360deg); } }
 .statebar .txt { font-size: 18px; font-weight: 650; letter-spacing: -.01em; }
 
-.expiry { display: flex; align-items: center; gap: 10px; background: var(--warn-soft); border: 1px solid color-mix(in srgb, var(--warn) 40%, transparent); color: var(--text); border-radius: var(--radius-sm); padding: 11px 14px; font-size: 13.5px; margin-bottom: 18px; }
+.expiry-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 18px; }
+.expiry { display: flex; align-items: center; gap: 10px; background: var(--warn-soft); border: 1px solid color-mix(in srgb, var(--warn) 40%, transparent); color: var(--text); border-radius: var(--radius-sm); padding: 11px 14px; font-size: 13.5px; flex: 1 1 auto; }
+.danger-text { color: var(--danger) !important; }
+.danger-text:hover { background: var(--danger-soft) !important; }
+
+/* Gerenderde markdown in het verslag */
+.report-body.md { white-space: normal; }
+.report-body.md h1 { font-size: 20px; margin: .2em 0 .5em; letter-spacing: -.01em; }
+.report-body.md h2 { font-size: 16.5px; margin: 1.1em 0 .4em; padding-bottom: 4px; border-bottom: 1px solid var(--line); }
+.report-body.md h3 { font-size: 14.5px; margin: .9em 0 .25em; color: var(--text-soft); }
+.report-body.md p { margin: .5em 0; }
+.report-body.md ul, .report-body.md ol { margin: .4em 0; padding-left: 22px; }
+.report-body.md li { margin: 3px 0; }
+.report-body.md code { background: var(--surface-3); padding: 1px 5px; border-radius: 5px; font-size: .9em; font-family: var(--mono); }
+.report-body.md table { border-collapse: collapse; width: 100%; margin: .7em 0; font-size: 13px; }
+.report-body.md th, .report-body.md td { border: 1px solid var(--line); padding: 6px 9px; text-align: left; vertical-align: top; }
+.report-body.md th { background: var(--surface-3); font-weight: 600; }
+.report-body.md hr { border: none; border-top: 1px solid var(--line); margin: 1em 0; }
 
 .columns { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
 @media (max-width: 860px) { .columns { grid-template-columns: 1fr; } }

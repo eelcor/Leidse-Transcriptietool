@@ -1,5 +1,6 @@
 import { API } from './api.js';
 import { Recorder, listMics, loadSettings } from './recorder.js';
+import { renderMarkdown } from './md.js';
 
 let CONFIG = { max_upload_mb: 200, retention_workdays: 2, default_language: 'nl', word_timestamps: true };
 let SECTIONS = [];
@@ -176,6 +177,14 @@ function setupRecorder() {
     else { const st = loadSettings(); st.bitrate = v; localStorage.setItem('transcribe.recorder.settings.v1', JSON.stringify(st)); }
   });
 
+  // Audio lokaal opslaan (standaard uit)
+  const saveLocal = $('#opt-savelocal');
+  saveLocal.checked = !!s.saveLocal;
+  saveLocal.addEventListener('change', () => {
+    const st = loadSettings(); st.saveLocal = saveLocal.checked;
+    localStorage.setItem('transcribe.recorder.settings.v1', JSON.stringify(st));
+  });
+
   let startTs = 0, timer = null, uploadChain = Promise.resolve(), sessionId = null, chunkErr = false;
 
   async function refreshMics() {
@@ -272,9 +281,13 @@ function setupRecorder() {
       const blob = await recorder.stop();
       await uploadChain; // wacht tot alle gestreamde chunks binnen zijn
       if (chunkErr) throw new Error('upload van een deel van de opname is mislukt');
-      // Lokale download aanbieden.
-      const url = URL.createObjectURL(blob);
-      dl.href = url; dl.download = 'opname.webm'; dl.hidden = false;
+      // Optioneel: opname ook lokaal opslaan (download automatisch starten).
+      if ($('#opt-savelocal').checked) {
+        const url = URL.createObjectURL(blob);
+        const a = el('a', { href: url, download: `opname-${Date.now()}.webm` });
+        document.body.append(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 10000);
+      }
       await API.complete(sessionId);
       openSession(sessionId);
     } catch (e) {
@@ -306,8 +319,8 @@ async function openSession(sessionId) {
     el('div', { class: 'sesh' },
       el('span', { class: 'lbl' }, '🔑 Sessie-code (bewaar als geheim): '),
       el('code', { id: 'sid-code' }, sessionId),
-      el('button', { class: 'btn ghost sm', onclick: (e) => { navigator.clipboard.writeText(sessionId); e.target.textContent = '✓ Gekopieerd'; } }, 'Kopieer'),
-      el('a', { class: 'btn ghost sm', href: `/api/sessions/${sessionId}/audio`, download: '' }, '⬇ Audio'),
+      el('button', { class: 'btn ghost sm', onclick: (e) => { navigator.clipboard.writeText(sessionId); e.target.textContent = '✓ Gekopieerd'; } }, 'Kopieer code'),
+      el('a', { class: 'btn outline sm', href: `/api/sessions/${sessionId}/audio`, download: '' }, '⬇ Download opname'),
     ),
     el('div', { class: 'statebar' },
       el('div', { class: 'spinner', id: 'status-spinner' }),
@@ -360,8 +373,18 @@ async function loadResult(sessionId) {
     return;
   }
 
-  area.append(el('div', { class: 'expiry' },
-    `⏳ Deze gegevens (audio + transcript + verslag) worden automatisch verwijderd op ${fmtDate(res.expires_at)}.`));
+  area.append(el('div', { class: 'expiry-row' },
+    el('div', { class: 'expiry' },
+      `⏳ Automatisch verwijderd op ${fmtDate(res.expires_at)}.`),
+    el('button', { class: 'btn ghost sm danger-text', onclick: async (e) => {
+      if (!confirm('Audio, transcript én verslag nu direct verwijderen? Dit kan niet ongedaan worden gemaakt.')) return;
+      e.target.disabled = true;
+      await API.deleteSession(sessionId);
+      location.hash = '';
+      show('home');
+      alert('Verwijderd. De sessie en alle gegevens zijn gewist.');
+    } }, '🗑 Nu verwijderen'),
+  ));
 
   // Twee kolommen: transcript | verslag
   const cols = el('div', { class: 'columns' });
@@ -398,12 +421,19 @@ async function loadResult(sessionId) {
     left.append(tgl);
   }
 
-  // Verslag-generator
-  right.append(el('div', { class: 'panel-head' }, el('h3', {}, '📋 Verslag maken')));
-  right.append(buildReportControls(sessionId));
+  // Verslag: klaargezette verslagen staan centraal; de opnieuw-maken-opties zijn ingeklapt.
+  const hasReports = res.reports.length > 0;
+  right.append(el('div', { class: 'panel-head' }, el('h3', {}, '📋 Verslag')));
   const reportsWrap = el('div', { id: 'reports-wrap' });
   right.append(reportsWrap);
   res.reports.forEach((r) => renderReport(sessionId, r, reportsWrap));
+
+  const controls = el('details', { class: 'opts', id: 'report-controls-box', style: 'margin-top:14px' },
+    el('summary', {}, hasReports ? 'Verslag opnieuw maken' : 'Verslag maken'),
+    buildReportControls(sessionId),
+  );
+  if (!hasReports) controls.open = true;  // niets klaar -> meteen open
+  right.append(controls);
 }
 
 function fmtTime(sec) {
@@ -476,8 +506,8 @@ function renderReport(sessionId, report, wrap, poll = false) {
       el('a', { class: 'btn ghost sm', href: `/api/sessions/${sessionId}/reports/${report.id}/download.docx` }, '⬇ Word'),
       el('a', { class: 'btn ghost sm', href: `/api/sessions/${sessionId}/reports/${report.id}/download.md` }, '.md'),
     ));
-    const body = el('div', { class: 'report-body' });
-    body.textContent = report.content || '';
+    const body = el('div', { class: 'report-body md' });
+    body.innerHTML = renderMarkdown(report.content || '');
     card.append(body);
   } else if (report.status === 'failed') {
     card.append(el('div', { class: 'error' }, report.error || 'Verslag mislukt.'));

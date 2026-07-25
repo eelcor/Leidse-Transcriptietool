@@ -18,6 +18,7 @@ export const defaultSettings = {
   gain: 1.0,        // handmatige gevoeligheid (fijnafstemming)
   vadTrim: false,   // optioneel; client-side stilte trimmen (stub-hint)
   bitrate: 48000,   // Opus-bitrate; 48 kbps = goede balans voor vergaderingen
+  saveLocal: false, // opname ook lokaal downloaden (standaard uit)
 };
 
 export function loadSettings() {
