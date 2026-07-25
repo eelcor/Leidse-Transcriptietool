@@ -106,6 +106,23 @@
           </div>
         </div>
       </div>
+
+      <!-- Verslag-opties vooraf: transcriptie -> LLM in één keer inplannen -->
+      <div class="card report-config">
+        <h2><span class="ico">📋</span> Verslag <span class="muted" style="font-weight:500;font-size:15px">— automatisch na de transcriptie</span></h2>
+        <p class="sub">Kies wat er meteen na de transcriptie wordt uitgewerkt, zodat je niet twee keer
+          hoeft te wachten. Op het resultaatscherm kun je het later opnieuw draaien met andere opties.</p>
+        <div class="seg" role="radiogroup">
+          <label class="seg-opt"><input type="radio" name="rep-mode" value="none" /><span>Geen verslag</span></label>
+          <label class="seg-opt"><input type="radio" name="rep-mode" value="full" checked /><span>Volledig verslag</span></label>
+          <label class="seg-opt"><input type="radio" name="rep-mode" value="custom" /><span>Zelf kiezen…</span></label>
+        </div>
+        <div id="rep-custom" hidden style="margin-top:14px">
+          <div class="chips" id="rep-chips"></div>
+          <textarea id="rep-prompt" rows="2" placeholder="Eigen prompt (optioneel) — bijv. 'Vat samen in 5 bullets voor het MT.'" style="margin-top:10px"></textarea>
+          <textarea id="rep-context" rows="2" placeholder="Context (optioneel) — onderwerp, datum, deelnemers" style="margin-top:8px"></textarea>
+        </div>
+      </div>
     </section>
 
     <!-- STATUS / RESULTAAT -->

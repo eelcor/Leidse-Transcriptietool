@@ -20,6 +20,7 @@ from app.config import get_settings
 from app.db import get_sessionmaker
 from app.models import Report, ReportStatus, Session, SessionStatus
 from app.prompts import build_messages
+from app.tokens import new_token
 from app.workdays import compute_expires_at
 from app import storage
 
@@ -93,7 +94,30 @@ async def transcribe_session(ctx: dict, session_id: str) -> str:
         # Bewaartermijn pas NU vastzetten (2 werkdagen ná verwerking).
         obj.expires_at = expires
         obj.updated_at = finished
+
+        # Vooraf gevraagd verslag? Maak de report-rij en zet 'm meteen op de queue,
+        # zodat transcriptie -> LLM in één keer wordt ingepland (geen handmatige trigger).
+        auto = obj.auto_report
+        auto_report_id = None
+        if auto:
+            auto_report_id = new_token()
+            db.add(Report(
+                id=auto_report_id,
+                session_id=session_id,
+                kinds=auto.get("kinds"),
+                custom_prompt=auto.get("custom_prompt"),
+                context=auto.get("context"),
+                status=ReportStatus.QUEUED,
+                created_at=finished,
+                updated_at=finished,
+            ))
         await db.commit()
+
+    if auto_report_id is not None:
+        redis = ctx.get("redis")
+        if redis is not None:
+            await redis.enqueue_job("generate_report", auto_report_id, _job_id=f"report:{auto_report_id}")
+        log.info("Auto-verslag ingepland voor sessie %s.", session_id[:8])
     log.info("Sessie %s getranscribeerd (verloopt %s).", session_id[:8], expires.isoformat())
     return "ok"
 

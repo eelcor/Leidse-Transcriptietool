@@ -6,11 +6,11 @@ export const API = {
   async prompts() {
     return (await fetch('/api/prompts')).json();
   },
-  async createSession(language, optimize) {
+  async createSession(language, optimize, report) {
     const r = await fetch('/api/sessions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ language, optimize }),
+      body: JSON.stringify({ language, optimize, report }),
     });
     if (!r.ok) throw new Error('Kon sessie niet aanmaken');
     return r.json();
@@ -34,7 +34,7 @@ export const API = {
   async deleteSession(sessionId) {
     try { await fetch(`/api/sessions/${sessionId}`, { method: 'DELETE' }); } catch {}
   },
-  async uploadFile(file, language, optimize, onProgress) {
+  async uploadFile(file, language, optimize, report, onProgress) {
     // XHR voor uploadvoortgang.
     return new Promise((resolve, reject) => {
       const form = new FormData();
@@ -42,6 +42,7 @@ export const API = {
       const q = new URLSearchParams();
       if (language) q.set('language', language);
       if (optimize !== undefined) q.set('optimize', optimize ? 'true' : 'false');
+      if (report) q.set('report', JSON.stringify(report));
       const url = '/api/upload' + (q.toString() ? `?${q}` : '');
       const xhr = new XMLHttpRequest();
       xhr.open('POST', url);

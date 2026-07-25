@@ -56,6 +56,7 @@ async function init() {
   $('#nav-new').addEventListener('click', () => show('home'));
   $('#nav-retrieve').addEventListener('click', () => show('retrieve'));
 
+  setupReportConfig();
   setupUpload();
   setupRecorder();
   setupRetrieve();
@@ -63,6 +64,38 @@ async function init() {
   // Diep-link: #s=<sessionId>
   const m = location.hash.match(/s=([^&]+)/);
   if (m) { openSession(decodeURIComponent(m[1])); } else { show('home'); }
+}
+
+// -------------------------------------------------------------------------
+// Verslag-opties op het startscherm (auto-verslag na transcriptie)
+// -------------------------------------------------------------------------
+const repBoxes = {};
+function setupReportConfig() {
+  const chips = $('#rep-chips');
+  SECTIONS.filter((s) => s.key !== 'volledig').forEach((s) => {
+    const cb = el('input', { type: 'checkbox' });
+    repBoxes[s.key] = cb;
+    const chip = el('label', { class: 'chip' }, cb, s.label);
+    cb.addEventListener('change', () => chip.classList.toggle('on', cb.checked));
+    chips.append(chip);
+  });
+  document.querySelectorAll('input[name="rep-mode"]').forEach((r) => {
+    r.addEventListener('change', () => {
+      $('#rep-custom').hidden = document.querySelector('input[name="rep-mode"]:checked').value !== 'custom';
+    });
+  });
+}
+
+// Lees de gekozen verslag-config; geeft {kinds,custom_prompt,context} of null.
+function getReportConfig() {
+  const mode = (document.querySelector('input[name="rep-mode"]:checked') || {}).value || 'none';
+  if (mode === 'none') return null;
+  if (mode === 'full') return { kinds: ['volledig'] };
+  const kinds = Object.entries(repBoxes).filter(([, cb]) => cb.checked).map(([k]) => k);
+  const custom_prompt = ($('#rep-prompt').value || '').trim() || null;
+  const context = ($('#rep-context').value || '').trim() || null;
+  if (!kinds.length && !custom_prompt) return null;
+  return { kinds: kinds.length ? kinds : null, custom_prompt, context };
 }
 
 // -------------------------------------------------------------------------
@@ -81,7 +114,7 @@ function setupUpload() {
     btn.disabled = true;
     prog.hidden = false;
     try {
-      const res = await API.uploadFile(file, CONFIG.default_language, optimize, (f) => {
+      const res = await API.uploadFile(file, CONFIG.default_language, optimize, getReportConfig(), (f) => {
         prog.value = Math.round(f * 100);
       });
       openSession(res.id);
@@ -197,7 +230,7 @@ function setupRecorder() {
     startBtn.disabled = true;
     try {
       const optimize = $('#opt-record').checked;
-      const sess = await API.createSession(CONFIG.default_language, optimize);
+      const sess = await API.createSession(CONFIG.default_language, optimize, getReportConfig());
       sessionId = sess.id;
       uploadChain = Promise.resolve();
       // Chunk-callback ZETTEN vóór start(): elke chunk direct uploaden (in volgorde).

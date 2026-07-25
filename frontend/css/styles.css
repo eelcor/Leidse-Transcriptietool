@@ -142,6 +142,15 @@ nav { display: flex; gap: 6px; }
 .btn.sm { padding: 7px 12px; font-size: 13px; }
 .btn.lg { padding: 14px 22px; font-size: 15.5px; }
 
+/* ---------- Verslag-opties (startscherm) ---------- */
+.report-config { margin-top: 20px; }
+.seg { display: inline-flex; background: var(--surface-2); border: 1px solid var(--line); border-radius: 11px; padding: 4px; gap: 4px; flex-wrap: wrap; }
+.seg-opt { position: relative; }
+.seg-opt input { position: absolute; opacity: 0; inset: 0; cursor: pointer; }
+.seg-opt span { display: block; padding: 8px 16px; border-radius: 8px; font-size: 14px; font-weight: 600; color: var(--text-soft); cursor: pointer; transition: all .12s; }
+.seg-opt input:checked + span { background: var(--surface); color: var(--accent); box-shadow: var(--shadow-sm); }
+.seg-opt input:focus-visible + span { outline: 2px solid var(--accent); }
+
 /* ---------- Forms ---------- */
 input[type=file], input[type=text], select, textarea {
   width: 100%; padding: 11px 13px; border-radius: var(--radius-sm);

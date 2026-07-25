@@ -43,6 +43,24 @@ def _now() -> datetime:
     return datetime.now(timezone.utc)
 
 
+def _clean_report_config(report: dict | None) -> dict | None:
+    """Valideer/normaliseer een verslag-config voor auto-generatie na transcriptie.
+    Geeft een schone dict terug, of None als er geen (geldig) verslag gevraagd is."""
+    if not report or not isinstance(report, dict):
+        return None
+    kinds = report.get("kinds") or None
+    custom = (report.get("custom_prompt") or "").strip() or None
+    context = (report.get("context") or "").strip() or None
+    if kinds:
+        valid = set(prompts.SECTIONS.keys())
+        kinds = [k for k in kinds if k in valid]
+        if not kinds:
+            kinds = None
+    if not kinds and not custom:
+        return None
+    return {"kinds": kinds, "custom_prompt": custom, "context": context}
+
+
 async def _get_session_or_404(db: AsyncSession, session_id: str, with_reports: bool = False) -> Session:
     stmt = select(Session).where(Session.id == session_id)
     if with_reports:
@@ -90,6 +108,7 @@ async def create_session(request: Request, db: AsyncSession = Depends(get_db)) -
     optimize = (body or {}).get("optimize")
     if optimize is None:
         optimize = s.audio_optimize_default
+    auto_report = _clean_report_config((body or {}).get("report"))
 
     now = _now()
     obj = Session(
@@ -97,6 +116,7 @@ async def create_session(request: Request, db: AsyncSession = Depends(get_db)) -
         status=SessionStatus.CREATED,
         language=language,
         optimize_audio=bool(optimize),
+        auto_report=auto_report,
         created_at=now,
         updated_at=now,
     )
@@ -161,15 +181,23 @@ async def upload_file(
     file: UploadFile,
     language: str | None = None,
     optimize: bool | None = None,
+    report: str | None = None,
     db: AsyncSession = Depends(get_db),
 ) -> CreateSessionResponse:
     s = get_settings()
     now = _now()
+    auto_report = None
+    if report:
+        try:
+            auto_report = _clean_report_config(json.loads(report))
+        except (ValueError, TypeError):
+            auto_report = None
     obj = Session(
         id=new_token(),
         status=SessionStatus.CREATED,
         language=language or s.default_language,
         optimize_audio=s.audio_optimize_default if optimize is None else bool(optimize),
+        auto_report=auto_report,
         audio_filename=file.filename,
         audio_mime=file.content_type,
         created_at=now,

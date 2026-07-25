@@ -54,6 +54,9 @@ class Session(Base):
     audio_bytes: Mapped[int | None] = mapped_column(Integer, nullable=True)
     # ASR-audio-optimalisatie toepassen tijdens verwerking (default aan).
     optimize_audio: Mapped[bool] = mapped_column(Boolean, default=True)
+    # Optioneel: verslag dat automatisch ná de transcriptie moet draaien.
+    # Vorm: {"kinds": [...], "custom_prompt": str|None, "context": str|None} of NULL.
+    auto_report: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 
     # Resultaat
     transcript: Mapped[str | None] = mapped_column(Text, nullable=True)
