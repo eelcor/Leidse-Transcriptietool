@@ -35,8 +35,10 @@
 	handle /caddy-root.crt {
 		root * /data/caddy/pki/authorities/local
 		rewrite * /root.crt
+		# Inline (GEEN attachment): iOS/iPadOS toont dan de "profiel installeren"-prompt
+		# i.p.v. het cert stilletjes naar Bestanden weg te schrijven. Desktopbrowsers
+		# downloaden 'm alsnog op de .crt-extensie in de URL.
 		header Content-Type application/x-x509-ca-cert
-		header Content-Disposition "attachment; filename=leidse-transcriptietool-ca.crt"
 		file_server
 	}
 
