@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex, nofollow" />
+  <meta name="theme-color" content="#6d5efc" />
+  <title>Statistieken — Anoniem transcriberen</title>
+  <link rel="stylesheet" href="/css/styles.css" />
+  <style>
+    .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; }
+    .tile { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px; box-shadow: var(--shadow-sm); }
+    .tile .v { font-size: 26px; font-weight: 800; letter-spacing: -.02em; }
+    .tile .l { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+    .tile .s { font-size: 11.5px; color: var(--muted); margin-top: 4px; }
+    .tile.live .v { color: var(--accent); }
+    .panels { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+    @media (max-width: 760px) { .panels { grid-template-columns: 1fr; } }
+    .chart-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px 20px; box-shadow: var(--shadow-sm); }
+    .chart-card h3 { margin: 0 0 14px; font-size: 15px; }
+    .vbars { display: flex; align-items: flex-end; gap: 3px; height: 130px; }
+    .vbars .col { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 4px; height: 100%; }
+    .vbars .bar { width: 100%; min-height: 2px; background: linear-gradient(180deg, var(--accent-2), var(--accent)); border-radius: 3px 3px 0 0; transition: height .3s; }
+    .vbars .cl { font-size: 9.5px; color: var(--muted); }
+    .hbars { display: flex; flex-direction: column; gap: 9px; }
+    .hbar { display: grid; grid-template-columns: 90px 1fr 42px; align-items: center; gap: 10px; font-size: 13px; }
+    .hbar .track { background: var(--surface-3); border-radius: 999px; height: 12px; overflow: hidden; }
+    .hbar .fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); border-radius: 999px; }
+    .hbar .n { text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; }
+    .hbar .k { color: var(--text-soft); font-weight: 600; text-transform: capitalize; }
+    .muted-note { color: var(--muted); font-size: 12px; text-align: center; margin-top: 8px; }
+    .empty { color: var(--muted); font-size: 13px; }
+    .sec-title { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 700; margin: 26px 0 12px; }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="logo">🎙️</span> Anoniem transcriberen <span class="beta-badge">BÈTA</span></div>
+    <nav><a href="/" class="btn ghost">← Terug naar de app</a></nav>
+  </header>
+  <div class="beta-bar">⚠️ <b>BÈTA</b> — deze dienst is in ontwikkeling en kan tijdelijk onbereikbaar zijn.</div>
+
+  <main class="wrap">
+    <div class="hero">
+      <h1>📊 Statistieken</h1>
+      <p>Een openbaar, <strong>volledig anoniem</strong> beeld van het gebruik. Geen persoonsgegevens,
+        geen namen, geen inhoud — alleen tellingen, tijden en keuzes.</p>
+    </div>
+
+    <div class="sec-title">Nu</div>
+    <div class="tiles" id="live"></div>
+
+    <div class="sec-title">Totaal</div>
+    <div class="tiles" id="totals"></div>
+
+    <div class="sec-title">Wanneer wordt er getranscribeerd?</div>
+    <div class="panels">
+      <div class="chart-card"><h3>Per uur van de dag</h3><div id="by-hour"></div></div>
+      <div class="chart-card"><h3>Per weekdag</h3><div id="by-weekday"></div></div>
+    </div>
+    <div class="chart-card" style="margin-top:18px"><h3>Laatste 30 dagen</h3><div id="trend"></div></div>
+
+    <div class="sec-title">Hoe gebruiken mensen het?</div>
+    <div class="panels">
+      <div class="chart-card"><h3>Upload vs. opname</h3><div id="source"></div></div>
+      <div class="chart-card"><h3>Bestandsformaat</h3><div id="formats"></div></div>
+      <div class="chart-card"><h3>Verslag-keuze (vooraf)</h3><div id="report-modes"></div></div>
+      <div class="chart-card"><h3>Taal</h3><div id="languages"></div></div>
+    </div>
+
+    <div class="sec-title">Prestaties &amp; tevredenheid</div>
+    <div class="panels">
+      <div class="chart-card"><h3>Verwerkingstijd (seconden)</h3><div id="processing"></div></div>
+      <div class="chart-card"><h3>Tevredenheid (1–5 sterren)</h3><div id="satisfaction"></div></div>
+      <div class="chart-card"><h3>Downloads</h3><div id="downloads"></div></div>
+    </div>
+
+    <p class="muted-note" id="generated"></p>
+  </main>
+  <footer class="foot">Privacy by design · geen tracking · alle cijfers zijn geaggregeerd en anoniem</footer>
+
+  <script type="module" src="/js/stats.js"></script>
+</body>
+</html>

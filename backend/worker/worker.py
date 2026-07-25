@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 from datetime import datetime, timezone
 
 from sqlalchemy import select
@@ -22,7 +23,7 @@ from app.models import Report, ReportStatus, Session, SessionStatus
 from app.prompts import build_messages
 from app.tokens import new_token
 from app.workdays import compute_expires_at
-from app import storage
+from app import stats, storage
 
 from . import audio, llm
 from .stt.factory import get_backend
@@ -77,6 +78,7 @@ async def transcribe_session(ctx: dict, session_id: str) -> str:
                 obj.status = SessionStatus.FAILED
                 obj.error = f"Transcriptie mislukt: {type(exc).__name__}"
                 obj.updated_at = _now()
+                await stats.record_event(db, "failed", target="transcribe")
                 await db.commit()
         raise  # laat arq retry/backoff doen
 
@@ -97,6 +99,22 @@ async def transcribe_session(ctx: dict, session_id: str) -> str:
 
         # Vooraf gevraagd verslag? Maak de report-rij en zet 'm meteen op de queue,
         # zodat transcriptie -> LLM in één keer wordt ingepland (geen handmatige trigger).
+        # Anoniem statistiek-event.
+        started = obj.processing_started_at or finished
+        try:
+            wav_bytes = os.path.getsize(storage.wav_path(session_id))
+            audio_seconds = max(0.0, (wav_bytes - 44) / 32000.0)  # 16kHz mono 16-bit
+        except OSError:
+            audio_seconds = None
+        await stats.record_event(
+            db, "transcribed",
+            duration_seconds=(finished - started).total_seconds(),
+            audio_seconds=audio_seconds,
+            words=len((result.text or "").split()),
+            language=obj.language, source=obj.source,
+            audio_format=obj.audio_format, audio_bytes=obj.audio_bytes,
+        )
+
         auto = obj.auto_report
         auto_report_id = None
         if auto:
@@ -146,12 +164,14 @@ async def generate_report(ctx: dict, report_id: str) -> str:
         kinds, custom, context = r.kinds, r.custom_prompt, r.context
         await db.commit()
 
+    report_started = _now()
     try:
         messages = build_messages(transcript, kinds, custom, context)
         content = await llm.generate(messages)
     except Exception as exc:
         log.exception("Verslag genereren mislukt voor %s", report_id[:8])
         async with maker() as db:
+            await stats.record_event(db, "failed", target="report")
             r = (await db.execute(select(Report).where(Report.id == report_id))).scalar_one_or_none()
             if r is not None:
                 r.status = ReportStatus.FAILED
@@ -167,6 +187,11 @@ async def generate_report(ctx: dict, report_id: str) -> str:
         r.content = content
         r.status = ReportStatus.DONE
         r.updated_at = _now()
+        await stats.record_event(
+            db, "report",
+            duration_seconds=(_now() - report_started).total_seconds(),
+            report_mode=stats.report_mode_from_report(kinds, custom),
+        )
         await db.commit()
     return "ok"
 

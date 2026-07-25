@@ -33,6 +33,14 @@ transcriptie en schaalbaarheid.
   endpoint** (er wordt geen nieuwe LLM gehost).
 - **Bewaartermijn:** alles wordt automatisch verwijderd **2 werkdagen ná de
   verwerking** (weekenden tellen niet mee).
+- **Dashboard:** een openbaar, **volledig anoniem** [statistiekdashboard](docs/screenshots/dashboard.png)
+  (gebruik, drukke momenten, doorlooptijden, tevredenheid, wachttijd).
+
+## Screenshots
+
+| Startscherm | Resultaat (transcript + verslag) | Statistiek-dashboard |
+|:---:|:---:|:---:|
+| ![Startscherm](docs/screenshots/home.png) | ![Resultaat](docs/screenshots/result-report.png) | ![Dashboard](docs/screenshots/dashboard.png) |
 
 ## Documentatie
 
@@ -177,6 +185,11 @@ De tests draaien zonder Redis/GPU: SQLite + een nep-queue.
   daarna bestanden én DB-rijen hard. Weekenden tellen niet mee (klaar op vrijdag →
   verloopt dinsdag). Feestdagen zijn bewust niet meegenomen (uitbreidbaar in
   `app/workdays.py`).
+- **Anonieme statistieken:** het dashboard (`/stats.html`) toont alleen geaggregeerde,
+  niet-herleidbare cijfers uit de `stat_events`-tabel — **geen IP's, geen bestandsnamen,
+  geen transcript-inhoud, geen koppeling naar een persoon**; alleen tellingen, tijdstippen,
+  duur, formaat, taal en keuzes. Deze events blijven bewaard (los van de sessies die na de
+  bewaartermijn verdwijnen) zodat het dashboard historie toont.
 
 ## Isolatie & security
 
@@ -209,3 +222,18 @@ upload zonder de ASR-kwaliteit te schaden.
 - Meer volume: `docker compose up -d --scale worker=3`.
 - Later: worker(s) naar een aparte GPU-node; alleen `REDIS_URL`/`DATABASE_URL`
   hoeven te wijzen naar de gedeelde Redis/Postgres. De rest blijft gelijk.
+
+## Updaten naar een nieuwere versie
+
+Een beheerder update met één commando (volumes — audio, database, model-cache —
+blijven behouden):
+
+```bash
+./deploy/update.sh                 # nieuwste code via git + herbouwen + herstarten
+./deploy/update.sh nieuwe.tgz      # of update vanuit een tar-archief
+```
+
+Wat het doet: `git pull` (of archief uitpakken) → `docker compose build` →
+`docker compose up -d`. Nieuwe **tabellen** worden bij de start automatisch aangemaakt.
+Voegt een release nieuwe **kolommen** toe op bestaande tabellen, dan staat de bijbehorende
+`ALTER TABLE` in de release-notes (deze versie gebruikt nog geen automatische migraties).

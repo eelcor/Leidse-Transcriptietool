@@ -324,17 +324,36 @@ async function openSession(sessionId) {
     ),
     el('div', { class: 'statebar' },
       el('div', { class: 'spinner', id: 'status-spinner' }),
-      el('div', { class: 'txt', id: 'status-text' }, 'Laden…'),
+      el('div', {},
+        el('div', { class: 'txt', id: 'status-text' }, 'Laden…'),
+        el('div', { class: 'wait-hint', id: 'wait-hint' }),
+      ),
     ),
     el('div', { id: 'result-area' }),
   );
+
+  // Geschatte wachttijd tonen zolang de sessie in de wachtrij/verwerking zit.
+  let waitShown = false;
+  const showWait = async () => {
+    if (waitShown) return; waitShown = true;
+    const w = await API.wait();
+    const h = $('#wait-hint');
+    if (w && h && w.eta_seconds > 0) {
+      const m = Math.max(1, Math.round(w.eta_seconds / 60));
+      h.textContent = `⏳ Geschatte wachttijd: ~${m} min (${w.queued} in de wachtrij)`;
+    }
+  };
 
   // Verbind SSE voor live updates; val terug op polling.
   if (sse) { sse.close(); sse = null; }
   let done = false;
   const render = (st) => {
     $('#status-text').textContent = STATUS_LABEL[st.status] || st.status;
+    if (st.status === 'queued' || st.status === 'transcribing') {
+      showWait();
+    }
     if (st.status === 'transcribed' || st.status === 'failed') {
+      const h = $('#wait-hint'); if (h) h.textContent = '';
       // Toon het resultaat pas als een eventueel (vooraf gevraagd) verslag óók klaar is,
       // zodat de gebruiker niet een 'klaar'-scherm ziet terwijl het verslag nog draait.
       if (!done) { done = true; finishWhenReady(sessionId); }
@@ -444,6 +463,7 @@ async function loadResult(sessionId) {
     });
     left.append(tgl);
   }
+  left.append(starWidget(sessionId, 'transcript', 'Hoe bruikbaar is dit transcript?'));
 
   // Verslag: klaargezette verslagen staan centraal; de opnieuw-maken-opties zijn ingeklapt.
   const hasReports = res.reports.length > 0;
@@ -458,6 +478,7 @@ async function loadResult(sessionId) {
   );
   if (!hasReports) controls.open = true;  // niets klaar -> meteen open
   right.append(controls);
+  if (hasReports) right.append(starWidget(sessionId, 'verslag', 'Hoe bruikbaar is dit verslag?'));
 }
 
 function fmtTime(sec) {
@@ -565,5 +586,26 @@ function setupRetrieve() {
 
 // -------------------------------------------------------------------------
 function copy(text) { navigator.clipboard.writeText(text || ''); }
+
+// 1–5 sterren feedback-widget (anoniem; stuurt alleen de score).
+function starWidget(sessionId, target, label) {
+  const wrap = el('div', { class: 'rating' }, el('span', { class: 'rating-label' }, label));
+  const stars = el('div', { class: 'stars' });
+  let done = false;
+  const paint = (n) => [...stars.children].forEach((s, i) => s.classList.toggle('on', i < n));
+  for (let i = 1; i <= 5; i++) {
+    const st = el('button', { class: 'star', title: i + ' sterren' }, '★');
+    st.addEventListener('mouseenter', () => { if (!done) paint(i); });
+    st.addEventListener('click', async () => {
+      if (done) return; done = true; paint(i); stars.classList.add('locked');
+      await API.feedback(sessionId, i, target);
+      wrap.append(el('span', { class: 'rating-thanks' }, 'Bedankt voor je feedback!'));
+    });
+    stars.append(st);
+  }
+  stars.addEventListener('mouseleave', () => { if (!done) paint(0); });
+  wrap.append(stars);
+  return wrap;
+}
 
 init();

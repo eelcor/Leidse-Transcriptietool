@@ -57,6 +57,17 @@ export const API = {
       xhr.send(form);
     });
   },
+  async feedback(sessionId, stars, target) {
+    try {
+      await fetch(`/api/sessions/${sessionId}/feedback`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stars, target }),
+      });
+    } catch {}
+  },
+  async wait() {
+    try { return await (await fetch('/api/wait')).json(); } catch { return null; }
+  },
   async status(sessionId) {
     const r = await fetch(`/api/sessions/${sessionId}/status`);
     if (!r.ok) throw new Error('not-found');

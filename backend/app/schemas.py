@@ -54,3 +54,8 @@ class CreateReportRequest(BaseModel):
     kinds: list[str] | None = None
     custom_prompt: str | None = None
     context: str | None = None
+
+
+class FeedbackRequest(BaseModel):
+    stars: int
+    target: str | None = None   # "transcript" | "verslag"

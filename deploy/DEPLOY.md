@@ -177,10 +177,22 @@ STT-concurrency per worker staat op 1 (`STT_CONCURRENCY`) om piek-VRAM te beperk
 
 ## Updaten
 
+Gebruik het update-script (volumes blijven behouden):
+
 ```bash
-git pull   # of pak een nieuw tar-archief uit
-docker compose build
-docker compose up -d
+./deploy/update.sh                 # git pull + herbouwen + herstarten
+./deploy/update.sh nieuwe.tgz      # of update vanuit een tar-archief
+```
+
+Nieuwe **tabellen** worden bij de start automatisch aangemaakt (via `create_all`).
+Voegt een release **kolommen** toe op bestaande tabellen, voer dan de `ALTER TABLE`
+uit de release-notes uit — deze versie gebruikt nog geen automatische migraties
+(Alembic staat op de roadmap). Voorbeeld voor deze release:
+
+```sql
+ALTER TABLE sessions ADD COLUMN IF NOT EXISTS source varchar(12);
+ALTER TABLE sessions ADD COLUMN IF NOT EXISTS audio_format varchar(16);
+-- de tabel stat_events wordt automatisch aangemaakt
 ```
 
 ## Data & privacy

@@ -22,13 +22,14 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from .. import prompts, queue, storage
+from .. import prompts, queue, stats, storage
 from ..config import get_settings
 from ..db import get_db
 from ..models import Report, ReportStatus, Session, SessionStatus
 from ..schemas import (
     CreateReportRequest,
     CreateSessionResponse,
+    FeedbackRequest,
     ReportOut,
     SegmentOut,
     SessionResultOut,
@@ -41,6 +42,17 @@ router = APIRouter(prefix="/api")
 
 def _now() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def _audio_format(filename: str | None, mime: str | None) -> str | None:
+    """Korte, niet-herleidbare formaat-aanduiding (extensie of mime-subtype)."""
+    if filename and "." in filename:
+        ext = filename.rsplit(".", 1)[-1].lower()
+        if 1 <= len(ext) <= 8 and ext.isalnum():
+            return ext
+    if mime and "/" in mime:
+        return mime.split("/")[-1].split(";")[0][:8]
+    return None
 
 
 def _clean_report_config(report: dict | None) -> dict | None:
@@ -93,6 +105,18 @@ async def get_prompts() -> dict:
     return {"sections": prompts.available_sections()}
 
 
+@router.get("/stats")
+async def get_stats(db: AsyncSession = Depends(get_db)) -> dict:
+    """Publieke, volledig anonieme statistieken voor het dashboard."""
+    return await stats.compute_stats(db)
+
+
+@router.get("/wait")
+async def get_wait(db: AsyncSession = Depends(get_db)) -> dict:
+    """Actuele geschatte wachttijd (voor de statuspagina)."""
+    return await stats.estimate_wait(db)
+
+
 # --------------------------------------------------------------------------
 # Sessie aanmaken + chunked upload
 # --------------------------------------------------------------------------
@@ -117,6 +141,7 @@ async def create_session(request: Request, db: AsyncSession = Depends(get_db)) -
         language=language,
         optimize_audio=bool(optimize),
         auto_report=auto_report,
+        source="record",
         created_at=now,
         updated_at=now,
     )
@@ -165,8 +190,14 @@ async def complete_upload(session_id: str, db: AsyncSession = Depends(get_db)) -
 
     obj.audio_path = str(raw)
     obj.audio_bytes = raw.stat().st_size
+    obj.audio_format = _audio_format(obj.audio_filename, obj.audio_mime)
     obj.status = SessionStatus.QUEUED
     obj.updated_at = _now()
+    await stats.record_event(
+        db, "created", source="record", audio_format=obj.audio_format,
+        audio_bytes=obj.audio_bytes, language=obj.language,
+        report_mode=stats.report_mode(obj.auto_report),
+    )
     await db.commit()
 
     await queue.enqueue_transcription(session_id)
@@ -198,6 +229,8 @@ async def upload_file(
         language=language or s.default_language,
         optimize_audio=s.audio_optimize_default if optimize is None else bool(optimize),
         auto_report=auto_report,
+        source="upload",
+        audio_format=_audio_format(file.filename, file.content_type),
         audio_filename=file.filename,
         audio_mime=file.content_type,
         created_at=now,
@@ -228,6 +261,11 @@ async def upload_file(
     obj.audio_bytes = written
     obj.status = SessionStatus.QUEUED
     obj.updated_at = _now()
+    await stats.record_event(
+        db, "created", source="upload", audio_format=obj.audio_format,
+        audio_bytes=written, language=obj.language,
+        report_mode=stats.report_mode(obj.auto_report),
+    )
     await db.commit()
 
     await queue.enqueue_transcription(obj.id)
@@ -328,6 +366,8 @@ async def download_audio(session_id: str, db: AsyncSession = Depends(get_db)):
     if not raw.exists():
         raise HTTPException(status_code=404, detail="Audio niet (meer) beschikbaar.")
     filename = obj.audio_filename or f"audio-{session_id[:8]}"
+    await stats.record_event(db, "download", download_kind="audio")
+    await db.commit()
     return FileResponse(
         str(raw),
         media_type=obj.audio_mime or "application/octet-stream",
@@ -340,6 +380,8 @@ async def download_transcript(session_id: str, db: AsyncSession = Depends(get_db
     obj = await _get_session_or_404(db, session_id)
     if not obj.transcript:
         raise HTTPException(status_code=404, detail="Nog geen transcript.")
+    await stats.record_event(db, "download", download_kind="transcript")
+    await db.commit()
     return PlainTextResponse(
         obj.transcript,
         headers={"Content-Disposition": f'attachment; filename="transcript-{session_id[:8]}.txt"'},
@@ -395,6 +437,20 @@ async def create_report(
     return _report_out(report)
 
 
+@router.post("/sessions/{session_id}/feedback")
+async def submit_feedback(
+    session_id: str, req: FeedbackRequest, db: AsyncSession = Depends(get_db)
+) -> dict:
+    """Anonieme tevredenheidsscore (1–5 sterren). Slaat alleen de score op, geen inhoud."""
+    await _get_session_or_404(db, session_id)  # sessie moet bestaan
+    if not (1 <= req.stars <= 5):
+        raise HTTPException(status_code=422, detail="stars moet 1..5 zijn.")
+    target = req.target if req.target in ("transcript", "verslag") else "resultaat"
+    await stats.record_event(db, "feedback", stars=req.stars, target=target)
+    await db.commit()
+    return {"ok": True}
+
+
 @router.get("/sessions/{session_id}/reports/{report_id}", response_model=ReportOut)
 async def get_report(session_id: str, report_id: str, db: AsyncSession = Depends(get_db)) -> ReportOut:
     res = await db.execute(
@@ -421,6 +477,8 @@ async def _get_report_content_or_404(db: AsyncSession, session_id: str, report_i
 @router.get("/sessions/{session_id}/reports/{report_id}/download.md", response_class=PlainTextResponse)
 async def download_report_md(session_id: str, report_id: str, db: AsyncSession = Depends(get_db)) -> Response:
     r = await _get_report_content_or_404(db, session_id, report_id)
+    await stats.record_event(db, "download", download_kind="report_md")
+    await db.commit()
     return PlainTextResponse(
         r.content,
         media_type="text/markdown",
@@ -445,6 +503,8 @@ async def download_report_docx(session_id: str, report_id: str, db: AsyncSession
     if proc.returncode != 0:
         os.remove(out_path)
         raise HTTPException(status_code=500, detail="Word-conversie mislukt (pandoc).")
+    await stats.record_event(db, "download", download_kind="report_docx")
+    await db.commit()
     return FileResponse(
         out_path,
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
