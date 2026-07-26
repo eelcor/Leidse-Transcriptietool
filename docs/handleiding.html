@@ -34,6 +34,12 @@
     color:var(--text);background:var(--surface);border:1px solid var(--line-strong);padding:5px 11px}
   .toc a:hover{background:var(--text);color:var(--bg)}
   section{background:var(--surface);border:1px solid var(--line-strong);padding:24px 28px;margin:18px 0}
+  /* Nette pagina-afbrekingen in de PDF: secties heel houden, koppen bij hun tekst,
+     afbeeldingen/notities niet over een paginagrens splitsen. */
+  section{break-inside:avoid}
+  h1,h2,h3{break-after:avoid}
+  figure,img,.note,li{break-inside:avoid}
+  header.hero{break-inside:avoid}
   h2{font-family:var(--display);font-weight:800;font-stretch:112%;font-size:22px;letter-spacing:-.01em;margin:0 0 8px;display:flex;align-items:center;gap:12px}
   h2 .n{width:30px;height:30px;background:var(--accent);color:#fff;display:grid;place-items:center;font-family:var(--mono);font-size:14px;font-weight:500;flex:0 0 auto}
   h3{font-family:var(--display);font-weight:800;font-size:15px;margin:20px 0 6px}
@@ -115,7 +121,6 @@
     <h2><span class="n">3</span> Direct opnemen</h2>
     <p>Neem rechtstreeks in de browser op. Klik eerst op <b>Microfoon inschakelen</b> en geef
       toestemming voor de microfoon.</p>
-    <img class="crop" src="screenshots/recorder-idle.png" alt="Recorder klaar" />
     <h3>De niveaumeter</h3>
     <p>Boven de knoppen zie je een <b>niveaumeter</b> met een dB-schaal, een gemarkeerde <b>goede zone</b>
       en een <b>piek-indicator</b>. Praat even en zet de <b>gevoeligheid</b> zo dat de balk in de goede
