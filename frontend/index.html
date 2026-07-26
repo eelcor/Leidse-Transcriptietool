@@ -4,21 +4,31 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="robots" content="noindex, nofollow" />
-  <meta name="theme-color" content="#6d5efc" />
+  <meta name="theme-color" content="#e10600" />
   <title>Anoniem transcriberen</title>
   <link rel="stylesheet" href="/css/styles.css" />
 </head>
 <body>
   <header class="topbar">
-    <div class="brand"><span class="logo">🎙️</span> Anoniem transcriberen <span class="beta-badge">BÈTA</span></div>
+    <a class="brand" href="/" aria-label="Naar de hoofdpagina"><span class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 12h1M8 8v8M12 5v14M16 9v6M20 11v2"/></svg></span> Anoniem transcriberen <span class="beta-badge">BÈTA</span></a>
     <nav>
       <button id="nav-new" class="btn ghost">Nieuw</button>
       <button id="nav-retrieve" class="btn ghost">Ophalen via code</button>
-      <a href="/stats.html" class="btn ghost">📊 Statistieken</a>
+      <a href="/stats.html" class="btn ghost"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20V10M12 20V4M19 20v-7"/></svg> Statistieken</a>
     </nav>
   </header>
   <div class="beta-bar">⚠️ <b>BÈTA</b> — deze dienst is in ontwikkeling en kan tijdelijk onbereikbaar zijn.
-    Bewaar zelf je audio en maak aantekeningen. Gebruik binnen je interne netwerk.</div>
+    Bewaar zelf je audio en maak aantekeningen.</div>
+
+  <nav class="stepper" id="stepper" aria-label="Voortgang">
+    <ol>
+      <li data-step="1"><span class="idx">1</span> Kiezen</li>
+      <li class="sep" aria-hidden="true">→</li>
+      <li data-step="2"><span class="idx">2</span> Verwerken</li>
+      <li class="sep" aria-hidden="true">→</li>
+      <li data-step="3"><span class="idx">3</span> Transcript &amp; verslag</li>
+    </ol>
+  </nav>
 
   <main class="wrap">
     <!-- HOME -->
@@ -35,10 +45,11 @@
 
       <div class="cards">
         <!-- Uploaden -->
-        <div class="card">
-          <h2><span class="ico">📁</span> Bestand uploaden</h2>
-          <p class="sub">wav, mp3, m4a, ogg, webm of flac.</p>
+        <div class="card dropzone" id="upload-card">
+          <h2><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4M8 8l4-4 4 4"/><path d="M4 15v3a2 2 0 002 2h12a2 2 0 002-2v-3"/></svg></span> Bestand uploaden</h2>
+          <p class="sub">Sleep hierheen of kies een bestand — wav, mp3, m4a, ogg, webm of flac.</p>
           <label class="field"><input type="file" id="file-input" accept="audio/*,.wav,.mp3,.m4a,.ogg,.webm,.flac" /></label>
+          <p class="dz-hint muted small" id="dz-hint" hidden>Laat het bestand hier los</p>
 
           <label class="switch">
             <input type="checkbox" id="opt-upload" checked />
@@ -52,7 +63,7 @@
 
         <!-- Opnemen -->
         <div class="card">
-          <h2><span class="ico">🔴</span> Nu opnemen</h2>
+          <h2><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M6 11a6 6 0 0012 0M12 17v4M8 21h8"/></svg></span> Nu opnemen</h2>
           <p class="sub">Neem direct in de browser op.</p>
 
           <button id="rec-enable" class="btn primary block lg">Microfoon inschakelen</button>
@@ -63,8 +74,13 @@
             <div class="rec-stage">
               <div class="rec-timer" id="rec-time">00:00</div>
               <div class="rec-state" id="rec-state"><span class="live"></span><span id="rec-state-txt">Klaar om op te nemen</span></div>
-              <div class="vu" id="vu" data-zone="low"><div class="vu-fill" id="vu-fill"></div></div>
-              <div class="vu-legend"><span>te zacht</span><span>goed</span><span>te hard</span></div>
+              <div class="vu-scale"><span>−60</span><span>−30</span><span>−12</span><span>0 dB</span></div>
+              <div class="vu" id="vu" data-zone="low">
+                <div class="vu-zone-good" aria-hidden="true"></div>
+                <div class="vu-fill" id="vu-fill"></div>
+                <div class="vu-peak" id="vu-peak"></div>
+              </div>
+              <div class="vu-legend"><span>Zone: <b id="vu-zone">—</b></span><span>Piek: <b class="mono" id="vu-peak-db">−∞</b></span></div>
             </div>
 
             <div class="rec-controls">
@@ -118,7 +134,7 @@
 
       <!-- Verslag-opties vooraf: transcriptie -> LLM in één keer inplannen -->
       <div class="card report-config">
-        <h2><span class="ico">📋</span> Verslag <span class="muted" style="font-weight:500;font-size:15px">— automatisch na de transcriptie</span></h2>
+        <h2><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h8l5 5v12a1 1 0 01-1 1H6a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg></span> Verslag <span class="muted" style="font-weight:500;font-size:15px">— automatisch na de transcriptie</span></h2>
         <p class="sub">Kies wat er meteen na de transcriptie wordt uitgewerkt, zodat je niet twee keer
           hoeft te wachten. Op het resultaatscherm kun je het later opnieuw draaien met andere opties.</p>
         <div class="seg" role="radiogroup">
@@ -129,9 +145,29 @@
         <div id="rep-custom" hidden style="margin-top:14px">
           <div class="chips" id="rep-chips"></div>
           <textarea id="rep-prompt" rows="2" placeholder="Eigen prompt (optioneel) — bijv. 'Vat samen in 5 bullets voor het MT.'" style="margin-top:10px"></textarea>
-          <textarea id="rep-context" rows="2" placeholder="Context (optioneel) — onderwerp, datum, deelnemers" style="margin-top:8px"></textarea>
+          <textarea id="rep-context" rows="2" placeholder="Context (optioneel) — onderwerp, datum, deelnemers, of plak hier de agenda (dan matchen we de onderwerpen daarop)" style="margin-top:8px"></textarea>
         </div>
       </div>
+
+      <!-- Al een sessiecode? Prominent resultaat ophalen -->
+      <div class="card retrieve-card">
+        <h2><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="16" r="4"/><path d="M11 13l8-8M17 5l2 2M15 7l2 2"/></svg></span> Al een sessiecode? Haal je resultaat op</h2>
+        <p class="sub">Plak de code die je eerder kreeg om je transcript en verslag terug te zien.</p>
+        <div class="retrieve-row">
+          <input type="text" id="home-retrieve-input" class="mono" placeholder="plak hier je sessiecode" autocomplete="off" spellcheck="false" />
+          <button id="home-retrieve-btn" class="btn primary">Ophalen</button>
+        </div>
+      </div>
+
+      <!-- Statistieken-CTA onderaan de hoofdinterface -->
+      <a href="/stats.html" class="card stats-cta">
+        <span class="stats-cta-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20V10M12 20V4M19 20v-7"/></svg></span>
+        <span class="stats-cta-body">
+          <strong>Ben je benieuwd hoe we het doen?</strong>
+          <span class="sub">En hoe lang je moet wachten op je transcript en verslag? Kijk dan naar onze statistieken — openbaar en volledig anoniem.</span>
+        </span>
+        <span class="stats-cta-go">Bekijk statistieken <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+      </a>
     </section>
 
     <!-- STATUS / RESULTAAT -->
@@ -142,7 +178,7 @@
     <!-- OPHALEN -->
     <section id="view-retrieve" class="view" hidden>
       <div class="card" style="max-width:520px;margin:0 auto">
-        <h2><span class="ico">🔑</span> Resultaat ophalen</h2>
+        <h2><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="16" r="4"/><path d="M11 13l8-8M17 5l2 2M15 7l2 2"/></svg></span> Resultaat ophalen</h2>
         <p class="sub">Plak je sessie-code om transcript en verslag te bekijken.</p>
         <label class="field"><input type="text" id="retrieve-input" placeholder="sessie-code" /></label>
         <button id="retrieve-btn" class="btn primary block">Ophalen</button>
@@ -151,10 +187,12 @@
   </main>
 
   <footer class="foot">
-    Privacy by design · geen tracking · minimale logging · audio en tekst worden automatisch verwijderd
-    <span id="cert-note" hidden> ·
-      <a href="/caddy-root.crt" title="Installeer dit certificaat in je browser/OS om de beveiligingswaarschuwing weg te nemen">🔒 Certificaatwaarschuwing? Installeer ons certificaat</a>
-    </span>
+    <div>Privacy by design · geen tracking · minimale logging · audio en tekst worden automatisch verwijderd
+      <span id="cert-note" hidden> ·
+        <a href="/caddy-root.crt" title="Installeer dit certificaat in je browser/OS om de beveiligingswaarschuwing weg te nemen">🔒 Certificaatwaarschuwing? Installeer ons certificaat</a>
+      </span>
+    </div>
+    <div class="foot-models" id="foot-models" hidden></div>
   </footer>
 
   <script type="module" src="/js/app.js"></script>

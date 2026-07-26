@@ -88,15 +88,30 @@ async def _get_session_or_404(db: AsyncSession, session_id: str, with_reports: b
 # --------------------------------------------------------------------------
 # Config & prompts (voor de frontend)
 # --------------------------------------------------------------------------
+_STT_BACKEND_LABEL = {
+    "faster_whisper": "faster-whisper",
+    "canary": "NVIDIA Canary",
+    "openai": "extern (OpenAI-compatibel)",
+}
+
+
 @router.get("/config")
 async def get_config() -> dict:
     s = get_settings()
+    backend_label = _STT_BACKEND_LABEL.get(s.stt_backend, s.stt_backend)
+    stt_label = f"{backend_label} {s.stt_model}".strip() if s.stt_model else backend_label
     return {
         "max_upload_mb": s.max_upload_mb,
         "retention_workdays": s.retention_workdays,
         "default_language": s.default_language,
         "word_timestamps": s.stt_word_timestamps,
         "audio_optimize_default": s.audio_optimize_default,
+        # Model-namen komen uit de env (STT_BACKEND/STT_MODEL/LLM_MODEL) zodat de
+        # frontend de werkelijke modellen toont i.p.v. hardcoded teksten.
+        "stt_backend": s.stt_backend,
+        "stt_model": s.stt_model,
+        "stt_label": stt_label,
+        "llm_model": s.llm_model,
     }
 
 

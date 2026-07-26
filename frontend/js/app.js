@@ -23,6 +23,19 @@ const el = (tag, attrs = {}, ...kids) => {
 function show(view) {
   document.querySelectorAll('.view').forEach((v) => (v.hidden = true));
   $('#view-' + view).hidden = false;
+  const stepFor = { home: 1, status: 2, retrieve: 0 };
+  if (view in stepFor) setStep(stepFor[view]);
+}
+
+// Voortgangs-stepper: 1 Kiezen · 2 Verwerken · 3 Transcript & verslag.
+function setStep(n) {
+  const st = document.getElementById('stepper');
+  if (!st) return;
+  st.hidden = !n;
+  st.querySelectorAll('li[data-step]').forEach((li) => {
+    const i = +li.getAttribute('data-step');
+    li.dataset.state = n && i < n ? 'done' : (i === n ? 'active' : '');
+  });
 }
 
 function fmtDate(iso) {
@@ -52,6 +65,17 @@ async function init() {
   const recBitrate = (loadSettings().bitrate || 48000);
   const hours = (CONFIG.max_upload_mb * 1024 * 1024 * 8) / recBitrate / 3600;
   $('#max-dur').textContent = `(± ${Math.round(hours)} uur opname)`;
+
+  // Werkelijke modelnamen uit de env (via /api/config) in de voettekst.
+  const fm = $('#foot-models');
+  if (fm && (CONFIG.stt_label || CONFIG.llm_model)) {
+    const parts = [];
+    if (CONFIG.stt_label) parts.push(`STT: ${CONFIG.stt_label}`);
+    if (CONFIG.llm_model) parts.push(`Verslag: ${CONFIG.llm_model}`);
+    parts.push(`auto-verwijderen na ${CONFIG.retention_workdays} werkdagen`);
+    fm.textContent = parts.join(' · ');
+    fm.hidden = false;
+  }
 
   // Toon het "certificaat installeren"-linkje alleen als er een interne CA beschikbaar is
   // (dus bij een self-signed opzet; op prod met een echt certificaat blijft het verborgen).
@@ -112,6 +136,23 @@ function setupUpload() {
   const input = $('#file-input');
   const btn = $('#upload-btn');
   const prog = $('#upload-progress');
+
+  // Sleep-en-neerzet op de upload-kaart: gedropte audio in de file-input zetten.
+  const card = $('#upload-card');
+  const hint = $('#dz-hint');
+  if (card) {
+    const over = (on) => { card.classList.toggle('drag', on); if (hint) hint.hidden = !on; };
+    ['dragenter', 'dragover'].forEach((ev) => card.addEventListener(ev, (e) => { e.preventDefault(); over(true); }));
+    ['dragleave', 'dragend'].forEach((ev) => card.addEventListener(ev, (e) => { e.preventDefault(); over(false); }));
+    card.addEventListener('drop', (e) => {
+      e.preventDefault(); over(false);
+      const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+      if (!f) return;
+      try { const dt = new DataTransfer(); dt.items.add(f); input.files = dt.files; }
+      catch { /* oudere browser: file-input laat 'm dan zelf niet zetten */ }
+    });
+  }
+
   btn.addEventListener('click', async () => {
     const file = input.files[0];
     if (!file) { alert('Kies eerst een bestand.'); return; }
@@ -207,13 +248,19 @@ function setupRecorder() {
   $('#rec-enable').addEventListener('click', async () => {
     try {
       recorder = new Recorder();
+      const vuPeak = $('#vu-peak'), vuZone = $('#vu-zone'), vuPeakDb = $('#vu-peak-db');
+      const dbToPct = (db) => Math.max(0, Math.min(1, (db + 60) / 60)) * 100;
+      let peakHold = -99;
       recorder.onLevel(({ rms, peak }) => {
-        const pct = Math.min(100, Math.round(rms * 300));
-        meter.style.width = pct + '%';
-        let zone = 'ok';
-        if (peak > 0.97) zone = 'clip';
-        else if (rms < 0.03) zone = 'low';
-        meterWrap.dataset.zone = zone;
+        const db = rms > 0 ? 20 * Math.log10(rms) : -99;
+        const pdb = peak > 0 ? 20 * Math.log10(peak) : -99;
+        if (pdb > peakHold) peakHold = pdb; else peakHold -= 0.6;
+        meter.style.width = dbToPct(db) + '%';
+        const clip = pdb > -3;
+        meterWrap.dataset.zone = clip ? 'clip' : (db < -30 ? 'low' : 'ok');
+        if (vuPeak) vuPeak.style.left = dbToPct(peakHold) + '%';
+        if (vuPeakDb) vuPeakDb.textContent = pdb <= -99 ? '−∞' : `${Math.round(pdb)} dB`;
+        if (vuZone) vuZone.textContent = clip ? 'te hard' : (db < -30 ? 'te zacht' : 'goed');
       });
       await recorder.openStream();
       await refreshMics();
@@ -412,6 +459,7 @@ async function pollStatus(sessionId, render) {
 async function loadResult(sessionId) {
   let res;
   try { res = await API.result(sessionId); } catch { return; }
+  setStep(3);
   const sb = document.querySelector('.statebar');
   if (sb) sb.hidden = true;   // statusbalk weg; het resultaat spreekt voor zich
   const area = $('#result-area');
@@ -523,7 +571,7 @@ function buildReportControls(sessionId) {
     ),
     el('details', { class: 'opts' },
       el('summary', {}, 'Context meegeven (optioneel)'),
-      el('textarea', { id: 'ctx', rows: '2', placeholder: 'Onderwerp, datum, deelnemers…', style: 'margin:8px 0' }),
+      el('textarea', { id: 'ctx', rows: '2', placeholder: 'Onderwerp, datum, deelnemers, of plak hier de agenda (dan matchen we de onderwerpen daarop)…', style: 'margin:8px 0' }),
     ),
   );
 
@@ -583,11 +631,18 @@ async function pollReport(sessionId, reportId, wrap) {
 // Ophalen via sessie-ID
 // -------------------------------------------------------------------------
 function setupRetrieve() {
-  $('#retrieve-btn').addEventListener('click', () => {
+  const doRetrieve = () => {
     const id = $('#retrieve-input').value.trim();
     if (!id) return;
     openSession(id);
-  });
+  };
+  $('#retrieve-btn').addEventListener('click', doRetrieve);
+  $('#retrieve-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') doRetrieve(); });
+  // Prominente ophaalkaart op het startscherm.
+  const hb = $('#home-retrieve-btn'), hi = $('#home-retrieve-input');
+  const go = () => { const id = (hi.value || '').trim(); if (id) openSession(id); };
+  if (hb) hb.addEventListener('click', go);
+  if (hi) hi.addEventListener('keydown', (e) => { if (e.key === 'Enter') go(); });
 }
 
 // -------------------------------------------------------------------------

@@ -42,10 +42,13 @@
 		file_server
 	}
 
-	# Statische frontend.
+	# Statische frontend. Cache-Control: no-cache => de browser mag cachen maar moet
+	# eerst revalideren (via ETag); ongewijzigd levert een goedkope 304. Voorkomt dat
+	# gebruikers na een update op een oude index.html/app.js blijven hangen.
 	handle {
 		root * /srv
 		try_files {path} /index.html
+		header Cache-Control "no-cache"
 		file_server
 	}
 
