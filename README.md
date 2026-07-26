@@ -40,6 +40,11 @@ net zo laagdrempelig is. En heb je geen dictafoon of memorecorder? Dan doe je he
   STT net als de LLM kunt offloaden. Schakelbaar via `STT_BACKEND`, achter één interface.
 - **Verslag-LLM:** hergebruikt het **bestaande, OpenAI-compatibele Qwen3.6-27b
   endpoint** (er wordt geen nieuwe LLM gehost).
+- **Verslag-opties:** een **Volledig verslag** (samenvatting, thematische onderwerpen,
+  een **chronologisch gespreksverslag**, besluiten, afspraken, actiepunten, aandachtspunten),
+  losse secties, of een eigen prompt — met **Word (.docx)/Markdown**-export. Geef een
+  **agenda** mee bij de context en de onderwerpen worden daarop gematcht. De modelnamen komen
+  uit de env en worden in de app getoond (`/api/config`).
 - **Bewaartermijn:** alles wordt automatisch verwijderd **2 werkdagen ná de
   verwerking** (weekenden tellen niet mee).
 - **Dashboard:** een openbaar, **volledig anoniem** [statistiekdashboard](docs/screenshots/dashboard.png)
