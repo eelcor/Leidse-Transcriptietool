@@ -28,6 +28,11 @@ c "==> Images herbouwen"
 docker compose build
 c "==> Stack opnieuw starten (volumes blijven behouden)"
 docker compose up -d
+# Bind-mounted config (PROMPTS.md, Caddyfile, frontend/) wijzigt zonder image-rebuild,
+# dus 'up -d' maakt die containers niet opnieuw aan. Expliciet herstarten zodat o.a. de
+# nieuwe prompt (worker leest 'm via lru_cache) en Caddy-config zeker geladen worden.
+c "==> Config-services herstarten (prompt/Caddy/frontend zeker actueel)"
+docker compose restart web api worker cleanup
 docker compose ps
 
 cat <<'NOTE'
