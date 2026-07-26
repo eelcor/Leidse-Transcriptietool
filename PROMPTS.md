@@ -44,6 +44,12 @@ Harde regels:
   erin hoort: neem het op.
 - Als het transcript sprekers onderscheidt, respecteer die toewijzing; zo niet, schrijf
   dan neutraal ("een deelnemer", "de voorzitter") zonder namen te verzinnen.
+- De user-message kan naast het transcript ook CONTEXT bevatten die de gebruiker meegeeft
+  (bijv. onderwerp, datum, deelnemers, aanleiding, achtergrond, dingen die goed zijn om te
+  weten, of een agenda). Gebruik die om het gesprek te duiden, het verslag te kaderen (kop
+  of een korte inleiding) en namen en termen juist te schrijven. Het blijft achtergrond:
+  leid besluiten, afspraken en actiepunten uitsluitend af uit het transcript, niet uit de
+  context, en neem context niet klakkeloos als feit over als het transcript iets anders zegt.
 - Antwoord in het Nederlands en uitsluitend in Markdown, zonder inleidende of afsluitende
   meta-opmerkingen over jezelf of de taak.
 ```

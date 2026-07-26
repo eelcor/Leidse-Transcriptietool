@@ -571,7 +571,7 @@ function buildReportControls(sessionId) {
     ),
     el('details', { class: 'opts' },
       el('summary', {}, 'Context meegeven (optioneel)'),
-      el('textarea', { id: 'ctx', rows: '2', placeholder: 'Onderwerp, datum, deelnemers, of plak hier de agenda (dan matchen we de onderwerpen daarop)…', style: 'margin:8px 0' }),
+      el('textarea', { id: 'ctx', rows: '3', placeholder: 'Onderwerp, datum, deelnemers, aanleiding, achtergrond, of dingen die goed zijn om te weten. Plak hier ook gerust de agenda (dan matchen we de onderwerpen daarop)…', style: 'margin:8px 0' }),
     ),
   );
 
