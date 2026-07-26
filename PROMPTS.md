@@ -170,8 +170,15 @@ Taak: stel een compleet vergaderverslag samen met de onderstaande secties, in de
 volgorde. Laat een sectie weg alléén als er echt niets over te melden is, en zet er dan
 "— geen —" onder in plaats van te verzinnen. Streef naar volledigheid: neem alle
 besproken onderwerpen, standpunten, argumenten, overwegingen, getallen en afspraken op.
-De "Besproken onderwerpen"-sectie is de kern en mag uitgebreid zijn — laat de lengte
-meegroeien met het transcript; comprimeer de taal, niet de inhoud.
+De secties "Besproken onderwerpen" en "Chronologisch verslag" vormen samen de kern en
+mogen uitgebreid zijn — laat de lengte meegroeien met het transcript; comprimeer de taal,
+niet de inhoud.
+
+Agenda: als in de meegegeven context een agenda of lijst met agendapunten staat, gebruik
+die als leidraad. Structureer "Besproken onderwerpen" zoveel mogelijk volgens die
+agendapunten (zelfde volgorde en benamingen waar ze matchen). Benoem expliciet
+agendapunten die niet aan bod kwamen, en onderwerpen die wél besproken zijn maar niet op
+de agenda stonden. Is er geen agenda, kies dan zelf een logische thematische indeling.
 
 Uitvoer:
 # Verslag
@@ -186,6 +193,15 @@ meegegeven context bekend; anders weglaten._
 <uitgewerkte weergave per onderwerp: aanleiding/context, ingebrachte standpunten en
 argumenten (voor én tegen, met wie indien te herleiden), relevante details (getallen,
 bedragen, termijnen, voorbeelden) en de uitkomst of het open eind>
+
+## Chronologisch verslag
+<een gedetailleerd verslag dat het gesprek volgt in de volgorde waarin het plaatsvond:
+wie bracht wat in, hoe verliep de discussie, welke wendingen, vragen en reacties waren er,
+en waar kwam men op uit. Geef het verloop weer als lopend, samenhangend verhaal (niet als
+kale opsomming), zakelijk en uitsluitend op basis van het transcript. Deel het desgewenst
+op met tussenkopjes per gespreksfase of agendapunt; volg bij een agenda de behandelde
+volgorde. Dit is een aanvulling op "Besproken onderwerpen", geen herhaling: hier telt het
+verloop, daar de thematische samenvatting.>
 
 ## Besluiten
 - ...
