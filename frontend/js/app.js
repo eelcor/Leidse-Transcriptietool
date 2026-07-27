@@ -630,26 +630,21 @@ function buildReportControls(sessionId) {
   });
   wrap.append(
     el('button', { class: 'btn primary block', onclick: () => start(['volledig']) }, ic('sparkle'), ' Volledig verslag (aanbevolen)'),
-    el('p', { class: 'muted small', style: 'margin:2px 0' }, 'of kies losse secties:'),
+    el('p', { class: 'muted small', style: 'margin:12px 0 6px' }, 'of stel zelf samen — kies de onderdelen:'),
     chips,
-    el('button', { class: 'btn outline block', onclick: () => {
+    el('textarea', { id: 'ctx', rows: '3', placeholder: 'Context (optioneel) — onderwerp, datum, deelnemers, aanleiding, achtergrond, of de agenda (dan matchen we de onderwerpen daarop)…', style: 'margin-top:10px' }),
+    el('button', { class: 'btn outline block', style: 'margin-top:10px', onclick: () => {
       const kinds = Object.entries(boxes).filter(([, cb]) => cb.checked).map(([k]) => k);
-      if (!kinds.length) { alert('Kies minstens één sectie.'); return; }
+      if (!kinds.length) { alert('Kies minstens één onderdeel.'); return; }
       start(kinds);
-    } }, 'Genereer gekozen secties'),
-    el('details', { class: 'opts' },
-      el('summary', {}, 'Eigen prompt'),
-      el('textarea', { id: 'custom-prompt', rows: '3', placeholder: 'Bijv. "Vat samen in 5 bullets voor het MT."', style: 'margin:8px 0' }),
-      el('button', { class: 'btn outline sm', onclick: () => {
-        const t = $('#custom-prompt').value.trim();
-        if (!t) { alert('Typ een prompt.'); return; }
-        start(null, t);
-      } }, 'Toepassen'),
-    ),
-    el('details', { class: 'opts' },
-      el('summary', {}, 'Context meegeven (optioneel)'),
-      el('textarea', { id: 'ctx', rows: '3', placeholder: 'Onderwerp, datum, deelnemers, aanleiding, achtergrond, of dingen die goed zijn om te weten. Plak hier ook gerust de agenda (dan matchen we de onderwerpen daarop)…', style: 'margin:8px 0' }),
-    ),
+    } }, 'Genereer verslag'),
+    el('div', { class: 'or-sep' }, 'of'),
+    el('textarea', { id: 'custom-prompt', rows: '3', placeholder: 'Eigen prompt — bijv. "Vat samen in 5 bullets voor het MT." (de context hierboven wordt meegenomen)' }),
+    el('button', { class: 'btn outline block', style: 'margin-top:10px', onclick: () => {
+      const t = $('#custom-prompt').value.trim();
+      if (!t) { alert('Typ een prompt.'); return; }
+      start(null, t);
+    } }, 'Voer prompt uit'),
   );
 
   async function start(kinds, custom) {

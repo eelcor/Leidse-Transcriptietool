@@ -297,6 +297,8 @@ details.opts[open] summary::before { transform: rotate(90deg); }
 .seg { padding: 2px 0; } .seg .ts { color: var(--accent); font-family: var(--mono); font-size: 12px; }
 
 .report-controls { display: flex; flex-direction: column; gap: 12px; }
+.or-sep { display: flex; align-items: center; gap: 12px; margin: 6px 0; font-family: var(--mono); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+.or-sep::before, .or-sep::after { content: ""; flex: 1; height: 1px; background: var(--line-strong); }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .chip { display: inline-flex; align-items: center; gap: 7px; padding: 8px 12px; border: 1px solid var(--line-strong); border-radius: var(--radius-pill); background: var(--surface-2); font-size: 13.5px; cursor: pointer; user-select: none; transition: all .12s; }
 .chip:hover { border-color: var(--accent); }
