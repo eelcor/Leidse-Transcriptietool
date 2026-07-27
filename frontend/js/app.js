@@ -22,7 +22,7 @@ const el = (tag, attrs = {}, ...kids) => {
 
 // Gestylde line-SVG-iconen (currentColor) i.p.v. emoji.
 const ICONS = {
-  key: '<circle cx="8" cy="16" r="4"/><path d="M11 13l8-8M17 5l2 2M15 7l2 2"/>',
+  key: '<circle cx="6" cy="12" r="4"/><path d="M10 12h11"/><path d="M16 12v3.5M19 12v3.5"/>',
   download: '<path d="M12 3v12M8 11l4 4 4-4"/><path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/>',
   trash: '<path d="M4 7h16M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2M6 7l1 13a1 1 0 001 1h8a1 1 0 001-1l1-13"/>',
   transcript: '<path d="M4 6h16M4 12h16M4 18h10"/>',
