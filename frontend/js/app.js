@@ -117,6 +117,7 @@ async function init() {
   setupUpload();
   setupRecorder();
   setupRetrieve();
+  setupAutohideTopbar();
 
   // Diep-link: #s=<sessionId>
   const m = location.hash.match(/s=([^&]+)/);
@@ -779,6 +780,22 @@ function setupRetrieve() {
   const go = () => { const id = (hi.value || '').trim(); if (id) openSession(id); };
   if (hb) hb.addEventListener('click', go);
   if (hi) hi.addEventListener('keydown', (e) => { if (e.key === 'Enter') go(); });
+}
+
+// Topbar verbergen bij omlaag scrollen, tonen bij omhoog (autohide).
+function setupAutohideTopbar() {
+  const bar = document.querySelector('.topbar');
+  if (!bar) return;
+  let lastY = window.scrollY || 0, ticking = false;
+  const update = () => {
+    const y = window.scrollY || 0;
+    if (y > lastY && y > bar.offsetHeight + 8) bar.classList.add('hide');
+    else if (y < lastY) bar.classList.remove('hide');
+    lastY = y; ticking = false;
+  };
+  window.addEventListener('scroll', () => {
+    if (!ticking) { requestAnimationFrame(update); ticking = true; }
+  }, { passive: true });
 }
 
 // -------------------------------------------------------------------------

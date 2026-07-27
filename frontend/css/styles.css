@@ -341,7 +341,12 @@ h1, h2, .hero h1, .card h2, .panel-head h3, .statebar .txt {
 }
 
 /* Topbar + merk */
-.topbar { background: color-mix(in srgb, var(--surface) 90%, transparent); border-bottom: 2px solid var(--line-strong); backdrop-filter: blur(10px); }
+.topbar { background: color-mix(in srgb, var(--surface) 90%, transparent); border-bottom: 2px solid var(--line-strong); backdrop-filter: blur(10px); transition: transform .25s ease; }
+/* Autohide: verberg bij omlaag scrollen, toon bij omhoog. */
+.topbar.hide { transform: translateY(-100%); }
+/* BÈTA-balk scrolt mee (geen sticky-overlap met de topbar). */
+.beta-bar { position: static; }
+@media (prefers-reduced-motion: reduce) { .topbar { transition: none; } }
 .brand { font-family: var(--font-display); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; text-decoration: none; color: inherit; cursor: pointer; }
 .brand:hover { color: inherit; }
 .brand .logo { border-radius: 0; background: var(--text); color: var(--accent-ink); box-shadow: none; }

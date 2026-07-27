@@ -127,3 +127,17 @@ function modeLabel(k) { return { volledig: 'Volledig verslag', secties: 'Losse s
 function dlLabel(k) { return { audio: 'Audio', transcript: 'Transcript', report_docx: 'Word', report_md: 'Markdown' }[k] || k; }
 
 main();
+
+// Topbar verbergen bij omlaag scrollen, tonen bij omhoog (autohide).
+(function () {
+  const bar = document.querySelector('.topbar');
+  if (!bar) return;
+  let lastY = window.scrollY || 0, ticking = false;
+  const update = () => {
+    const y = window.scrollY || 0;
+    if (y > lastY && y > bar.offsetHeight + 8) bar.classList.add('hide');
+    else if (y < lastY) bar.classList.remove('hide');
+    lastY = y; ticking = false;
+  };
+  window.addEventListener('scroll', () => { if (!ticking) { requestAnimationFrame(update); ticking = true; } }, { passive: true });
+})();
