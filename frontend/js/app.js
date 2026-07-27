@@ -162,7 +162,7 @@ function setupUpload() {
     btn.disabled = true;
     prog.hidden = false;
     try {
-      const res = await API.uploadFile(file, CONFIG.default_language, optimize, getReportConfig(), (f) => {
+      const res = await API.uploadFileChunked(file, CONFIG.default_language, optimize, getReportConfig(), (f) => {
         prog.value = Math.round(f * 100);
       });
       openSession(res.id);

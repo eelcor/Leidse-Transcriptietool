@@ -186,6 +186,13 @@ Draait er al iets op poort 80/443? Twee opties:
      }
      ```
 
+> **Uploads achter een front-proxy.** Bestanden én opnames worden in **chunks van 4 MB**
+> geüpload (met automatische retry), dus je hoeft géén 200 MB-bodylimiet in te stellen —
+> maar zorg dat de front-proxy per request minstens ~4 MB toestaat en niet te snel
+> time-out. Let vooral op **nginx** (`client_max_body_size` staat standaard op **1 MB** →
+> zet 'm op bv. `10m`) en op tunnels/CDN's met een strakke bodylimiet. `/api/*` moet met
+> ruime read-timeouts worden doorgezet (bij een lange opname zijn er veel chunk-PUTs).
+
 ## LLM-endpoint bereikbaar maken vanuit de container
 
 - LLM op een **andere host**: gebruik dat adres direct in `LLM_BASE_URL`.
