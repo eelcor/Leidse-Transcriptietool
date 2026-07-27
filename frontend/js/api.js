@@ -92,4 +92,13 @@ export const API = {
     if (!r.ok) throw new Error('not-found');
     return r.json();
   },
+  async updateReport(sessionId, reportId, content) {
+    const r = await fetch(`/api/sessions/${sessionId}/reports/${reportId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content }),
+    });
+    if (!r.ok) throw new Error('Opslaan mislukt (' + r.status + ')');
+    return r.json();
+  },
 };

@@ -56,6 +56,11 @@ class CreateReportRequest(BaseModel):
     context: str | None = None
 
 
+class UpdateReportRequest(BaseModel):
+    # Handmatig bewerkte verslagtekst (Markdown).
+    content: str
+
+
 class FeedbackRequest(BaseModel):
     stars: int
     target: str | None = None   # "transcript" | "verslag"

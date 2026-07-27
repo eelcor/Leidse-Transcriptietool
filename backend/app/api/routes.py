@@ -34,6 +34,7 @@ from ..schemas import (
     SegmentOut,
     SessionResultOut,
     SessionStatusOut,
+    UpdateReportRequest,
 )
 from ..tokens import new_token
 
@@ -474,6 +475,29 @@ async def get_report(session_id: str, report_id: str, db: AsyncSession = Depends
     r = res.scalar_one_or_none()
     if r is None:
         raise HTTPException(status_code=404, detail="Verslag niet gevonden.")
+    return _report_out(r)
+
+
+@router.patch("/sessions/{session_id}/reports/{report_id}", response_model=ReportOut)
+async def update_report(
+    session_id: str, report_id: str, req: UpdateReportRequest, db: AsyncSession = Depends(get_db)
+) -> ReportOut:
+    """Bewerk de tekst van een afgerond verslag (handmatige correctie in de app)."""
+    res = await db.execute(
+        select(Report).where(Report.id == report_id, Report.session_id == session_id)
+    )
+    r = res.scalar_one_or_none()
+    if r is None:
+        raise HTTPException(status_code=404, detail="Verslag niet gevonden.")
+    if r.status != ReportStatus.DONE:
+        raise HTTPException(status_code=409, detail="Alleen een afgerond verslag kan bewerkt worden.")
+    content = (req.content or "").strip()
+    if not content:
+        raise HTTPException(status_code=422, detail="Lege inhoud.")
+    r.content = content
+    r.updated_at = _now()
+    await db.commit()
+    await db.refresh(r)
     return _report_out(r)
 
 

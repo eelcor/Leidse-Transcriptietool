@@ -633,6 +633,7 @@ function renderReport(sessionId, report, wrap, poll = false) {
 
   if (report.status === 'done') {
     head.append(el('div', { class: 'panel-actions' },
+      el('button', { class: 'btn ghost sm', onclick: () => openEditor(sessionId, report) }, '✏️ Bewerken'),
       el('button', { class: 'btn ghost sm', onclick: () => copy(report.content) }, 'Kopieer'),
       el('a', { class: 'btn ghost sm', href: `/api/sessions/${sessionId}/reports/${report.id}/download.docx` }, '⬇ Word'),
       el('a', { class: 'btn ghost sm', href: `/api/sessions/${sessionId}/reports/${report.id}/download.md` }, '.md'),
@@ -657,6 +658,68 @@ async function pollReport(sessionId, reportId, wrap) {
     setTimeout(tick, 2000);
   };
   setTimeout(tick, 2000);
+}
+
+// -------------------------------------------------------------------------
+// Verslag bewerken — TipTap WYSIWYG, zelf-gehost en lazy-loaded (461 KB pas
+// bij openen). Opslaan gaat via PATCH; downloads/kopie weerspiegelen de tekst.
+// -------------------------------------------------------------------------
+let _tt = null;
+async function loadTiptap() {
+  if (!_tt) _tt = await import('/js/vendor/tiptap.bundle.js');
+  return _tt;
+}
+
+async function openEditor(sessionId, report) {
+  const modal = $('#editor-modal'), area = $('#editor-area'), tb = $('#editor-toolbar');
+  const statusEl = $('#editor-status');
+  area.innerHTML = ''; tb.innerHTML = ''; statusEl.textContent = 'Editor laden…';
+  modal.hidden = false;
+
+  let TT;
+  try { TT = await loadTiptap(); } catch { statusEl.textContent = 'Kon de editor niet laden.'; return; }
+  const { Editor, StarterKit, Markdown, Table, TableRow, TableHeader, TableCell } = TT;
+  statusEl.textContent = '';
+
+  const editor = new Editor({
+    element: area,
+    extensions: [StarterKit, Table.configure({ resizable: false }), TableRow, TableHeader, TableCell, Markdown],
+    content: report.content || '',
+  });
+
+  const tbtns = [];
+  const mk = (label, title, run, active) => {
+    const b = el('button', { class: 'tb-btn', type: 'button', title,
+      onclick: () => { run(editor.chain().focus()).run(); sync(); } }, label);
+    b._active = active; tbtns.push(b); tb.append(b);
+  };
+  mk('B', 'Vet', (c) => c.toggleBold(), () => editor.isActive('bold'));
+  mk('I', 'Cursief', (c) => c.toggleItalic(), () => editor.isActive('italic'));
+  mk('H2', 'Kop', (c) => c.toggleHeading({ level: 2 }), () => editor.isActive('heading', { level: 2 }));
+  mk('H3', 'Subkop', (c) => c.toggleHeading({ level: 3 }), () => editor.isActive('heading', { level: 3 }));
+  mk('•', 'Opsomming', (c) => c.toggleBulletList(), () => editor.isActive('bulletList'));
+  mk('1.', 'Genummerd', (c) => c.toggleOrderedList(), () => editor.isActive('orderedList'));
+  mk('❝', 'Citaat', (c) => c.toggleBlockquote(), () => editor.isActive('blockquote'));
+  mk('↶', 'Ongedaan', (c) => c.undo(), () => false);
+  mk('↷', 'Opnieuw', (c) => c.redo(), () => false);
+  const sync = () => tbtns.forEach((b) => b.classList.toggle('on', !!(b._active && b._active())));
+  editor.on('selectionUpdate', sync); editor.on('transaction', sync); sync();
+
+  const cleanup = () => { try { editor.destroy(); } catch {} modal.hidden = true; modal.onclick = null; };
+  $('#editor-cancel').onclick = cleanup;
+  $('#editor-close').onclick = cleanup;
+  modal.onclick = (e) => { if (e.target === modal) cleanup(); };  // klik op de achtergrond sluit
+  $('#editor-save').onclick = async () => {
+    const md = editor.storage.markdown.getMarkdown();
+    statusEl.textContent = 'Opslaan…';
+    try {
+      await API.updateReport(sessionId, report.id, md);
+      report.content = md;
+      const card = document.getElementById('rep-' + report.id);
+      renderReport(sessionId, report, (card && card.parentNode) || $('#reports-wrap'));
+      cleanup();
+    } catch (e) { statusEl.textContent = e.message; }
+  };
 }
 
 // -------------------------------------------------------------------------

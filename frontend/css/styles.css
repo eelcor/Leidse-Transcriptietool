@@ -453,6 +453,33 @@ progress::-webkit-progress-value { background: var(--accent); }
 .foot { display: flex; flex-direction: column; align-items: center; gap: 6px; }
 .foot-models { font-size: 11px; opacity: .8; }
 
+/* Verslag-editor (modal + TipTap) */
+.modal { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 20px; background: rgba(0,0,0,.5); }
+.modal[hidden] { display: none; }
+.modal-box { background: var(--surface); border: 2px solid var(--line-strong); width: min(920px, 100%); max-height: 90vh; display: flex; flex-direction: column; }
+.modal-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 13px 18px; border-bottom: 1px solid var(--line-strong); }
+.modal-head strong { font-family: var(--font-display); font-weight: 800; font-stretch: 110%; font-size: 18px; }
+.modal-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 13px 18px; border-top: 1px solid var(--line-strong); }
+.editor-toolbar { display: flex; flex-wrap: wrap; gap: 4px; padding: 8px 14px; border-bottom: 1px solid var(--line); }
+.tb-btn { font-family: var(--mono); font-size: 12px; font-weight: 500; min-width: 32px; padding: 5px 9px; border: 1px solid var(--line-strong); background: var(--surface); color: var(--text); cursor: pointer; }
+.tb-btn:hover { background: var(--surface-2); }
+.tb-btn.on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.editor-area { flex: 1; overflow: auto; padding: 18px 22px; background: var(--surface); }
+.editor-area .ProseMirror { outline: none; min-height: 320px; font-size: 14px; line-height: 1.6; color: var(--text); }
+.editor-area .ProseMirror:focus { outline: none; }
+.editor-area .ProseMirror > :first-child { margin-top: 0; }
+.editor-area .ProseMirror h1 { font-family: var(--font-display); font-size: 20px; margin: .3em 0 .5em; }
+.editor-area .ProseMirror h2 { font-family: var(--font-display); font-size: 16.5px; margin: 1em 0 .4em; padding-bottom: 4px; border-bottom: 1px solid var(--line); }
+.editor-area .ProseMirror h3 { font-family: var(--font-display); font-size: 14.5px; margin: .8em 0 .25em; }
+.editor-area .ProseMirror p { margin: .5em 0; }
+.editor-area .ProseMirror ul, .editor-area .ProseMirror ol { margin: .4em 0; padding-left: 22px; }
+.editor-area .ProseMirror li { margin: 3px 0; }
+.editor-area .ProseMirror blockquote { border-left: 3px solid var(--accent); margin: .6em 0; padding-left: 12px; color: var(--muted); }
+.editor-area .ProseMirror table { border-collapse: collapse; width: 100%; margin: .7em 0; font-size: 13px; }
+.editor-area .ProseMirror th, .editor-area .ProseMirror td { border: 1px solid var(--line-strong); padding: 6px 9px; text-align: left; vertical-align: top; }
+.editor-area .ProseMirror th { background: var(--surface-2); font-weight: 600; }
+.editor-area .ProseMirror .selectedCell { background: var(--accent-soft); }
+
 /* Statistieken-CTA onderaan de home */
 .stats-cta { display: flex; align-items: center; gap: 18px; margin-top: 20px; text-decoration: none; color: inherit; transition: background .12s, border-color .12s; }
 .stats-cta:hover { background: var(--surface-2); }
