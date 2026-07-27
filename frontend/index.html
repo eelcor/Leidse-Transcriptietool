@@ -66,6 +66,15 @@
           <h2><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M6 11a6 6 0 0012 0M12 17v4M8 21h8"/></svg></span> Nu opnemen</h2>
           <p class="sub">Neem direct in de browser op.</p>
 
+          <label class="field"><span>Opnamebron</span>
+            <select id="rec-source">
+              <option value="mic">Microfoon (jouw stem)</option>
+              <option value="system">Vergaderingsgeluid — deel een tab/venster (bijv. Teams)</option>
+              <option value="both">Microfoon + vergaderingsgeluid</option>
+            </select>
+          </label>
+          <p class="sub" id="rec-source-hint" style="margin-top:-6px"></p>
+
           <button id="rec-enable" class="btn primary block lg">Microfoon inschakelen</button>
 
           <div id="rec-controls" class="recorder" hidden>

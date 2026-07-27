@@ -232,6 +232,35 @@ function setupRecorder() {
     localStorage.setItem('transcribe.recorder.settings.v1', JSON.stringify(st));
   });
 
+  // Opnamebron: microfoon / vergaderingsgeluid (tab of scherm, bijv. Teams) / beide.
+  const sourceSel = $('#rec-source');
+  const sourceHint = $('#rec-source-hint');
+  const enableBtn = $('#rec-enable');
+  const SRC_HINT = {
+    mic: 'Neemt je microfoon op (je eigen stem).',
+    system: 'Kies straks het Teams-venster of -tabblad en deel het mét geluid. Systeemgeluid delen werkt het best in Chrome/Edge op Windows; op macOS werkt alleen tabblad-geluid.',
+    both: 'Neemt je microfoon én het gedeelde vergaderingsgeluid op — handig als je zelf ook meepraat.',
+  };
+  const SRC_LABEL = { mic: 'Microfoon inschakelen', system: 'Vergaderingsgeluid delen', both: 'Microfoon + geluid delen' };
+  const applySourceUI = () => {
+    const v = sourceSel.value;
+    if (sourceHint) sourceHint.textContent = SRC_HINT[v] || '';
+    if (enableBtn && !enableBtn.hidden) enableBtn.textContent = SRC_LABEL[v] || 'Inschakelen';
+  };
+  if (sourceSel) {
+    sourceSel.value = s.source || 'mic';
+    applySourceUI();
+    sourceSel.addEventListener('change', async () => {
+      const st = loadSettings(); st.source = sourceSel.value;
+      localStorage.setItem('transcribe.recorder.settings.v1', JSON.stringify(st));
+      applySourceUI();
+      if (recorder) {
+        try { await recorder.applyConstraints({ source: sourceSel.value }); }
+        catch (e) { alert('Kon de opnamebron niet wijzigen: ' + e.message); }
+      }
+    });
+  }
+
   let startTs = 0, timer = null, uploadChain = Promise.resolve(), sessionId = null, chunkErr = false;
 
   async function refreshMics() {
@@ -262,12 +291,15 @@ function setupRecorder() {
         if (vuPeakDb) vuPeakDb.textContent = pdb <= -99 ? '−∞' : `${Math.round(pdb)} dB`;
         if (vuZone) vuZone.textContent = clip ? 'te hard' : (db < -30 ? 'te zacht' : 'goed');
       });
+      recorder.onSourceEnded(() => {
+        alert('Het delen van het vergaderingsgeluid is gestopt. Klik op "Stop & verstuur" om te versturen wat tot nu toe is opgenomen.');
+      });
       await recorder.openStream();
       await refreshMics();
       $('#rec-enable').hidden = true;
       $('#rec-controls').hidden = false;
     } catch (e) {
-      alert('Microfoon niet beschikbaar: ' + e.message);
+      alert('Kon de opnamebron niet openen: ' + e.message);
     }
   });
 

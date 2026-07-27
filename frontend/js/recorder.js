@@ -11,6 +11,7 @@ const LS_KEY = 'transcribe.recorder.settings.v1';
 
 export const defaultSettings = {
   deviceId: '',
+  source: 'mic',    // 'mic' | 'system' (tab/scherm, bijv. Teams) | 'both'
   autoGainControl: true,
   echoCancellation: true,
   noiseSuppression: true,
@@ -59,44 +60,84 @@ export class Recorder {
     this.chunks = [];       // voor lokale download-blob
     this._levelCb = null;
     this._rafId = null;
+    this._streams = [];     // alle actieve capture-streams (mic en/of display)
+    this._onSourceEnded = null;
   }
 
   onLevel(cb) { this._levelCb = cb; }
+  onSourceEnded(cb) { this._onSourceEnded = cb; }
 
   async openStream() {
-    // Sluit eventuele bestaande stream (constraints gewijzigd).
+    // Sluit eventuele bestaande stream (bron/constraints gewijzigd).
     await this._teardownStream();
     const s = this.settings;
-    const audio = {
-      autoGainControl: !!s.autoGainControl,
-      echoCancellation: !!s.echoCancellation,
-      noiseSuppression: !!s.noiseSuppression,
-      channelCount: 1,
-    };
-    if (s.deviceId) audio.deviceId = { exact: s.deviceId };
-    this.rawStream = await navigator.mediaDevices.getUserMedia({ audio });
+    const src = s.source || 'mic';
 
     this.audioCtx = this.audioCtx || new (window.AudioContext || window.webkitAudioContext)();
-    this.source = this.audioCtx.createMediaStreamSource(this.rawStream);
 
-    // Optionele lichte hoogdoorlaat (~80 Hz) tegen brom/rommel.
+    // Vaste staart van de keten: gain (gevoeligheid) -> analyser (VU) -> destination (recorder).
+    this.gainNode = this.audioCtx.createGain();
+    this.gainNode.gain.value = s.gain;
+    this.analyser = this.audioCtx.createAnalyser();
+    this.analyser.fftSize = 1024;
+    this.destNode = this.audioCtx.createMediaStreamDestination();
+    this.gainNode.connect(this.analyser);
+    this.analyser.connect(this.destNode);
+
+    // Hoogdoorlaat (~80 Hz) alleen op de microfoon; systeemgeluid gaat rechtstreeks.
     this.highpass = this.audioCtx.createBiquadFilter();
     this.highpass.type = 'highpass';
     this.highpass.frequency.value = s.highpass ? 80 : 0;
-
-    this.gainNode = this.audioCtx.createGain();
-    this.gainNode.gain.value = s.gain;
-
-    this.analyser = this.audioCtx.createAnalyser();
-    this.analyser.fftSize = 1024;
-
-    this.destNode = this.audioCtx.createMediaStreamDestination();
-
-    // Verbind de keten.
-    this.source.connect(this.highpass);
     this.highpass.connect(this.gainNode);
-    this.gainNode.connect(this.analyser);
-    this.analyser.connect(this.destNode);
+
+    this._streams = [];
+    this.rawStream = null;
+
+    // --- Microfoon ---
+    if (src === 'mic' || src === 'both') {
+      const audio = {
+        autoGainControl: !!s.autoGainControl,
+        echoCancellation: !!s.echoCancellation,
+        noiseSuppression: !!s.noiseSuppression,
+        channelCount: 1,
+      };
+      if (s.deviceId) audio.deviceId = { exact: s.deviceId };
+      const mic = await navigator.mediaDevices.getUserMedia({ audio });
+      this._streams.push(mic);
+      this.rawStream = mic;   // t.b.v. microfoon-labels (enumerateDevices)
+      this.audioCtx.createMediaStreamSource(mic).connect(this.highpass);
+    }
+
+    // --- Vergaderings-/systeemgeluid (tab of scherm, bijv. Teams) via getDisplayMedia ---
+    if (src === 'system' || src === 'both') {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+        await this._teardownStream();
+        throw new Error('Deze browser kan geen tab-/systeemgeluid delen. Gebruik Chrome of Edge.');
+      }
+      let disp;
+      try {
+        // video is verplicht bij getDisplayMedia; we gebruiken alleen het audiospoor.
+        disp = await navigator.mediaDevices.getDisplayMedia({
+          video: true,
+          audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
+        });
+      } catch {
+        await this._teardownStream();
+        throw new Error('Delen geannuleerd. Kies het Teams-venster of -tabblad om het geluid op te nemen.');
+      }
+      const aTracks = disp.getAudioTracks();
+      if (!aTracks.length) {
+        disp.getTracks().forEach((t) => t.stop());
+        await this._teardownStream();
+        throw new Error('Geen geluid gedeeld. Vink bij het delen "Ook tabblad-/systeemgeluid delen" aan.');
+      }
+      this._streams.push(disp);   // hele stream vasthouden (incl. video), anders stopt de capture
+      if (!this.rawStream) this.rawStream = disp;
+      // Alleen het audiospoor door de keten; systeemgeluid gaat direct naar gain (geen hoogdoorlaat).
+      this.audioCtx.createMediaStreamSource(new MediaStream(aTracks)).connect(this.gainNode);
+      // Stopt de gebruiker het delen via de browserbalk, meld dat aan de app.
+      aTracks[0].addEventListener('ended', () => { if (this._onSourceEnded) this._onSourceEnded(); });
+    }
 
     this._startMeter();
     return this.rawStream;
@@ -179,10 +220,11 @@ export class Recorder {
 
   async _teardownStream() {
     if (this._rafId) cancelAnimationFrame(this._rafId);
-    if (this.rawStream) {
-      this.rawStream.getTracks().forEach((t) => t.stop());
-      this.rawStream = null;
+    for (const st of this._streams || []) {
+      try { st.getTracks().forEach((t) => t.stop()); } catch {}
     }
+    this._streams = [];
+    this.rawStream = null;
   }
 
   async close() {
