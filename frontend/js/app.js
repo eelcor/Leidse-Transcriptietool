@@ -31,6 +31,8 @@ const ICONS = {
   edit: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/>',
   clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
   word: '<path d="M6 3h8l5 5v12a1 1 0 01-1 1H6a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M14 3v5h5"/><path d="M8.3 12l1.2 4.5L11 12l1.5 4.5L13.7 12"/>',
+  copy: '<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/>',
+  markdown: '<rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 15V9l3 3 3-3v6"/><path d="M17 9v4M15 12l2 2 2-2"/>',
 };
 function ic(name, size = 15) {
   const w = document.createElement('span');
@@ -565,8 +567,8 @@ async function loadResult(sessionId) {
   left.append(el('div', { class: 'panel-head' },
     el('h3', {}, ic('transcript', 16), ' Transcript'),
     el('div', { class: 'panel-actions' },
-      el('button', { class: 'btn ghost sm', onclick: () => copy(res.transcript) }, 'Kopieer'),
-      el('a', { class: 'btn ghost sm', href: `/api/sessions/${sessionId}/transcript.txt` }, 'Download .txt'),
+      el('button', { class: 'btn outline sm', onclick: () => copy(res.transcript) }, ic('copy'), ' Kopieer'),
+      el('a', { class: 'btn outline sm', href: `/api/sessions/${sessionId}/transcript.txt` }, ic('download'), ' Download .txt'),
     ),
   ));
   const tbox = el('div', { class: 'transcript' });
@@ -672,10 +674,10 @@ function renderReport(sessionId, report, wrap, poll = false) {
 
   if (report.status === 'done') {
     head.append(el('div', { class: 'panel-actions' },
-      el('button', { class: 'btn ghost sm', onclick: () => openEditor(sessionId, report) }, ic('edit'), ' Bewerken'),
-      el('button', { class: 'btn ghost sm', onclick: () => copy(report.content) }, 'Kopieer'),
-      el('a', { class: 'btn ghost sm', href: `/api/sessions/${sessionId}/reports/${report.id}/download.docx` }, ic('word'), ' Word'),
-      el('a', { class: 'btn ghost sm', href: `/api/sessions/${sessionId}/reports/${report.id}/download.md` }, '.md'),
+      el('button', { class: 'btn outline sm', onclick: () => openEditor(sessionId, report) }, ic('edit'), ' Bewerken'),
+      el('button', { class: 'btn outline sm', onclick: () => copy(report.content) }, ic('copy'), ' Kopieer'),
+      el('a', { class: 'btn outline sm', href: `/api/sessions/${sessionId}/reports/${report.id}/download.docx` }, ic('word'), ' Word'),
+      el('a', { class: 'btn outline sm', href: `/api/sessions/${sessionId}/reports/${report.id}/download.md` }, ic('markdown'), ' Markdown'),
     ));
     const body = el('div', { class: 'report-body md' });
     body.innerHTML = renderMarkdown(report.content || '');
