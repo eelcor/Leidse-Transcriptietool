@@ -24,6 +24,10 @@ services:
       - "${WEB_HTTPS_PORT:-443}:443"  # https
     volumes:
       - ./frontend:/srv:ro
+      # Handleiding/quickref + hun screenshots/fonts serveren onder /docs (voor de
+      # "Handleiding"-knop). Caddy strip't het /docs-prefix; relatieve verwijzingen
+      # in de HTML lossen dan correct op.
+      - ./docs:/srv-docs:ro
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       # Eigen certificaat gebruiken (geen browserwaarschuwing): leg cert+key in ./certs

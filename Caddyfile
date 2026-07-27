@@ -42,6 +42,15 @@
 		file_server
 	}
 
+	# Handleiding/quickref (docs/) onder /docs. handle_path strip't het prefix, zodat
+	# /docs/handleiding.html -> /srv-docs/handleiding.html en de relatieve screenshots/
+	# fonts (/docs/screenshots/*, /docs/fonts/*) ook kloppen.
+	handle_path /docs/* {
+		root * /srv-docs
+		header Cache-Control "no-cache"
+		file_server
+	}
+
 	# Statische frontend. Cache-Control: no-cache => de browser mag cachen maar moet
 	# eerst revalideren (via ETag); ongewijzigd levert een goedkope 304. Voorkomt dat
 	# gebruikers na een update op een oude index.html/app.js blijven hangen.
