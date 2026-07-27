@@ -233,6 +233,23 @@ verloop, daar de thematische samenvatting.>
 
 ---
 
+## 8. Chronologisch verslag
+
+```
+Taak: schrijf een gedetailleerd chronologisch verslag dat het gesprek volgt in de volgorde
+waarin het plaatsvond: wie bracht wat in, hoe verliep de discussie, welke wendingen, vragen
+en reacties waren er, en waar kwam men op uit. Geef het verloop weer als lopend, samenhangend
+verhaal (niet als kale opsomming), zakelijk en uitsluitend op basis van het transcript. Deel
+het desgewenst op met tussenkopjes per gespreksfase of agendapunt; volg bij een meegegeven
+agenda de behandelde volgorde.
+
+Uitvoer:
+## Chronologisch verslag
+<lopend, chronologisch verslag van het gesprek>
+```
+
+---
+
 ## Aanbevolen UI-opzet
 
 - Toon de eerste zes als **losse aanvinkbare secties** én bied knop **"Volledig verslag"**

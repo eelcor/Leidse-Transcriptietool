@@ -14,6 +14,7 @@ from .config import get_settings
 SECTIONS: dict[str, tuple[str, str]] = {
     "samenvatting": ("## 1. Samenvatting", "Samenvatting"),
     "verslag": ("## 2. Verslag", "Verslag (uitgewerkt)"),
+    "chronologisch": ("## 8. Chronologisch verslag", "Chronologisch verslag"),
     "actiepunten": ("## 3. Actiepunten", "Actiepunten"),
     "afspraken": ("## 4. Afspraken", "Afspraken"),
     "besluiten": ("## 5. Besluiten", "Besluiten"),
