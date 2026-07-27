@@ -20,6 +20,30 @@ const el = (tag, attrs = {}, ...kids) => {
   return n;
 };
 
+// Gestylde line-SVG-iconen (currentColor) i.p.v. emoji.
+const ICONS = {
+  key: '<circle cx="8" cy="16" r="4"/><path d="M11 13l8-8M17 5l2 2M15 7l2 2"/>',
+  download: '<path d="M12 3v12M8 11l4 4 4-4"/><path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/>',
+  trash: '<path d="M4 7h16M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2M6 7l1 13a1 1 0 001 1h8a1 1 0 001-1l1-13"/>',
+  transcript: '<path d="M4 6h16M4 12h16M4 18h10"/>',
+  report: '<path d="M6 3h8l5 5v12a1 1 0 01-1 1H6a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M14 3v5h5M9 13h6M9 17h4"/>',
+  sparkle: '<path d="M12 3l1.7 4.8L18.5 9.5l-4.8 1.7L12 16l-1.7-4.8L5.5 9.5l4.8-1.7z"/>',
+  edit: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/>',
+  clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  word: '<path d="M6 3h8l5 5v12a1 1 0 01-1 1H6a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M14 3v5h5"/><path d="M8.3 12l1.2 4.5L11 12l1.5 4.5L13.7 12"/>',
+};
+function ic(name, size = 15) {
+  const w = document.createElement('span');
+  w.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:${size}px;height:${size}px;vertical-align:-2px;flex:none" aria-hidden="true">${ICONS[name] || ''}</svg>`;
+  return w.firstChild;
+}
+
+// Leesbare bestandsnaam voor de lokale opname: opname-2026-07-27_14-32-05.webm
+function opnameFilename() {
+  const d = new Date(), p = (n) => String(n).padStart(2, '0');
+  return `opname-${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}_${p(d.getHours())}-${p(d.getMinutes())}-${p(d.getSeconds())}.webm`;
+}
+
 function show(view) {
   document.querySelectorAll('.view').forEach((v) => (v.hidden = true));
   $('#view-' + view).hidden = false;
@@ -367,7 +391,7 @@ function setupRecorder() {
       if (savedLocally || !blob) return;
       savedLocally = true;
       const url = URL.createObjectURL(blob);
-      const a = el('a', { href: url, download: `opname-${Date.now()}.webm` });
+      const a = el('a', { href: url, download: opnameFilename() });
       document.body.append(a); a.click(); a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 30000);
     };
@@ -411,12 +435,12 @@ async function openSession(sessionId) {
   box.innerHTML = '';
   box.append(
     el('div', { class: 'sesh' },
-      el('span', { class: 'lbl' }, '🔑 Sessie-code (bewaar als geheim): '),
+      el('span', { class: 'lbl' }, ic('key'), ' Sessie-code (bewaar als geheim): '),
       el('code', { id: 'sid-code' }, sessionId),
       el('button', { class: 'btn outline sm',
         html: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/></svg> Kopieer code',
         onclick: (e) => { navigator.clipboard.writeText(sessionId); e.currentTarget.innerHTML = '✓ Gekopieerd'; } }),
-      el('a', { class: 'btn outline sm', href: `/api/sessions/${sessionId}/audio`, download: '' }, '⬇ Download opname'),
+      el('a', { class: 'btn outline sm', href: `/api/sessions/${sessionId}/audio`, download: '' }, ic('download'), ' Download opname'),
     ),
     el('div', { class: 'statebar' },
       el('div', { class: 'spinner', id: 'status-spinner' }),
@@ -436,7 +460,7 @@ async function openSession(sessionId) {
     const h = $('#wait-hint');
     if (w && h && w.eta_seconds > 0) {
       const m = Math.max(1, Math.round(w.eta_seconds / 60));
-      h.textContent = `⏳ Geschatte wachttijd: ~${m} min (${w.queued} in de wachtrij)`;
+      h.textContent = `Geschatte wachttijd: ~${m} min (${w.queued} in de wachtrij)`;
     }
   };
 
@@ -515,7 +539,7 @@ async function loadResult(sessionId) {
 
   area.append(el('div', { class: 'expiry-row' },
     el('div', { class: 'expiry' },
-      `⏳ Automatisch verwijderd op ${fmtDate(res.expires_at)}.`),
+      ic('clock', 14), ` Automatisch verwijderd op ${fmtDate(res.expires_at)}.`),
     el('button', { class: 'btn ghost sm danger-text', onclick: async (e) => {
       if (!confirm('Audio, transcript én verslag nu direct verwijderen? Dit kan niet ongedaan worden gemaakt.')) return;
       e.target.disabled = true;
@@ -523,7 +547,7 @@ async function loadResult(sessionId) {
       location.hash = '';
       show('home');
       alert('Verwijderd. De sessie en alle gegevens zijn gewist.');
-    } }, '🗑 Nu verwijderen'),
+    } }, ic('trash'), ' Nu verwijderen'),
   ));
 
   // Twee kolommen: transcript | verslag
@@ -535,7 +559,7 @@ async function loadResult(sessionId) {
 
   // Transcript
   left.append(el('div', { class: 'panel-head' },
-    el('h3', {}, '📝 Transcript'),
+    el('h3', {}, ic('transcript', 16), ' Transcript'),
     el('div', { class: 'panel-actions' },
       el('button', { class: 'btn ghost sm', onclick: () => copy(res.transcript) }, 'Kopieer'),
       el('a', { class: 'btn ghost sm', href: `/api/sessions/${sessionId}/transcript.txt` }, 'Download .txt'),
@@ -564,7 +588,7 @@ async function loadResult(sessionId) {
 
   // Verslag: klaargezette verslagen staan centraal; de opnieuw-maken-opties zijn ingeklapt.
   const hasReports = res.reports.length > 0;
-  right.append(el('div', { class: 'panel-head' }, el('h3', {}, '📋 Verslag')));
+  right.append(el('div', { class: 'panel-head' }, el('h3', {}, ic('report', 16), ' Verslag')));
   const reportsWrap = el('div', { id: 'reports-wrap' });
   right.append(reportsWrap);
   res.reports.forEach((r) => renderReport(sessionId, r, reportsWrap));
@@ -595,7 +619,7 @@ function buildReportControls(sessionId) {
     chips.append(chip);
   });
   wrap.append(
-    el('button', { class: 'btn primary block', onclick: () => start(['volledig']) }, '✨ Volledig verslag (aanbevolen)'),
+    el('button', { class: 'btn primary block', onclick: () => start(['volledig']) }, ic('sparkle'), ' Volledig verslag (aanbevolen)'),
     el('p', { class: 'muted small', style: 'margin:2px 0' }, 'of kies losse secties:'),
     chips,
     el('button', { class: 'btn outline block', onclick: () => {
@@ -644,9 +668,9 @@ function renderReport(sessionId, report, wrap, poll = false) {
 
   if (report.status === 'done') {
     head.append(el('div', { class: 'panel-actions' },
-      el('button', { class: 'btn ghost sm', onclick: () => openEditor(sessionId, report) }, '✏️ Bewerken'),
+      el('button', { class: 'btn ghost sm', onclick: () => openEditor(sessionId, report) }, ic('edit'), ' Bewerken'),
       el('button', { class: 'btn ghost sm', onclick: () => copy(report.content) }, 'Kopieer'),
-      el('a', { class: 'btn ghost sm', href: `/api/sessions/${sessionId}/reports/${report.id}/download.docx` }, '⬇ Word'),
+      el('a', { class: 'btn ghost sm', href: `/api/sessions/${sessionId}/reports/${report.id}/download.docx` }, ic('word'), ' Word'),
       el('a', { class: 'btn ghost sm', href: `/api/sessions/${sessionId}/reports/${report.id}/download.md` }, '.md'),
     ));
     const body = el('div', { class: 'report-body md' });
@@ -655,7 +679,7 @@ function renderReport(sessionId, report, wrap, poll = false) {
   } else if (report.status === 'failed') {
     card.append(el('div', { class: 'error' }, report.error || 'Verslag mislukt.'));
   } else {
-    card.append(el('div', { class: 'muted small' }, '⏳ Bezig…'), el('progress'));
+    card.append(el('div', { class: 'muted small' }, ic('clock', 13), ' Bezig…'), el('progress'));
     if (poll || report.status !== 'done') pollReport(sessionId, report.id, wrap);
   }
 }
