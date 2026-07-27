@@ -199,6 +199,38 @@ async def generate_report(ctx: dict, report_id: str) -> str:
 # --------------------------------------------------------------------------
 # arq WorkerSettings
 # --------------------------------------------------------------------------
+async def _recover_stuck_transcriptions(ctx: dict) -> None:
+    """Sessies die op 'transcribing' bleven hangen (worker onderbroken door herstart/crash)
+    opnieuw inplannen. Zo overleeft een lange opname een update of herstart."""
+    maker = get_sessionmaker()
+    async with maker() as db:
+        stuck = (
+            await db.execute(select(Session).where(Session.status == SessionStatus.TRANSCRIBING))
+        ).scalars().all()
+        ids = [s.id for s in stuck]
+    if not ids:
+        return
+    redis = ctx.get("redis")
+    if redis is None:
+        from app.queue import get_pool
+        redis = await get_pool()
+    for sid in ids:
+        jid = f"stt:{sid}"
+        # Stale arq-status opruimen zodat de job niet gededupliceerd/geblokkeerd wordt.
+        for key in (f"arq:in-progress:{jid}", f"arq:retry:{jid}", f"arq:job:{jid}", f"arq:result:{jid}"):
+            try:
+                await redis.delete(key)
+            except Exception:
+                pass
+        try:
+            await redis.zrem("arq:queue", jid)
+            await redis.enqueue_job("transcribe_session", sid, _job_id=jid)
+            log.warning("Onderbroken transcriptie opnieuw ingepland: %s", sid[:12])
+        except Exception:
+            log.exception("Kon onderbroken transcriptie niet opnieuw inplannen: %s", sid[:12])
+    log.warning("%d onderbroken transcriptie(s) hersteld bij worker-start.", len(ids))
+
+
 async def startup(ctx: dict) -> None:
     settings = get_settings()
     ctx["stt_semaphore"] = asyncio.Semaphore(settings.stt_concurrency)
@@ -208,6 +240,11 @@ async def startup(ctx: dict) -> None:
         get_backend().load()
     except Exception:
         log.exception("Model warm laden mislukt; wordt bij de eerste job opnieuw geprobeerd.")
+    # Robuustheid: onderbroken transcripties opnieuw inplannen (overleeft update/herstart).
+    try:
+        await _recover_stuck_transcriptions(ctx)
+    except Exception:
+        log.exception("Herstel van onderbroken transcripties mislukt.")
 
 
 from app.queue import redis_settings as _redis_settings  # noqa: E402
