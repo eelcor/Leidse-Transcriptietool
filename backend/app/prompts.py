@@ -11,15 +11,31 @@ from functools import lru_cache
 from .config import get_settings
 
 # Kernel-key -> (deel van de kop in PROMPTS.md, UI-label)
+# Kernel-key -> (kop in PROMPTS.md voor section_task, UI-label). Volgorde = die van
+# het Volledig verslag; de sectie-chips zijn een selectie hieruit (alles aan = volledig).
 SECTIONS: dict[str, tuple[str, str]] = {
     "samenvatting": ("## 1. Samenvatting", "Samenvatting"),
-    "verslag": ("## 2. Verslag", "Verslag (uitgewerkt)"),
+    "verslag": ("## 2. Verslag", "Besproken onderwerpen"),
     "chronologisch": ("## 8. Chronologisch verslag", "Chronologisch verslag"),
-    "actiepunten": ("## 3. Actiepunten", "Actiepunten"),
-    "afspraken": ("## 4. Afspraken", "Afspraken"),
     "besluiten": ("## 5. Besluiten", "Besluiten"),
+    "afspraken": ("## 4. Afspraken", "Afspraken"),
+    "actiepunten": ("## 3. Actiepunten", "Actiepunten"),
     "aandachtspunten": ("## 6. Aandachtspunten", "Aandachtspunten"),
     "volledig": ("## 7. Volledig verslag", "Volledig verslag"),
+}
+
+# Volgorde en output-koppen exact zoals in het Volledig verslag. Een zelf-samengesteld
+# verslag gebruikt dezelfde structuur, met alleen de gekozen secties.
+_VOLLEDIG_ORDER = ["samenvatting", "verslag", "chronologisch", "besluiten",
+                   "afspraken", "actiepunten", "aandachtspunten"]
+_VOLLEDIG_HEADING = {
+    "samenvatting": "Samenvatting",
+    "verslag": "Besproken onderwerpen",
+    "chronologisch": "Chronologisch verslag",
+    "besluiten": "Besluiten",
+    "afspraken": "Afspraken",
+    "actiepunten": "Actiepunten",
+    "aandachtspunten": "Aandachtspunten",
 }
 
 _BASE_HEADING = "## Gedeelde basis-instructie"
@@ -84,20 +100,21 @@ def build_messages(
     if custom_prompt:
         task = custom_prompt.strip()
     elif kinds:
-        # "volledig" heeft voorrang: één alles-in-één prompt.
-        if "volledig" in kinds:
-            task = section_task("volledig")
+        # Eén verslag in de Volledig-verslag-structuur, met alleen de gekozen secties.
+        vol = section_task("volledig")
+        wanted = [k for k in _VOLLEDIG_ORDER if k in kinds]
+        if "volledig" in kinds or set(wanted) == set(_VOLLEDIG_ORDER):
+            task = vol  # alle secties -> het complete verslag
+        elif wanted:
+            headings = [_VOLLEDIG_HEADING[k] for k in wanted]
+            task = vol + (
+                "\n\nSECTIEKEUZE (belangrijk): behoud de kop (# Verslag met onderwerp, datum en "
+                "deelnemers) en lever daarna UITSLUITEND de volgende secties op, in deze volgorde en "
+                "in de hierboven beschreven stijl: " + ", ".join(headings) + ". Laat alle overige "
+                "secties volledig weg."
+            )
         else:
-            parts = [section_task(k) for k in kinds if k in SECTIONS]
-            if not parts:
-                raise ValueError("Geen geldige secties opgegeven")
-            if len(parts) == 1:
-                task = parts[0]
-            else:
-                task = (
-                    "Voer de onderstaande deeltaken uit en lever de secties na elkaar op, "
-                    "elk met de aangegeven kop.\n\n" + "\n\n---\n\n".join(parts)
-                )
+            raise ValueError("Geen geldige secties opgegeven")
     else:
         raise ValueError("Geef 'kinds' of 'custom_prompt' op")
 

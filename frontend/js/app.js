@@ -132,16 +132,16 @@ function setupReportConfig() {
   const chips = $('#rep-chips');
   SECTIONS.filter((s) => s.key !== 'volledig').forEach((s) => {
     const cb = el('input', { type: 'checkbox' });
+    cb.checked = true;                                  // alle onderdelen standaard aan (= volledig verslag)
     repBoxes[s.key] = cb;
-    const chip = el('label', { class: 'chip' }, cb, s.label);
+    const chip = el('label', { class: 'chip on' }, cb, s.label);
     cb.addEventListener('change', () => chip.classList.toggle('on', cb.checked));
     chips.append(chip);
   });
   const applyRepMode = () => {
     const mode = (document.querySelector('input[name="rep-mode"]:checked') || {}).value || 'none';
-    $('#rep-custom').hidden = mode !== 'custom';       // secties/eigen prompt: alleen bij 'Zelf kiezen…'
-    const cw = $('#rep-context-wrap');
-    if (cw) cw.hidden = mode === 'none';                // context/agenda: bij Volledig verslag én Zelf kiezen
+    const opts = $('#rep-opts');
+    if (opts) opts.hidden = mode === 'none';             // context + onderdelen bij 'Verslag maken'
   };
   document.querySelectorAll('input[name="rep-mode"]').forEach((r) => r.addEventListener('change', applyRepMode));
   applyRepMode();
@@ -152,11 +152,9 @@ function getReportConfig() {
   const mode = (document.querySelector('input[name="rep-mode"]:checked') || {}).value || 'none';
   if (mode === 'none') return null;
   const context = ($('#rep-context').value || '').trim() || null;
-  if (mode === 'full') return { kinds: ['volledig'], context };
   const kinds = Object.entries(repBoxes).filter(([, cb]) => cb.checked).map(([k]) => k);
-  const custom_prompt = ($('#rep-prompt').value || '').trim() || null;
-  if (!kinds.length && !custom_prompt) return null;
-  return { kinds: kinds.length ? kinds : null, custom_prompt, context };
+  if (!kinds.length) return null;                        // niets aangevinkt -> geen verslag
+  return { kinds, context };
 }
 
 // -------------------------------------------------------------------------
@@ -623,21 +621,21 @@ function buildReportControls(sessionId) {
   const boxes = {};
   SECTIONS.filter((s) => s.key !== 'volledig').forEach((s) => {
     const cb = el('input', { type: 'checkbox' });
+    cb.checked = true;                                  // alles aan = volledig verslag
     boxes[s.key] = cb;
-    const chip = el('label', { class: 'chip' }, cb, s.label);
+    const chip = el('label', { class: 'chip on' }, cb, s.label);
     cb.addEventListener('change', () => chip.classList.toggle('on', cb.checked));
     chips.append(chip);
   });
   wrap.append(
-    el('button', { class: 'btn primary block', onclick: () => start(['volledig']) }, ic('sparkle'), ' Volledig verslag (aanbevolen)'),
-    el('p', { class: 'muted small', style: 'margin:12px 0 6px' }, 'of stel zelf samen — kies de onderdelen:'),
+    el('textarea', { id: 'ctx', rows: '3', placeholder: 'Context (optioneel) — onderwerp, datum, deelnemers, aanleiding, achtergrond, of de agenda (dan matchen we de onderwerpen daarop)…' }),
+    el('p', { class: 'muted small', style: 'margin:14px 0 6px' }, 'Onderdelen — alles aan = een volledig verslag:'),
     chips,
-    el('textarea', { id: 'ctx', rows: '3', placeholder: 'Context (optioneel) — onderwerp, datum, deelnemers, aanleiding, achtergrond, of de agenda (dan matchen we de onderwerpen daarop)…', style: 'margin-top:10px' }),
-    el('button', { class: 'btn outline block', style: 'margin-top:10px', onclick: () => {
+    el('button', { class: 'btn primary block', style: 'margin-top:12px', onclick: () => {
       const kinds = Object.entries(boxes).filter(([, cb]) => cb.checked).map(([k]) => k);
       if (!kinds.length) { alert('Kies minstens één onderdeel.'); return; }
       start(kinds);
-    } }, 'Genereer verslag'),
+    } }, ic('sparkle'), ' Verslag genereren'),
     el('div', { class: 'or-sep' }, 'of'),
     el('textarea', { id: 'custom-prompt', rows: '3', placeholder: 'Eigen prompt — bijv. "Vat samen in 5 bullets voor het MT." (de context hierboven wordt meegenomen)' }),
     el('button', { class: 'btn outline block', style: 'margin-top:10px', onclick: () => {
