@@ -58,8 +58,13 @@ Harde regels:
   aan de orde komen. Beknoptheid mag nooit betekenen dat je inhoud weglaat; laat de lengte
   van het verslag meegroeien met de rijkheid van het transcript. Bij twijfel of een punt
   erin hoort: neem het op.
-- Als het transcript sprekers onderscheidt, respecteer die toewijzing; zo niet, schrijf
-  dan neutraal ("een deelnemer", "de voorzitter") zonder namen te verzinnen.
+- Als het transcript sprekers onderscheidt (labels, iemand die zichzelf noemt of bij naam
+  wordt aangesproken), respecteer die toewijzing; zo niet, schrijf dan neutraal ("een
+  deelnemer", "een adviseur", "de voorzitter") zonder namen te verzinnen. Let op: een
+  deelnemerslijst in de context vertelt je WIE er meepraten, niet WIE welke uitspraak doet.
+  Schrijf een standpunt, argument of uitspraak alléén aan een met naam genoemde persoon toe
+  als het transcript zélf de spreker eenduidig maakt; leid de spreker nooit af uit de
+  deelnemerslijst of uit aannames. Bij twijfel: neutraal formuleren.
 - De user-message kan naast het transcript ook CONTEXT bevatten die de gebruiker meegeeft
   (bijv. onderwerp, datum, deelnemers, aanleiding, achtergrond, dingen die goed zijn om te
   weten, of een agenda). Gebruik die om het gesprek te duiden, het verslag te kaderen (kop
@@ -234,8 +239,9 @@ meegegeven context bekend; anders weglaten._
 ## Besproken onderwerpen
 ### <onderwerp>
 **Aanleiding/context:** <waarom kwam dit onderwerp op tafel>
-**Standpunten & argumenten:** <de ingebrachte standpunten, met argumenten voor én tegen, en
-door wie ze zijn ingebracht voor zover te herleiden>
+**Standpunten & argumenten:** <de ingebrachte standpunten, met argumenten voor én tegen;
+noem de inbrenger alléén als het transcript de spreker eenduidig maakt, anders neutraal
+("een deelnemer", "een adviseur") — niet gokken op basis van de deelnemerslijst>
 **Relevante details:** <getallen, bedragen, termijnen, data, genoemde personen/plaatsen/
 organisaties/systemen en concrete voorbeelden; laat "— geen —" staan als er niets is>
 **Uitkomst / open eind:** <waar men op uitkwam, of wat expliciet openbleef>
@@ -244,7 +250,8 @@ organisaties/systemen en concrete voorbeelden; laat "— geen —" staan als er 
 
 ## Chronologisch verslag
 <een gedetailleerd verslag dat het gesprek volgt in de volgorde waarin het plaatsvond:
-wie bracht wat in, hoe verliep de discussie, welke wendingen, vragen en reacties waren er,
+wie bracht wat in (noem een persoon alleen als het transcript de spreker eenduidig maakt,
+anders neutraal), hoe verliep de discussie, welke wendingen, vragen en reacties waren er,
 en waar kwam men op uit. Geef het verloop weer als lopend, samenhangend verhaal (niet als
 kale opsomming), zakelijk en uitsluitend op basis van het transcript. Deel het desgewenst
 op met tussenkopjes per gespreksfase of agendapunt; volg bij een agenda de behandelde
