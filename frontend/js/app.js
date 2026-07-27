@@ -137,21 +137,24 @@ function setupReportConfig() {
     cb.addEventListener('change', () => chip.classList.toggle('on', cb.checked));
     chips.append(chip);
   });
-  document.querySelectorAll('input[name="rep-mode"]').forEach((r) => {
-    r.addEventListener('change', () => {
-      $('#rep-custom').hidden = document.querySelector('input[name="rep-mode"]:checked').value !== 'custom';
-    });
-  });
+  const applyRepMode = () => {
+    const mode = (document.querySelector('input[name="rep-mode"]:checked') || {}).value || 'none';
+    $('#rep-custom').hidden = mode !== 'custom';       // secties/eigen prompt: alleen bij 'Zelf kiezen…'
+    const cw = $('#rep-context-wrap');
+    if (cw) cw.hidden = mode === 'none';                // context/agenda: bij Volledig verslag én Zelf kiezen
+  };
+  document.querySelectorAll('input[name="rep-mode"]').forEach((r) => r.addEventListener('change', applyRepMode));
+  applyRepMode();
 }
 
 // Lees de gekozen verslag-config; geeft {kinds,custom_prompt,context} of null.
 function getReportConfig() {
   const mode = (document.querySelector('input[name="rep-mode"]:checked') || {}).value || 'none';
   if (mode === 'none') return null;
-  if (mode === 'full') return { kinds: ['volledig'] };
+  const context = ($('#rep-context').value || '').trim() || null;
+  if (mode === 'full') return { kinds: ['volledig'], context };
   const kinds = Object.entries(repBoxes).filter(([, cb]) => cb.checked).map(([k]) => k);
   const custom_prompt = ($('#rep-prompt').value || '').trim() || null;
-  const context = ($('#rep-context').value || '').trim() || null;
   if (!kinds.length && !custom_prompt) return null;
   return { kinds: kinds.length ? kinds : null, custom_prompt, context };
 }
