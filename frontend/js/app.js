@@ -361,22 +361,31 @@ function setupRecorder() {
   stopBtn.addEventListener('click', async () => {
     stopBtn.disabled = true; pauseBtn.disabled = true; discardBtn.disabled = true;
     clearInterval(timer);
-    setState('', 'Uploaden…');
+    setState('', 'Opname opslaan…');
+    let blob = null, savedLocally = false;
+    const saveLocalFile = () => {
+      if (savedLocally || !blob) return;
+      savedLocally = true;
+      const url = URL.createObjectURL(blob);
+      const a = el('a', { href: url, download: `opname-${Date.now()}.webm` });
+      document.body.append(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 30000);
+    };
     try {
-      const blob = await recorder.stop();
+      blob = await recorder.stop();
+      // FOOLPROOF: sla de opname lokaal op VOORDAT we afronden. Staat de toggle aan,
+      // dan gebeurt dat meteen — zo raak je de audio nooit kwijt als de upload faalt.
+      if ($('#opt-savelocal').checked) saveLocalFile();
+      setState('', 'Uploaden…');
       await uploadChain; // wacht tot alle gestreamde chunks binnen zijn
       if (chunkErr) throw new Error('upload van een deel van de opname is mislukt');
-      // Optioneel: opname ook lokaal opslaan (download automatisch starten).
-      if ($('#opt-savelocal').checked) {
-        const url = URL.createObjectURL(blob);
-        const a = el('a', { href: url, download: `opname-${Date.now()}.webm` });
-        document.body.append(a); a.click(); a.remove();
-        setTimeout(() => URL.revokeObjectURL(url), 10000);
-      }
       await API.complete(sessionId);
       openSession(sessionId);
     } catch (e) {
-      alert('Verzenden mislukt: ' + e.message + '. Probeer het opnieuw.');
+      // Rescue: zorg dat de audio in elk geval lokaal is opgeslagen (ook als de toggle uit stond).
+      saveLocalFile();
+      alert('Verzenden mislukt: ' + e.message + '.\n\nJe opname is lokaal opgeslagen (gedownload). '
+        + 'Probeer het opnieuw, of upload het gedownloade bestand later via "Bestand uploaden".');
       resetRecUI();
     }
   });
@@ -404,7 +413,9 @@ async function openSession(sessionId) {
     el('div', { class: 'sesh' },
       el('span', { class: 'lbl' }, '🔑 Sessie-code (bewaar als geheim): '),
       el('code', { id: 'sid-code' }, sessionId),
-      el('button', { class: 'btn ghost sm', onclick: (e) => { navigator.clipboard.writeText(sessionId); e.target.textContent = '✓ Gekopieerd'; } }, 'Kopieer code'),
+      el('button', { class: 'btn outline sm',
+        html: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/></svg> Kopieer code',
+        onclick: (e) => { navigator.clipboard.writeText(sessionId); e.currentTarget.innerHTML = '✓ Gekopieerd'; } }),
       el('a', { class: 'btn outline sm', href: `/api/sessions/${sessionId}/audio`, download: '' }, '⬇ Download opname'),
     ),
     el('div', { class: 'statebar' },
