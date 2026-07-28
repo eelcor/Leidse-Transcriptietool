@@ -249,10 +249,23 @@ een deelnemerslijst in de context, of uit het transcript alleen als iemand er du
 aanwezige meepraat. Namen die alleen worden besproken of genoemd (personen buiten het gesprek,
 collega's, bestuurders, derden) zijn GEEN deelnemers en horen niet in de deelnemersregel; noem
 die zo nodig apart ("ook genoemd: …") of gewoon in de tekst. Bij twijfel of iemand deelnam:
-niet als deelnemer opvoeren._
+niet als deelnemer opvoeren. Kun je de deelnemers niet betrouwbaar vaststellen (geen
+deelnemerslijst in de context én geen duidelijke aanwezigen in het transcript), schrijf dan
+kort "Deelnemers: niet eenduidig uit de opname af te leiden" en som daar géén louter genoemde
+namen op — die horen thuis in de tekst, niet in de deelnemersregel._
 
 ## Samenvatting
 <2–4 zinnen + enkele kernpunten>
+
+## Chronologisch verslag
+<een gedetailleerd verslag dat het gesprek volgt in de volgorde waarin het plaatsvond:
+wie bracht wat in (noem een persoon alleen als het transcript de spreker eenduidig maakt,
+anders neutraal), hoe verliep de discussie, welke wendingen, vragen en reacties waren er,
+en waar kwam men op uit. Geef het verloop weer als lopend, samenhangend verhaal (niet als
+kale opsomming), zakelijk en uitsluitend op basis van het transcript. Deel het desgewenst
+op met tussenkopjes per gespreksfase of agendapunt; volg bij een agenda de behandelde
+volgorde. Dit verslag is de basis; "Besproken onderwerpen" hieronder ordent hetzelfde
+verloop thematisch — geen herhaling, maar een andere invalshoek.>
 
 ## Besproken onderwerpen
 ### <onderwerp>
@@ -265,16 +278,6 @@ organisaties/systemen en concrete voorbeelden; laat "— geen —" staan als er 
 **Uitkomst / open eind:** <waar men op uitkwam, of wat expliciet openbleef>
 ### <volgend onderwerp>
 ...
-
-## Chronologisch verslag
-<een gedetailleerd verslag dat het gesprek volgt in de volgorde waarin het plaatsvond:
-wie bracht wat in (noem een persoon alleen als het transcript de spreker eenduidig maakt,
-anders neutraal), hoe verliep de discussie, welke wendingen, vragen en reacties waren er,
-en waar kwam men op uit. Geef het verloop weer als lopend, samenhangend verhaal (niet als
-kale opsomming), zakelijk en uitsluitend op basis van het transcript. Deel het desgewenst
-op met tussenkopjes per gespreksfase of agendapunt; volg bij een agenda de behandelde
-volgorde. Dit is een aanvulling op "Besproken onderwerpen", geen herhaling: hier telt het
-verloop, daar de thematische samenvatting.>
 
 ## Besluiten
 - ...

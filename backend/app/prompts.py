@@ -15,8 +15,8 @@ from .config import get_settings
 # het Volledig verslag; de sectie-chips zijn een selectie hieruit (alles aan = volledig).
 SECTIONS: dict[str, tuple[str, str]] = {
     "samenvatting": ("## 1. Samenvatting", "Samenvatting"),
-    "verslag": ("## 2. Verslag", "Besproken onderwerpen"),
     "chronologisch": ("## 8. Chronologisch verslag", "Chronologisch verslag"),
+    "verslag": ("## 2. Verslag", "Besproken onderwerpen"),
     "besluiten": ("## 5. Besluiten", "Besluiten"),
     "afspraken": ("## 4. Afspraken", "Afspraken"),
     "actiepunten": ("## 3. Actiepunten", "Actiepunten"),
@@ -26,7 +26,7 @@ SECTIONS: dict[str, tuple[str, str]] = {
 
 # Volgorde en output-koppen exact zoals in het Volledig verslag. Een zelf-samengesteld
 # verslag gebruikt dezelfde structuur, met alleen de gekozen secties.
-_VOLLEDIG_ORDER = ["samenvatting", "verslag", "chronologisch", "besluiten",
+_VOLLEDIG_ORDER = ["samenvatting", "chronologisch", "verslag", "besluiten",
                    "afspraken", "actiepunten", "aandachtspunten"]
 _VOLLEDIG_HEADING = {
     "samenvatting": "Samenvatting",
