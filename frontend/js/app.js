@@ -33,6 +33,7 @@ const ICONS = {
   word: '<path d="M6 3h8l5 5v12a1 1 0 01-1 1H6a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M14 3v5h5"/><path d="M8.3 12l1.2 4.5L11 12l1.5 4.5L13.7 12"/>',
   copy: '<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/>',
   markdown: '<rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 15V9l3 3 3-3v6"/><path d="M17 9v4M15 12l2 2 2-2"/>',
+  close: '<path d="M6 6l12 12M18 6L6 18"/>',
 };
 function ic(name, size = 15) {
   const w = document.createElement('span');
@@ -599,7 +600,8 @@ async function loadResult(sessionId) {
   right.append(el('div', { class: 'panel-head' }, el('h3', {}, ic('report', 16), ' Verslag')));
   const reportsWrap = el('div', { id: 'reports-wrap' });
   right.append(reportsWrap);
-  res.reports.forEach((r) => renderReport(sessionId, r, reportsWrap));
+  REPORTS = (res.reports || []).slice();
+  layoutReports(sessionId);
 
   const controls = el('details', { class: 'opts', id: 'report-controls-box', style: 'margin-top:14px' },
     el('summary', {}, hasReports ? 'Verslag opnieuw maken' : 'Verslag maken'),
@@ -649,33 +651,65 @@ function buildReportControls(sessionId) {
     const context = ($('#ctx') && $('#ctx').value.trim()) || null;
     try {
       const r = await API.createReport(sessionId, { kinds, custom_prompt: custom || null, context });
-      const rw = $('#reports-wrap');
-      renderReport(sessionId, r, rw, true);
+      REPORTS.push(r);
+      layoutReports(sessionId);
     } catch (e) { alert(e.message); }
   }
 
   return wrap;
 }
 
-function renderReport(sessionId, report, wrap, poll = false) {
-  let card = document.getElementById('rep-' + report.id);
-  if (!card) {
-    card = el('div', { class: 'report-card', id: 'rep-' + report.id });
-    wrap.prepend(card);
+// De verslagen-kolom: het nieuwste verslag staat open bovenaan; oudere verslagen
+// staan ingeklapt onder "Eerdere verslagen". REPORTS is de client-side lijst die
+// bij aanmaken, pollen, bewerken en verwijderen wordt bijgewerkt.
+let REPORTS = [];
+
+function layoutReports(sessionId) {
+  const wrap = $('#reports-wrap');
+  if (!wrap) return;
+  wrap.innerHTML = '';
+  const sorted = REPORTS.slice().sort((a, b) => (a.created_at < b.created_at ? 1 : -1));  // nieuwste eerst
+  if (!sorted.length) return;
+  const [latest, ...older] = sorted;
+  renderReportCard(sessionId, latest, wrap);
+  if (older.length) {
+    const det = el('details', { class: 'opts older-reports', style: 'margin-top:12px' },
+      el('summary', {}, `Eerdere verslagen (${older.length})`));
+    older.forEach((r) => renderReportCard(sessionId, r, det));
+    wrap.append(det);
   }
+}
+
+async function deleteReport(sessionId, report) {
+  if (!confirm('Dit verslag verwijderen? Dit kan niet ongedaan worden gemaakt.')) return;
+  try {
+    await API.deleteReport(sessionId, report.id);
+    REPORTS = REPORTS.filter((r) => r.id !== report.id);
+    layoutReports(sessionId);
+  } catch (e) { alert(e.message); }
+}
+
+function renderReportCard(sessionId, report, parent) {
+  const card = el('div', { class: 'report-card', id: 'rep-' + report.id });
   const title = report.custom_prompt ? 'Eigen prompt'
     : (report.kinds || []).map((k) => (SECTIONS.find((s) => s.key === k) || {}).label || k).join(', ');
-  card.innerHTML = '';
-  const head = el('div', { class: 'panel-head' }, el('strong', {}, title || 'Verslag'));
-  card.append(head);
-
+  const actions = el('div', { class: 'panel-actions' });
   if (report.status === 'done') {
-    head.append(el('div', { class: 'panel-actions' },
+    actions.append(
       el('button', { class: 'btn outline sm', onclick: () => openEditor(sessionId, report) }, ic('edit'), ' Bewerken'),
       el('button', { class: 'btn outline sm', onclick: () => copy(report.content) }, ic('copy'), ' Kopieer'),
       el('a', { class: 'btn outline sm', href: `/api/sessions/${sessionId}/reports/${report.id}/download.docx` }, ic('word'), ' Word'),
       el('a', { class: 'btn outline sm', href: `/api/sessions/${sessionId}/reports/${report.id}/download.md` }, ic('markdown'), ' Markdown'),
-    ));
+    );
+  }
+  // Verwijderknop (X) rechtsboven — altijd beschikbaar.
+  actions.append(el('button', {
+    class: 'btn ghost sm icon report-del', title: 'Verslag verwijderen',
+    'aria-label': 'Verslag verwijderen', onclick: () => deleteReport(sessionId, report),
+  }, ic('close', 15)));
+  card.append(el('div', { class: 'panel-head' }, el('strong', {}, title || 'Verslag'), actions));
+
+  if (report.status === 'done') {
     const body = el('div', { class: 'report-body md' });
     body.innerHTML = renderMarkdown(report.content || '');
     card.append(body);
@@ -683,15 +717,21 @@ function renderReport(sessionId, report, wrap, poll = false) {
     card.append(el('div', { class: 'error' }, report.error || 'Verslag mislukt.'));
   } else {
     card.append(el('div', { class: 'muted small' }, ic('clock', 13), ' Bezig…'), el('progress'));
-    if (poll || report.status !== 'done') pollReport(sessionId, report.id, wrap);
+    pollReport(sessionId, report.id);
   }
+  parent.append(card);
 }
 
-async function pollReport(sessionId, reportId, wrap) {
+async function pollReport(sessionId, reportId) {
   const tick = async () => {
     try {
       const r = await API.getReport(sessionId, reportId);
-      if (r.status === 'done' || r.status === 'failed') { renderReport(sessionId, r, wrap); return; }
+      if (r.status === 'done' || r.status === 'failed') {
+        const i = REPORTS.findIndex((x) => x.id === reportId);
+        if (i >= 0) REPORTS[i] = r; else REPORTS.push(r);
+        layoutReports(sessionId);
+        return;
+      }
     } catch {}
     setTimeout(tick, 2000);
   };
@@ -751,10 +791,11 @@ async function openEditor(sessionId, report) {
     const md = editor.storage.markdown.getMarkdown();
     statusEl.textContent = 'Opslaan…';
     try {
-      await API.updateReport(sessionId, report.id, md);
+      const updated = await API.updateReport(sessionId, report.id, md);
       report.content = md;
-      const card = document.getElementById('rep-' + report.id);
-      renderReport(sessionId, report, (card && card.parentNode) || $('#reports-wrap'));
+      const i = REPORTS.findIndex((x) => x.id === report.id);
+      if (i >= 0) REPORTS[i] = updated;
+      layoutReports(sessionId);
       cleanup();
     } catch (e) { statusEl.textContent = e.message; }
   };

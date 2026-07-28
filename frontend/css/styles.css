@@ -305,6 +305,13 @@ details.opts[open] summary::before { transform: rotate(90deg); }
 .chip input { display: none; }
 .chip.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); font-weight: 600; }
 .report-card { border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 14px; margin-top: 12px; background: var(--surface); }
+/* X-verwijderknop rechtsboven in een verslag-kaart: puur icoon, geen onderstreping. */
+.btn.icon { padding: 6px; line-height: 0; text-decoration: none; border-radius: var(--radius-sm); }
+.report-del { color: var(--muted); }
+.report-del:hover { color: var(--danger); background: var(--danger-soft); }
+/* "Eerdere verslagen": ingeklapte oudere generaties; kaartjes zonder dubbele buitenrand. */
+.older-reports { margin-top: 12px; }
+.older-reports > .report-card:first-of-type { margin-top: 10px; }
 .error { color: var(--danger); background: var(--danger-soft); border: 1px solid color-mix(in srgb, var(--danger) 35%, transparent); border-radius: var(--radius-sm); padding: 11px 14px; font-size: 14px; }
 progress { width: 100%; height: 8px; border: none; border-radius: 999px; overflow: hidden; background: var(--surface-3); }
 progress::-webkit-progress-bar { background: var(--surface-3); }

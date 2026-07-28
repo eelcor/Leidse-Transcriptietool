@@ -128,4 +128,8 @@ export const API = {
     if (!r.ok) throw new Error('Opslaan mislukt (' + r.status + ')');
     return r.json();
   },
+  async deleteReport(sessionId, reportId) {
+    const r = await fetch(`/api/sessions/${sessionId}/reports/${reportId}`, { method: 'DELETE' });
+    if (!r.ok && r.status !== 404) throw new Error('Verwijderen mislukt (' + r.status + ')');
+  },
 };

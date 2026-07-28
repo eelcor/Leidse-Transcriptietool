@@ -501,6 +501,22 @@ async def update_report(
     return _report_out(r)
 
 
+@router.delete("/sessions/{session_id}/reports/{report_id}", status_code=204)
+async def delete_report(
+    session_id: str, report_id: str, db: AsyncSession = Depends(get_db)
+) -> Response:
+    """Verwijder één verslag (bijv. een eerdere, overbodige generatie). Idempotent:
+    een reeds verwijderd verslag geeft ook 204."""
+    res = await db.execute(
+        select(Report).where(Report.id == report_id, Report.session_id == session_id)
+    )
+    r = res.scalar_one_or_none()
+    if r is not None:
+        await db.delete(r)
+        await db.commit()
+    return Response(status_code=204)
+
+
 async def _get_report_content_or_404(db: AsyncSession, session_id: str, report_id: str) -> Report:
     res = await db.execute(
         select(Report).where(Report.id == report_id, Report.session_id == session_id)
