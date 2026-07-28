@@ -226,6 +226,15 @@ transcript past in één keer in het contextvenster; kort niet in omwille van le
 "Besproken onderwerpen" en "Chronologisch verslag" mogen samen het grootste deel van het
 verslag beslaan.
 
+Samenhang tussen de secties: "Besproken onderwerpen" en "Chronologisch verslag" beschrijven
+hetzelfde gesprek vanuit twee invalshoeken en moeten inhoudelijk consistent zijn. Reconstrueer
+eerst het werkelijke verloop van het gesprek (de basis voor "Chronologisch verslag") en leid de
+thematische onderwerpen dááruit af. Zo geldt: elk onderwerp steunt op wat in het verloop
+daadwerkelijk aan bod kwam, en elke inhoudelijke draad uit het verloop komt als onderwerp terug.
+Voeg bij de onderwerpen geen standpunt, argument of uitkomst toe dat niet ook in het verloop zit,
+en laat geen behandelde draad weg; klopt iets in de onderwerpen niet met het verloop, corrigeer
+het naar het verloop.
+
 Agenda: als in de meegegeven context een agenda of lijst met agendapunten staat, gebruik
 die als leidraad. Structureer "Besproken onderwerpen" zoveel mogelijk volgens die
 agendapunten (zelfde volgorde en benamingen waar ze matchen). Benoem expliciet
@@ -234,8 +243,13 @@ de agenda stonden. Is er geen agenda, kies dan zelf een logische thematische ind
 
 Uitvoer:
 # Verslag
-_Onderwerp, datum en deelnemers alleen invullen voor zover uit het transcript of de
-meegegeven context bekend; anders weglaten._
+_Vul onderwerp, datum en deelnemers alleen in voor zover betrouwbaar bekend; anders weglaten.
+Deelnemers = uitsluitend de mensen die aantoonbaar aan het gesprek deelnemen: neem ze over uit
+een deelnemerslijst in de context, of uit het transcript alleen als iemand er duidelijk als
+aanwezige meepraat. Namen die alleen worden besproken of genoemd (personen buiten het gesprek,
+collega's, bestuurders, derden) zijn GEEN deelnemers en horen niet in de deelnemersregel; noem
+die zo nodig apart ("ook genoemd: …") of gewoon in de tekst. Bij twijfel of iemand deelnam:
+niet als deelnemer opvoeren._
 
 ## Samenvatting
 <2–4 zinnen + enkele kernpunten>
