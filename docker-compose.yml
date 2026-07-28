@@ -53,9 +53,13 @@ services:
       context: ./backend
       dockerfile: Dockerfile.worker
       args:
-        # NeMo/Canary meebouwen (zwaar). TORCH_VARIANT: "default" (nieuwe GPU's,
-        # o.a. RTX Pro 6000) of "cu124" (Tesla V100/Volta). install.sh zet dit juist.
-        INSTALL_NEMO: "${INSTALL_NEMO:-1}"
+        # GPU-libs voor faster-whisper/CTranslate2 (cuBLAS/cuDNN). Default AAN;
+        # zet STT_GPU=0 voor een CPU-only image.
+        STT_GPU: "${STT_GPU:-1}"
+        # Canary/NeMo is zwaar en losgekoppeld van de standaard-build: default UIT.
+        # Zet INSTALL_NEMO=1 alleen als je STT_BACKEND=canary wilt draaien.
+        # TORCH_VARIANT: "default" (nieuwe GPU's) of "cu124" (Tesla V100/Volta).
+        INSTALL_NEMO: "${INSTALL_NEMO:-0}"
         TORCH_VARIANT: "${TORCH_VARIANT:-default}"
     env_file: .env
     environment:

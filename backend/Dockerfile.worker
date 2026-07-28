@@ -1,18 +1,21 @@
-# Worker-image: STT (ffmpeg + faster-whisper, optioneel NeMo/Canary) + LLM-client.
+# Worker-image: STT (ffmpeg + faster-whisper) + LLM-client.
 #
-# GPU: draai met de NVIDIA Container Toolkit. Voor Canary op GPU heb je een CUDA-
-# passende torch + nemo_toolkit nodig; zet dan INSTALL_NEMO=1 (en pas de base
-# image eventueel aan naar een CUDA-image). Default draait faster-whisper, wat
-# ook op CPU werkt (STT_DEVICE=cpu, STT_COMPUTE_TYPE=int8).
+# Default-build is LICHT en betrouwbaar: faster-whisper (CTranslate2), zonder torch
+# of NeMo. Voor GPU (STT_DEVICE=cuda) leveren we alleen de CUDA-libs die CTranslate2
+# nodig heeft (cuBLAS + cuDNN + CUDA-runtime) via pip; CTranslate2 4.x vindt die
+# automatisch in site-packages (geen LD_LIBRARY_PATH nodig).
+#
+# Optioneel: NVIDIA Canary via NeMo (STT_BACKEND=canary) -> zet INSTALL_NEMO=1.
+# NeMo is zwaar en torch/CUDA-gevoelig; bewust opt-in en losgekoppeld van de
+# standaard-build. (Diarisatie/pyannote komt later, zie ROADMAP.md.)
 FROM python:3.11-slim
 
+# GPU-libs voor faster-whisper/CTranslate2. Zet STT_GPU=0 voor een CPU-only image
+# (bespaart ~0,5 GB; draai dan met STT_DEVICE=cpu, STT_COMPUTE_TYPE=int8).
+ARG STT_GPU=1
+# Optionele Canary/NeMo-backend (zwaar). Default UIT.
 ARG INSTALL_NEMO=0
-# TORCH_VARIANT bepaalt welke torch-build NeMo gebruikt:
-#   "default" -> torch van PyPI (CUDA 13): voor nieuwe GPU's zoals de RTX Pro 6000
-#                (Blackwell/sm_120), Hopper (sm_90), Ada (sm_89), Ampere, Turing (sm_75).
-#   "cu124"   -> torch 2.6.0+cu124: nodig voor Tesla V100 (Volta/sm_70), want
-#                CUDA 13 laat Volta vallen ("no kernel image available").
-# install.sh detecteert de GPU en zet dit automatisch juist.
+# torch-build voor NeMo: "default" (nieuwe GPU's) of "cu124" (Tesla V100/Volta).
 ARG TORCH_VARIANT=default
 
 ENV PYTHONUNBUFFERED=1 \
@@ -25,16 +28,25 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
+# GPU-libs voor CTranslate2 (faster-whisper) EERST, in een eigen layer, zodat een
+# geslaagde (grote) cuDNN-download gecached blijft en latere requirement-wijzigingen
+# 'm niet opnieuw triggeren. CTranslate2 4.x laadt cuBLAS/cuDNN automatisch uit de
+# nvidia-*-cu12 pip-pakketten. Versies gepind op een met CTranslate2 4.8 geteste
+# combinatie (cuDNN 9, CUDA 12.4).
+RUN if [ "$STT_GPU" = "1" ]; then \
+        pip install --no-cache-dir --timeout 600 --retries 10 \
+            nvidia-cublas-cu12==12.4.5.8 \
+            nvidia-cudnn-cu12==9.1.0.70 \
+            nvidia-cuda-runtime-cu12==12.4.127 ; \
+    fi
+
+# App-requirements (basis + faster-whisper). Na de GPU-libs zodat een wijziging hier
+# de cuDNN-layer niet invalideert.
 COPY requirements.txt requirements-worker.txt ./
 RUN pip install --no-cache-dir -r requirements-worker.txt
-# Canary/NeMo optioneel. Voor Tesla V100 (Volta/sm_70): expliciet torch met
-# CUDA 12.x (cu13 laat sm_70 vallen). We installeren die eerst en pinnen torch
-# via een constraint, zodat NeMo torch niet upgradet naar een cu13-build.
-# Op een nieuwe GPU (RTX Pro 6000 = sm_120) mag je de cu124-regel weglaten en
-# gewoon `pip install "nemo_toolkit[asr]==2.7.3" torch` gebruiken.
-# Aparte layers zodat een geslaagde (grote) torch-download gecached blijft en een
-# retry na een netwerkhapering alleen NeMo opnieuw hoeft te halen.
-# Stap 1: torch installeren volgens TORCH_VARIANT.
+
+# --- Optioneel: Canary via NeMo (opt-in, losgekoppeld van de default-build) ---
+# Stap 1: torch volgens TORCH_VARIANT (aparte layer -> cache-vriendelijk).
 RUN if [ "$INSTALL_NEMO" = "1" ]; then \
         if [ "$TORCH_VARIANT" = "cu124" ]; then \
             pip install --no-cache-dir --timeout 600 --retries 10 torch==2.6.0+cu124 \
@@ -43,8 +55,8 @@ RUN if [ "$INSTALL_NEMO" = "1" ]; then \
             pip install --no-cache-dir --timeout 600 --retries 10 torch ; \
         fi ; \
     fi
-# Stap 2: NeMo installeren, met torch gepind op de zojuist geïnstalleerde versie
-# zodat NeMo torch niet upgradet naar een build die jouw GPU niet ondersteunt.
+# Stap 2: NeMo, met torch gepind zodat NeMo torch niet upgradet naar een build die
+# jouw GPU niet ondersteunt.
 RUN if [ "$INSTALL_NEMO" = "1" ]; then \
         echo "torch==$(python -c 'import torch; print(torch.__version__.split(\"+\")[0])')" > /tmp/torch-constraint.txt && \
         pip install --no-cache-dir --timeout 600 --retries 10 \

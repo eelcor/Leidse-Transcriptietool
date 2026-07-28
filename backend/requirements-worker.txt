@@ -3,6 +3,9 @@
 
 # --- Default STT-backend: faster-whisper (licht, CPU/GPU) ---
 faster-whisper==1.1.1
+# faster-whisper importeert 'requests' direct; huggingface_hub 1.x levert het niet
+# meer transitief (en zonder torch/NeMo valt het anders weg). Daarom expliciet.
+requests>=2.31
 
 # --- Optionele backend: NVIDIA Canary via NeMo (vastgelegde keuze) ---
 # NeMo is zwaar en GPU/CUDA-gevoelig; installeer alleen als STT_BACKEND=canary.
