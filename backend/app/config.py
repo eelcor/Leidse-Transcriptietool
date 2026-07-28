@@ -57,6 +57,19 @@ class Settings(BaseSettings):
     # Pad naar PROMPTS.md (letterlijke prompt-teksten, single source of truth).
     prompts_file: str = "/app/PROMPTS.md"
 
+    # --- Beveiliging ---
+    # Swagger-UI en OpenAPI-schema standaard UIT in productie (kleiner aanvalsoppervlak;
+    # het schema somt anders alle endpoints op). Zet EXPOSE_API_DOCS=true voor lokaal debuggen.
+    expose_api_docs: bool = False
+
+    # --- Diarisatie (sprekerlabels) — GERESERVEERD, standaard uit (zie ROADMAP.md) ---
+    # Roadmap: optionele spreker-diarisatie (bv. pyannote) die ná STT sprekerlabels aan de
+    # segments hangt. Zwaar qua VRAM/latency, daarom expliciet opt-in. Nog niet geïmplementeerd.
+    diarization_enabled: bool = False
+    diarization_backend: str = "none"          # "none" | "pyannote" (nog niet geïmplementeerd)
+    diarization_model: str = "pyannote/speaker-diarization-3.1"
+    hf_token: str = ""                          # HuggingFace-token voor gated pyannote-modellen
+
     @property
     def max_upload_bytes(self) -> int:
         return self.max_upload_mb * 1024 * 1024

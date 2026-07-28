@@ -25,7 +25,7 @@ from app.tokens import new_token
 from app.workdays import compute_expires_at
 from app import stats, storage
 
-from . import audio, llm
+from . import audio, diarize, llm
 from .stt.factory import get_backend
 
 log = logging.getLogger("transcribe.worker")
@@ -89,7 +89,9 @@ async def transcribe_session(ctx: dict, session_id: str) -> str:
         if obj is None:
             return "gone"
         obj.transcript = result.text
-        obj.segments = result.segments_as_dicts() if settings.stt_word_timestamps else None
+        segments = result.segments_as_dicts() if settings.stt_word_timestamps else None
+        # Extensiehaak (roadmap): optionele sprekerlabels. No-op tenzij ingeschakeld.
+        obj.segments = diarize.apply_diarization(str(wav), segments)
         obj.stt_backend = backend.name
         obj.status = SessionStatus.TRANSCRIBED
         obj.processing_finished_at = finished

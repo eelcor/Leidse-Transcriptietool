@@ -25,7 +25,15 @@ async def lifespan(app: FastAPI):
     await close_pool()
 
 
-app = FastAPI(title="Anonieme transcriptie", lifespan=lifespan, docs_url="/api/docs", openapi_url="/api/openapi.json")
+# Swagger/OpenAPI alleen aanzetten als expliciet gevraagd (kleiner aanvalsoppervlak).
+_docs_on = get_settings().expose_api_docs
+app = FastAPI(
+    title="Anonieme transcriptie",
+    lifespan=lifespan,
+    docs_url="/api/docs" if _docs_on else None,
+    redoc_url=None,
+    openapi_url="/api/openapi.json" if _docs_on else None,
+)
 
 
 @app.get("/api/health")

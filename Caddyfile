@@ -23,6 +23,22 @@
 	tls {$CADDY_TLS:internal}
 	encode gzip
 
+	# Security-headers (defense-in-depth). Het systeem draait op een geïsoleerd VLAN;
+	# dit is de applicatielaag daarbovenop. De frontend is CSP-veilig: geen externe CDN,
+	# geen inline scripts (alleen /js/app.js), dus een strak script-src 'self' kan.
+	# Let op: microfoon (getUserMedia) en scherm/tab-audio (getDisplayMedia) blijven
+	# toegestaan via Permissions-Policy; media-src blob: is nodig voor de opname-preview.
+	header {
+		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; media-src 'self' blob:; connect-src 'self'; worker-src 'self' blob:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
+		Permissions-Policy "microphone=(self), display-capture=(self), camera=(), geolocation=(), payment=(), usb=()"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "no-referrer"
+		Cross-Origin-Opener-Policy "same-origin"
+		Strict-Transport-Security "max-age=31536000"
+		-Server
+	}
+
 	# API en SSE naar de FastAPI-service. flush_interval -1 houdt SSE realtime.
 	handle /api/* {
 		reverse_proxy api:8000 {
