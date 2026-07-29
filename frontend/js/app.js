@@ -630,7 +630,9 @@ function buildReportControls(sessionId) {
     chips.append(chip);
   });
   wrap.append(
-    el('textarea', { id: 'ctx', rows: '3', placeholder: 'Context (optioneel) — onderwerp, datum, deelnemers, aanleiding, achtergrond, of de agenda (dan matchen we de onderwerpen daarop)…' }),
+    el('p', { class: 'context-tip' }, el('strong', {}, 'Tip — geef context mee.'),
+      ' Onderwerp, datum, deelnemers, aanleiding/achtergrond of de agenda verbeteren het verslag merkbaar: correcte namen, structuur volgens je agenda en minder giswerk.'),
+    el('textarea', { id: 'ctx', rows: '3', placeholder: 'Context (optioneel, maar sterk aanbevolen) — onderwerp, datum, deelnemers, aanleiding, achtergrond, of de agenda (dan matchen we de onderwerpen daarop)…' }),
     el('p', { class: 'muted small', style: 'margin:14px 0 6px' }, 'Onderdelen — alles aan = een volledig verslag:'),
     chips,
     el('button', { class: 'btn primary block', style: 'margin-top:12px', onclick: () => {

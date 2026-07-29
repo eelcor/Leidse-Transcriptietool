@@ -172,6 +172,11 @@ nav { display: flex; gap: 6px; align-items: center; }
 
 /* ---------- Verslag-opties (startscherm) ---------- */
 .report-config { margin-top: 20px; }
+/* Context-tip: benadrukt dat context de verslagkwaliteit merkbaar verbetert. */
+.context-tip { margin: 0 0 12px; padding: 10px 14px; font-size: 13.5px; line-height: 1.5;
+  color: var(--text); background: var(--accent-soft);
+  border-left: 3px solid var(--accent); border-radius: var(--radius-sm); }
+.context-tip strong { color: var(--accent); }
 .seg { display: inline-flex; background: var(--surface-2); border: 1px solid var(--line); border-radius: 11px; padding: 4px; gap: 4px; flex-wrap: wrap; }
 .seg-opt { position: relative; }
 .seg-opt input { position: absolute; opacity: 0; inset: 0; cursor: pointer; }
