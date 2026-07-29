@@ -63,6 +63,10 @@
   .tip{background:var(--accent-soft);border-left:4px solid var(--accent);
     padding:12px 16px;margin:14px 0;color:var(--text);font-size:14px;line-height:1.55}
   .tip strong{color:var(--accent)}
+  /* Geruststeller bovenaan: vertrouwelijkheid/privacy, met accent-look. */
+  .reassure{background:var(--accent-soft);border-color:var(--accent)}
+  .reassure h2{margin-bottom:6px}
+  .reassure>p{margin-top:0}
   footer{text-align:center;color:var(--muted);font-family:var(--mono);font-size:11px;text-transform:uppercase;
     letter-spacing:.08em;margin-top:34px;border-top:2px solid var(--line-strong);padding-top:22px}
   a{color:var(--accent)}
@@ -77,6 +81,7 @@
     <p class="lede">Spraak naar tekst — zonder account of login. Deze handleiding legt in een paar
       stappen uit hoe je een opname laat transcriberen en er een verslag van maakt.</p>
     <nav class="toc">
+      <a href="#privacy">Vertrouwelijk &amp; privacy</a>
       <a href="#start">Aan de slag</a>
       <a href="#uploaden">Uploaden</a>
       <a href="#opnemen">Opnemen</a>
@@ -85,9 +90,23 @@
       <a href="#verslag">Verslag &amp; export</a>
       <a href="#code">Code &amp; later ophalen</a>
       <a href="#stats">Statistieken</a>
-      <a href="#privacy">Privacy</a>
     </nav>
   </header>
+
+  <section id="privacy" class="reassure">
+    <h2>Vertrouwelijk &amp; privacy — jouw data blijft van jou</h2>
+    <p>Kort vooraf, zodat je met een gerust hart begint:</p>
+    <ul>
+      <li><b>Vertrouwelijk:</b> je audio, transcript en verslag blijven binnen onze eigen omgeving —
+        transcriptie en verslaglegging draaien lokaal, er gaat niets naar externe (cloud)diensten.</li>
+      <li><b>Anoniem:</b> geen account, geen login, geen persoonsgegevens, geen tracking.</li>
+      <li><b>Automatisch verwijderen:</b> audio, transcript en verslag worden verwijderd
+        <b>2 werkdagen na de verwerking</b> (weekenden tellen niet mee).</li>
+      <li><b>Zelf verwijderen:</b> met <b>Stop &amp; weggooien</b> of <b>Nu verwijderen</b> gooi je
+        een opname meteen weg.</li>
+      <li>De sessie-code is een geheim — deel hem alleen met wie het transcript mag zien.</li>
+    </ul>
+  </section>
 
   <section id="start">
     <h2><span class="n">1</span> Aan de slag</h2>
@@ -242,20 +261,6 @@
       anoniem</b> dashboard: aantallen, tijden, upload-vs-opname, verslagkeuzes, verwerkingstijd en
       tevredenheid. Geen persoonsgegevens, geen namen, geen inhoud — alleen geaggregeerde cijfers.</p>
     <figure><img class="shot" src="screenshots/dashboard.png" alt="Statistiekdashboard" /><figcaption>Het anonieme statistiekdashboard.</figcaption></figure>
-  </section>
-
-  <section id="privacy">
-    <h2><span class="n">9</span> Privacy &amp; bewaartermijn</h2>
-    <ul>
-      <li><b>Vertrouwelijk:</b> je audio, transcript en verslag blijven binnen onze eigen omgeving —
-        transcriptie en verslaglegging draaien lokaal, er gaat niets naar externe (cloud)diensten.</li>
-      <li><b>Anoniem:</b> geen account, geen login, geen persoonsgegevens, geen tracking.</li>
-      <li><b>Automatisch verwijderen:</b> audio, transcript en verslag worden verwijderd
-        <b>2 werkdagen na de verwerking</b> (weekenden tellen niet mee).</li>
-      <li><b>Zelf verwijderen:</b> met <b>Stop &amp; weggooien</b> of <b>Nu verwijderen</b> gooi je
-        een opname meteen weg.</li>
-      <li>De sessie-code is een geheim — deel hem alleen met wie het transcript mag zien.</li>
-    </ul>
   </section>
 
   <footer>Vertrouwelijk transcriberen · handleiding</footer>
