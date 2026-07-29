@@ -105,10 +105,12 @@ docker compose up -d --build
 **Pure CPU-run (geen GPU):** zet `STT_DEVICE=cpu` en comment het `deploy:`-GPU-blok
 van de `worker` in `docker-compose.yml` uit.
 
-**Canary/NeMo aanzetten:** zet `STT_BACKEND=canary`, `STT_MODEL=nvidia/canary-1b-v2`
-en bouw de worker met `INSTALL_NEMO=1` (in `docker-compose.yml` onder `worker.build.args`,
-of `docker compose build --build-arg INSTALL_NEMO=1 worker`). NeMo vereist een
-CUDA-passende `torch`.
+De **standaard-worker draait faster-whisper zonder torch/NeMo** (lichter en
+betrouwbaarder te bouwen). **Canary/NeMo aanzetten:** zet `STT_BACKEND=canary`,
+`STT_MODEL=nvidia/canary-1b-v2` en bouw de worker met `INSTALL_NEMO=1` (in
+`.env`/`docker-compose.yml` onder `worker.build.args`, of
+`docker compose build --build-arg INSTALL_NEMO=1 worker`). NeMo vereist een
+CUDA-passende `torch` (zie de V100/cu124-noot hieronder).
 
 > **End-to-end getest** (nemo_toolkit 2.7.3). De backend handelt automatisch af:
 > (1) canary-1b-v2 laadt als `EncDecMultiTaskModel` (de generieke
@@ -134,13 +136,14 @@ CUDA-passende `torch`.
 
 ## GPU- & resource-afwegingen
 
-- **Dev:** de 4×V100 zijn bezet door Qwen; voor STT is alleen een Quadro P1000
-  (4GB) beschikbaar. Draai daarom op dev met `STT_DEVICE=cpu` + `STT_COMPUTE_TYPE=int8`
-  (werkende CPU-fallback), of faster-whisper op de P1000 met int8.
-- **Prod:** de RTX Pro 6000 draait Qwen met ~10GB vrij. Canary past erin, maar
-  deelt de kaart. Daarom `STT_CONCURRENCY=1` (default): maximaal één STT-job
-  tegelijk, zodat piek-VRAM voorspelbaar blijft en Qwen niet uit het geheugen
-  wordt gedrukt. De wachtrij vangt pieken op.
+- **Standaard STT:** faster-whisper (CTranslate2) op de GPU (`STT_DEVICE=cuda`,
+  `STT_COMPUTE_TYPE=float16`); large-v2 kost ~4 GB VRAM. De worker-image bevat hiervoor
+  alleen de benodigde CUDA-libs (cuBLAS/cuDNN) — **geen torch of NeMo** (die zijn
+  losgekoppeld; Canary is opt-in, zie boven). CPU-only kan met `STT_DEVICE=cpu` +
+  `STT_COMPUTE_TYPE=int8` (en `STT_GPU=0` voor een lichter image).
+- **Delen met Qwen:** draait STT op dezelfde kaart als het Qwen-endpoint, dan houdt
+  `STT_CONCURRENCY=1` (default) de piek-VRAM voorspelbaar (max één STT-job tegelijk),
+  zodat Qwen niet uit het geheugen wordt gedrukt. De wachtrij vangt pieken op.
 - De **verslag-LLM** kost in dit project geen extra VRAM: het is het bestaande endpoint.
 
 ## Configuratie
@@ -288,6 +291,9 @@ blijven behouden):
 ```
 
 Wat het doet: `git pull` (of archief uitpakken) → `docker compose build` →
-`docker compose up -d`. Nieuwe **tabellen** worden bij de start automatisch aangemaakt.
-Voegt een release nieuwe **kolommen** toe op bestaande tabellen, dan staat de bijbehorende
-`ALTER TABLE` in de release-notes (deze versie gebruikt nog geen automatische migraties).
+`docker compose up -d` → `up -d --force-recreate web api worker`. Dat laatste is nodig
+omdat `PROMPTS.md` en de `Caddyfile` als **losse bestanden** gemount zijn: een edit vervangt
+de inode, en een gewone `restart` herlaadt die niet — alleen een recreate re-resolvet de
+mount. Nieuwe **tabellen** worden bij de start automatisch aangemaakt; nieuwe **kolommen** op
+bestaande tabellen vereisen een `ALTER TABLE` zoals vermeld in de release-notes (deze versie
+gebruikt nog geen automatische migraties).

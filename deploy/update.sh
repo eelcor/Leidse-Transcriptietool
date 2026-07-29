@@ -28,11 +28,13 @@ c "==> Images herbouwen"
 docker compose build
 c "==> Stack opnieuw starten (volumes blijven behouden)"
 docker compose up -d
-# Bind-mounted config (PROMPTS.md, Caddyfile, frontend/) wijzigt zonder image-rebuild,
-# dus 'up -d' maakt die containers niet opnieuw aan. Expliciet herstarten zodat o.a. de
-# nieuwe prompt (worker leest 'm via lru_cache) en Caddy-config zeker geladen worden.
-c "==> Config-services herstarten (prompt/Caddy/frontend zeker actueel)"
-docker compose restart web api worker cleanup
+# LET OP: PROMPTS.md en de Caddyfile zijn als LOSSE bestanden gemount. Een edit vervangt
+# de inode, en `docker compose restart` herlaadt die NIET — de oude inode blijft in de
+# draaiende container gemount. Alleen een RECREATE re-resolvet de bind-mount. Daarom
+# force-recreate voor de config-dragende services (web=Caddyfile, api/worker=PROMPTS.md).
+# De frontend/ is een MAP-mount en is sowieso al live zonder recreate.
+c "==> Config-services opnieuw aanmaken (prompt/Caddy zeker geladen)"
+docker compose up -d --force-recreate web api worker
 docker compose ps
 
 cat <<'NOTE'
