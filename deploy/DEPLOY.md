@@ -27,8 +27,10 @@ deploy/package.sh      # maakt een distribueerbaar tar-archief
   ```bash
   sudo nvidia-ctk cdi generate --output=/etc/cdi/nvidia.yaml   # geen daemon-restart nodig
   ```
-- Een bereikbaar **OpenAI-compatibel LLM-endpoint** (het bestaande Qwen). Er wordt
-  géén LLM in dit pakket gehost.
+- Een bereikbaar **OpenAI-compatibel LLM-endpoint** — je eigen LLM-laag. Op prod bijv.
+  een **LiteLLM-proxy** (die naar je model/provider routeert), of vLLM/Ollama/llama.cpp/
+  een externe API. Er wordt géén LLM in dit pakket gehost; je wijst er via `LLM_BASE_URL`
+  naartoe.
 
 ## Snelste weg: install.sh
 
@@ -71,9 +73,9 @@ Deelt de STT-GPU met een groot LLM (zoals Qwen met 256K-context, waarvan het geh
 fluctueert), reken dan op **ruim voldoende vrije VRAM** — richtlijn **≥12 GB vrij** voor
 langere bestanden, niet krap 7-10 GB. Te weinig marge geeft `CUDA out of memory` (tijdens
 laden óf inferentie); een mislukte poging kan VRAM vasthouden (herstart de worker om vrij
-te geven). **Op de dev-V100 (16 GB, gedeeld met Qwen) is dit niet werkbaar → daar draait
-STT op CPU.** Voor betrouwbare GPU-STT: een GPU die niet met een groot LLM gedeeld wordt,
-of ruime vrije VRAM.
+te geven). **Let op:** dit VRAM-verhaal geldt voor **Canary** (zwaar). De **standaard
+faster-whisper** (large-v2, ~4 GB in float16) is veel lichter en draait prima op een
+gedeelde kaart — op de dev-V100 (gedeeld met Qwen) draait de STT gewoon op de GPU.
 
 - Genoeg vrije VRAM (bv. prod-RTX): `STT_DEVICE=cuda`, `STT_COMPUTE_TYPE=float16`.
   `PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True` staat al gezet (beperkt fragmentatie).
@@ -106,7 +108,7 @@ cp .env.example .env
 # Pas minimaal aan:
 #   SITE_ADDRESS       -> jouw domein (bv. transcriptie.example.nl)
 #   CADDY_TLS          -> e-mailadres (Let's Encrypt) of "internal"
-#   LLM_BASE_URL       -> jouw Qwen-endpoint
+#   LLM_BASE_URL       -> jouw OpenAI-compat. LLM (bv. LiteLLM-proxy)
 #   TORCH_VARIANT      -> default (RTX) of cu124 (V100)
 #   WORKER_GPU_DEVICE  -> nvidia.com/gpu=0  (of =all)
 #   STT_DEVICE         -> cuda
@@ -114,7 +116,8 @@ cp .env.example .env
 
 docker compose build
 docker compose up -d
-docker compose logs -f worker    # eerste start: Canary-model (~2GB) wordt gedownload
+docker compose logs -f worker    # eerste start: STT-model (faster-whisper large-v2 ~1,5 GB,
+                                 # of Canary ~2 GB) wordt gedownload
 ```
 
 ## HTTPS & domein

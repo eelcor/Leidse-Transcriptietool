@@ -38,8 +38,9 @@ net zo laagdrempelig is. En heb je geen dictafoon of memorecorder? Dan doe je he
 - **STT:** **faster-whisper** (large-v2), NVIDIA **Canary 1B v2** (via NeMo), óf een
   extern **OpenAI-compatibel `/v1/audio/transcriptions`-endpoint** (`openai`) — zodat je
   STT net als de LLM kunt offloaden. Schakelbaar via `STT_BACKEND`, achter één interface.
-- **Verslag-LLM:** hergebruikt het **bestaande, OpenAI-compatibele Qwen3.6-27b
-  endpoint** (er wordt geen nieuwe LLM gehost).
+- **Verslag-LLM:** een **bestaand, OpenAI-compatibel LLM-endpoint** (er wordt geen LLM
+  gehost). Wijs `LLM_BASE_URL` naar je eigen laag — op prod bijv. een **LiteLLM-proxy**,
+  of vLLM/Ollama/llama.cpp/een externe API. Endpoint en modelnaam komen uit de env.
 - **Verslag-opties:** een **Volledig verslag** (samenvatting, thematische onderwerpen,
   een **chronologisch gespreksverslag**, besluiten, afspraken, actiepunten, aandachtspunten),
   losse secties, of een eigen prompt — met **Word (.docx)/Markdown**-export. Geef een
@@ -78,7 +79,7 @@ net zo laagdrempelig is. En heb je geen dictafoon of memorecorder? Dan doe je he
   api  (FastAPI) ──enqueue──►  redis  ──►  worker (arq)
     │                                        │  ffmpeg → STT (Canary/Whisper)
     ▼                                        │  → transcript (+timestamps)
-  db  (Postgres: sessies/jobs/verslagen)     │  LLM-verslag via Qwen-endpoint
+  db  (Postgres: sessies/jobs/verslagen)     │  LLM-verslag via OpenAI-compat. endpoint
                                              ▼
   cleanup (scheduler)  ── verwijdert sessies na expires_at (werkdag-bewust)
 ```
@@ -94,7 +95,7 @@ Vereist: Docker + Docker Compose. Voor GPU-transcriptie ook de
 ```bash
 cp .env.example .env
 #  Pas in .env minimaal aan:
-#   - LLM_BASE_URL  -> jouw bestaande Qwen-endpoint
+#   - LLM_BASE_URL  -> jouw OpenAI-compatibele LLM (bv. LiteLLM-proxy)
 #   - STT_DEVICE    -> cpu (dev) of cuda (prod)
 #   - STT_BACKEND   -> faster_whisper (start) of canary
 
@@ -156,7 +157,7 @@ Alles via env-vars — zie [`.env.example`](.env.example). Belangrijkste:
 | `STT_MODEL` | `large-v2` (whisper) / `nvidia/canary-1b-v2` |
 | `STT_DEVICE` / `STT_COMPUTE_TYPE` | `cpu`+`int8` (dev) of `cuda`+`float16` (prod) |
 | `STT_CONCURRENCY` | max gelijktijdige STT-jobs (VRAM-bescherming) |
-| `LLM_BASE_URL` / `LLM_MODEL` / `LLM_API_KEY` | bestaand Qwen-endpoint |
+| `LLM_BASE_URL` / `LLM_MODEL` / `LLM_API_KEY` | OpenAI-compatibel LLM-endpoint (LiteLLM/vLLM/Ollama/…) |
 | `RETENTION_WORKDAYS` | bewaartermijn in werkdagen (default 2) |
 | `MAX_UPLOAD_MB` | max uploadgrootte (default 200) |
 
