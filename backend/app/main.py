@@ -28,7 +28,7 @@ async def lifespan(app: FastAPI):
 # Swagger/OpenAPI alleen aanzetten als expliciet gevraagd (kleiner aanvalsoppervlak).
 _docs_on = get_settings().expose_api_docs
 app = FastAPI(
-    title="Anonieme transcriptie",
+    title="Vertrouwelijke transcriptie",
     lifespan=lifespan,
     docs_url="/api/docs" if _docs_on else None,
     redoc_url=None,
