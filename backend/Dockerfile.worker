@@ -66,5 +66,11 @@ RUN if [ "$INSTALL_NEMO" = "1" ]; then \
 COPY app ./app
 COPY worker ./worker
 
+# CTranslate2 laadt cuBLAS/cuDNN OP NAAM bij de eerste GPU-berekening (in de
+# transcriptie-thread). Zonder expliciet zoekpad faalt dat in de langdraaiende worker
+# ("libcublas.so.12 ... is not found or cannot be loaded") — voorheen zette torch dit
+# pad impliciet goed. Wijs de dynamische loader naar de nvidia-pip-libs.
+ENV LD_LIBRARY_PATH=/usr/local/lib/python3.11/site-packages/nvidia/cublas/lib:/usr/local/lib/python3.11/site-packages/nvidia/cudnn/lib
+
 # arq-worker; verwerkt STT- en LLM-jobs.
 CMD ["arq", "worker.worker.WorkerSettings"]
