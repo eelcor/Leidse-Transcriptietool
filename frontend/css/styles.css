@@ -487,6 +487,12 @@ progress::-webkit-progress-value { background: var(--accent); }
 .tb-btn { font-family: var(--mono); font-size: 12px; font-weight: 500; min-width: 32px; padding: 5px 9px; border: 1px solid var(--line-strong); background: var(--surface); color: var(--text); cursor: pointer; }
 .tb-btn:hover { background: var(--surface-2); }
 .tb-btn.on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+/* Zoek & vervang-balk in de verslag-editor. */
+.editor-find { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 14px; border-bottom: 1px solid var(--line); background: var(--surface-2); }
+.editor-find .ef-label { font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.editor-find input { flex: 1 1 150px; min-width: 110px; padding: 6px 10px; font-size: 13px; border: 1px solid var(--line-strong); background: var(--surface); color: var(--text); }
+.editor-find input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 20%, transparent); }
+.editor-find .ef-info { flex: 0 0 auto; }
 .editor-area { flex: 1; overflow: auto; padding: 18px 22px; background: var(--surface); }
 .editor-area .ProseMirror { outline: none; min-height: 320px; font-size: 14px; line-height: 1.6; color: var(--text); }
 .editor-area .ProseMirror:focus { outline: none; }

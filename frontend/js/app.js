@@ -8,6 +8,17 @@ let recorder = null;
 let sse = null;
 
 const $ = (sel) => document.querySelector(sel);
+
+// Geef de microfoon/opnamebron vrij: stopt de getUserMedia-tracks + sluit de audiocontext,
+// en zet de opnamekaart terug naar de "inschakelen"-staat. Aanroepen zodra je de opname
+// verlaat (naar het wachtscherm, of via "Nieuw") — anders blijft de mic-indicator aan.
+async function releaseRecorder() {
+  if (recorder) { try { await recorder.close(); } catch {} recorder = null; }
+  const ctrls = document.getElementById('rec-controls');
+  const enable = document.getElementById('rec-enable');
+  if (ctrls) ctrls.hidden = true;
+  if (enable) enable.hidden = false;
+}
 const el = (tag, attrs = {}, ...kids) => {
   const n = document.createElement(tag);
   for (const [k, v] of Object.entries(attrs)) {
@@ -111,7 +122,7 @@ async function init() {
     .catch(() => {});
 
   // Navigatie
-  $('#nav-new').addEventListener('click', () => show('home'));
+  $('#nav-new').addEventListener('click', () => { releaseRecorder(); show('home'); });
   $('#nav-retrieve').addEventListener('click', () => show('retrieve'));
 
   setupReportConfig();
@@ -409,6 +420,7 @@ function setupRecorder() {
       await uploadChain; // wacht tot alle gestreamde chunks binnen zijn
       if (chunkErr) throw new Error('upload van een deel van de opname is mislukt');
       await API.complete(sessionId);
+      await releaseRecorder();   // microfoon vrijgeven vóór het wachtscherm
       openSession(sessionId);
     } catch (e) {
       // Rescue: zorg dat de audio in elk geval lokaal is opgeslagen (ook als de toggle uit stond).
@@ -766,6 +778,27 @@ async function loadTiptap() {
   return _tt;
 }
 
+// Vervang ALLE exacte voorkomens van `find` door `replace` in de ProseMirror-doc.
+// Handig voor namen die consequent verkeerd staan. Behoudt opmaak; geeft het aantal terug.
+function editorReplaceAll(editor, find, replace) {
+  if (!find) return 0;
+  const { state } = editor;
+  const ranges = [];
+  state.doc.descendants((node, pos) => {
+    if (node.isText && node.text) {
+      const t = node.text;
+      let i = 0;
+      while ((i = t.indexOf(find, i)) !== -1) { ranges.push([pos + i, pos + i + find.length]); i += find.length; }
+    }
+  });
+  if (!ranges.length) return 0;
+  let tr = state.tr;
+  // Van achter naar voren, zodat eerdere posities geldig blijven.
+  for (let k = ranges.length - 1; k >= 0; k--) tr = tr.insertText(replace, ranges[k][0], ranges[k][1]);
+  editor.view.dispatch(tr);
+  return ranges.length;
+}
+
 async function openEditor(sessionId, report) {
   const modal = $('#editor-modal'), area = $('#editor-area'), tb = $('#editor-toolbar');
   const statusEl = $('#editor-status');
@@ -800,6 +833,28 @@ async function openEditor(sessionId, report) {
   mk('↷', 'Opnieuw', (c) => c.redo(), () => false);
   const sync = () => tbtns.forEach((b) => b.classList.toggle('on', !!(b._active && b._active())));
   editor.on('selectionUpdate', sync); editor.on('transaction', sync); sync();
+
+  // Zoek & vervang (alles) — handig voor consequent verkeerd gespelde namen.
+  const fbox = $('#editor-find');
+  if (fbox) {
+    fbox.innerHTML = '';
+    const findIn = el('input', { type: 'text', class: 'mono', placeholder: 'Zoek…', 'aria-label': 'Zoeken' });
+    const replIn = el('input', { type: 'text', class: 'mono', placeholder: 'Vervang door…', 'aria-label': 'Vervang door' });
+    const info = el('span', { class: 'muted small ef-info' });
+    const doIt = () => {
+      const f = findIn.value;
+      if (!f) { info.textContent = ''; return; }
+      const n = editorReplaceAll(editor, f, replIn.value);
+      info.textContent = n ? `${n}× vervangen` : 'niet gevonden';
+    };
+    replIn.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); doIt(); } });
+    fbox.append(
+      el('span', { class: 'ef-label' }, 'Zoek & vervang'),
+      findIn, replIn,
+      el('button', { class: 'btn outline sm', type: 'button', onclick: doIt }, 'Vervang alles'),
+      info,
+    );
+  }
 
   const cleanup = () => { try { editor.destroy(); } catch {} modal.hidden = true; modal.onclick = null; };
   $('#editor-cancel').onclick = cleanup;
