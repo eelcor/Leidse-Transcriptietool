@@ -477,15 +477,22 @@ async function openSession(sessionId) {
   if (sse) { sse.close(); sse = null; }
   let done = false;
   const render = (st) => {
-    $('#status-text').textContent = STATUS_LABEL[st.status] || st.status;
-    if (st.status === 'queued' || st.status === 'transcribing') {
+    const t = $('#status-text');
+    if (st.status === 'queued') {                              // fase 1
+      t.textContent = st.queue_position
+        ? `Transcriptie is nummer ${st.queue_position} in de wachtrij`
+        : 'Transcriptie staat in de wachtrij';
       showWait();
-    }
-    if (st.status === 'transcribed' || st.status === 'failed') {
+    } else if (st.status === 'transcribing') {                 // fase 2
+      t.textContent = 'Transcriptie wordt gemaakt…';
+      showWait();
+    } else if (st.status === 'transcribed' || st.status === 'failed') {
       const h = $('#wait-hint'); if (h) h.textContent = '';
       // Toon het resultaat pas als een eventueel (vooraf gevraagd) verslag óók klaar is,
       // zodat de gebruiker niet een 'klaar'-scherm ziet terwijl het verslag nog draait.
       if (!done) { done = true; finishWhenReady(sessionId); }
+    } else {
+      t.textContent = STATUS_LABEL[st.status] || st.status;
     }
   };
   try {
@@ -507,9 +514,18 @@ async function finishWhenReady(sessionId) {
     try { res = await API.result(sessionId); }
     catch { if (txt) txt.textContent = 'Sessie niet gevonden of verlopen.'; if (spin) spin.hidden = true; return; }
     if (res.status === 'failed') { if (spin) spin.hidden = true; loadResult(sessionId); return; }
-    const pending = (res.reports || []).some((r) => r.status !== 'done' && r.status !== 'failed');
-    if (pending) {
-      if (txt) txt.textContent = 'Transcript klaar — verslag maken…';
+    const pending = (res.reports || []).filter((r) => r.status !== 'done' && r.status !== 'failed');
+    if (pending.length) {
+      const r = pending[0];
+      if (txt) {
+        if (r.status === 'running') {                          // fase 4
+          txt.textContent = 'Verslag wordt gemaakt…';
+        } else {                                                // fase 3 (queued)
+          txt.textContent = r.queue_position
+            ? `Transcript klaar. Verslag is nummer ${r.queue_position} in de wachtrij`
+            : 'Transcript klaar. Verslag staat in de wachtrij';
+        }
+      }
       setTimeout(check, 2000);
     } else {
       if (spin) spin.hidden = true;

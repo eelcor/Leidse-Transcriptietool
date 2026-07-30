@@ -26,6 +26,8 @@ class SessionStatusOut(BaseModel):
     processing_finished_at: datetime | None = None
     expires_at: datetime | None = None
     has_transcript: bool = False
+    # Positie in de transcriptie-wachtrij (1 = eerstvolgende); alleen als status=queued.
+    queue_position: int | None = None
 
 
 class ReportOut(BaseModel):
@@ -36,6 +38,8 @@ class ReportOut(BaseModel):
     content: str | None = None
     error: str | None = None
     created_at: datetime
+    # Positie in de verslag-wachtrij (1 = eerstvolgende); alleen als status=queued.
+    queue_position: int | None = None
 
 
 class SessionResultOut(BaseModel):

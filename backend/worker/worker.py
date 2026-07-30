@@ -13,6 +13,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+from contextlib import nullcontext
 from datetime import datetime, timezone
 
 from sqlalchemy import select
@@ -147,6 +148,8 @@ async def transcribe_session(ctx: dict, session_id: str) -> str:
 # --------------------------------------------------------------------------
 async def generate_report(ctx: dict, report_id: str) -> str:
     maker = get_sessionmaker()
+
+    # Voorcontrole ZONDER de LLM-semafoor vast te houden: gone / al klaar / geen transcript.
     async with maker() as db:
         r = (await db.execute(select(Report).where(Report.id == report_id))).scalar_one_or_none()
         if r is None:
@@ -160,41 +163,60 @@ async def generate_report(ctx: dict, report_id: str) -> str:
             r.updated_at = _now()
             await db.commit()
             return "no-transcript"
-        r.status = ReportStatus.RUNNING
-        r.updated_at = _now()
-        transcript = sess.transcript
-        kinds, custom, context = r.kinds, r.custom_prompt, r.context
-        await db.commit()
 
-    report_started = _now()
-    try:
-        messages = build_messages(transcript, kinds, custom, context)
-        content = await llm.generate(messages)
-    except Exception as exc:
-        log.exception("Verslag genereren mislukt voor %s", report_id[:8])
+    # Serialiseer LLM-verslagen (endpoint = effectief 1 slot). Het verslag blijft QUEUED
+    # zolang het op de semafoor wacht, zodat de wachtrij-positie in de UI klopt; pas ná het
+    # verkrijgen van de semafoor gaat het naar RUNNING.
+    sem: asyncio.Semaphore | None = ctx.get("llm_semaphore")
+    async with (sem or nullcontext()):
         async with maker() as db:
-            await stats.record_event(db, "failed", target="report")
             r = (await db.execute(select(Report).where(Report.id == report_id))).scalar_one_or_none()
-            if r is not None:
+            if r is None:
+                return "gone"
+            if r.status == ReportStatus.DONE:
+                return "already-done"
+            sess = (await db.execute(select(Session).where(Session.id == r.session_id))).scalar_one_or_none()
+            if sess is None or not sess.transcript:
                 r.status = ReportStatus.FAILED
-                r.error = f"Verslag mislukt: {type(exc).__name__}"
+                r.error = "Transcript niet beschikbaar."
                 r.updated_at = _now()
                 await db.commit()
-        raise
+                return "no-transcript"
+            r.status = ReportStatus.RUNNING
+            r.updated_at = _now()
+            transcript = sess.transcript
+            kinds, custom, context = r.kinds, r.custom_prompt, r.context
+            await db.commit()
 
-    async with maker() as db:
-        r = (await db.execute(select(Report).where(Report.id == report_id))).scalar_one_or_none()
-        if r is None:
-            return "gone"
-        r.content = content
-        r.status = ReportStatus.DONE
-        r.updated_at = _now()
-        await stats.record_event(
-            db, "report",
-            duration_seconds=(_now() - report_started).total_seconds(),
-            report_mode=stats.report_mode_from_report(kinds, custom),
-        )
-        await db.commit()
+        report_started = _now()
+        try:
+            messages = build_messages(transcript, kinds, custom, context)
+            content = await llm.generate(messages)
+        except Exception as exc:
+            log.exception("Verslag genereren mislukt voor %s", report_id[:8])
+            async with maker() as db:
+                await stats.record_event(db, "failed", target="report")
+                r = (await db.execute(select(Report).where(Report.id == report_id))).scalar_one_or_none()
+                if r is not None:
+                    r.status = ReportStatus.FAILED
+                    r.error = f"Verslag mislukt: {type(exc).__name__}"
+                    r.updated_at = _now()
+                    await db.commit()
+            raise
+
+        async with maker() as db:
+            r = (await db.execute(select(Report).where(Report.id == report_id))).scalar_one_or_none()
+            if r is None:
+                return "gone"
+            r.content = content
+            r.status = ReportStatus.DONE
+            r.updated_at = _now()
+            await stats.record_event(
+                db, "report",
+                duration_seconds=(_now() - report_started).total_seconds(),
+                report_mode=stats.report_mode_from_report(kinds, custom),
+            )
+            await db.commit()
     return "ok"
 
 
@@ -277,7 +299,9 @@ async def _recover_stuck_reports(ctx: dict) -> None:
 async def startup(ctx: dict) -> None:
     settings = get_settings()
     ctx["stt_semaphore"] = asyncio.Semaphore(settings.stt_concurrency)
-    log.info("Worker gestart: STT_BACKEND=%s concurrency=%s", settings.stt_backend, settings.stt_concurrency)
+    ctx["llm_semaphore"] = asyncio.Semaphore(settings.llm_concurrency)
+    log.info("Worker gestart: STT_BACKEND=%s stt_concurrency=%s llm_concurrency=%s",
+             settings.stt_backend, settings.stt_concurrency, settings.llm_concurrency)
     # Model warm laden zodat de eerste job niet de laadtijd betaalt.
     try:
         get_backend().load()
@@ -304,5 +328,8 @@ class WorkerSettings:
     on_startup = startup
     redis_settings = _redis_settings()
     max_tries = 3            # retry met backoff bij transiente fouten
-    job_timeout = 3600       # lange opnames toegestaan
+    # Ruim (max ~1 dag): een job mag lang wachten op een druk/traag LLM- of STT-endpoint
+    # zonder door arq te worden afgebroken. Zo faalt een verslag niet op een timeout maar
+    # blijft het netjes in de wachtrij tot het aan de beurt is.
+    job_timeout = 86400
     keep_result = 3600

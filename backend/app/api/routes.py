@@ -18,7 +18,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, UploadFile
 from fastapi.responses import FileResponse, PlainTextResponse, StreamingResponse
 from starlette.background import BackgroundTask
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -198,7 +198,7 @@ async def complete_upload(session_id: str, db: AsyncSession = Depends(get_db)) -
     obj = await _get_session_or_404(db, session_id)
     if obj.status != SessionStatus.CREATED:
         # Idempotent: al afgerond -> gewoon status teruggeven.
-        return _status_out(obj)
+        return _status_out(obj, await _session_queue_position(db, obj))
 
     raw = storage.raw_audio_path(session_id)
     if not raw.exists() or raw.stat().st_size == 0:
@@ -217,7 +217,7 @@ async def complete_upload(session_id: str, db: AsyncSession = Depends(get_db)) -
     await db.commit()
 
     await queue.enqueue_transcription(session_id)
-    return _status_out(obj)
+    return _status_out(obj, await _session_queue_position(db, obj))
 
 
 # --------------------------------------------------------------------------
@@ -291,7 +291,38 @@ async def upload_file(
 # --------------------------------------------------------------------------
 # Status & resultaat ophalen
 # --------------------------------------------------------------------------
-def _status_out(obj: Session) -> SessionStatusOut:
+async def _session_queue_position(db: AsyncSession, obj: Session) -> int | None:
+    """1-geïndexeerde plek in de transcriptie-wachtrij (aantal 'queued' sessies dat
+    niet later is aangemaakt). Alleen zinvol als de sessie zelf 'queued' is."""
+    if obj.status != SessionStatus.QUEUED:
+        return None
+    n = (
+        await db.execute(
+            select(func.count()).select_from(Session).where(
+                Session.status == SessionStatus.QUEUED,
+                Session.created_at <= obj.created_at,
+            )
+        )
+    ).scalar_one()
+    return int(n)
+
+
+async def _report_queue_position(db: AsyncSession, r: Report) -> int | None:
+    """1-geïndexeerde plek in de verslag-wachtrij. Alleen zinvol als het verslag 'queued' is."""
+    if r.status != ReportStatus.QUEUED:
+        return None
+    n = (
+        await db.execute(
+            select(func.count()).select_from(Report).where(
+                Report.status == ReportStatus.QUEUED,
+                Report.created_at <= r.created_at,
+            )
+        )
+    ).scalar_one()
+    return int(n)
+
+
+def _status_out(obj: Session, queue_position: int | None = None) -> SessionStatusOut:
     return SessionStatusOut(
         id=obj.id,
         status=obj.status,
@@ -301,13 +332,14 @@ def _status_out(obj: Session) -> SessionStatusOut:
         processing_finished_at=obj.processing_finished_at,
         expires_at=obj.expires_at,
         has_transcript=bool(obj.transcript),
+        queue_position=queue_position,
     )
 
 
 @router.get("/sessions/{session_id}/status", response_model=SessionStatusOut)
 async def get_status(session_id: str, db: AsyncSession = Depends(get_db)) -> SessionStatusOut:
     obj = await _get_session_or_404(db, session_id)
-    return _status_out(obj)
+    return _status_out(obj, await _session_queue_position(db, obj))
 
 
 @router.get("/sessions/{session_id}", response_model=SessionResultOut)
@@ -325,7 +357,10 @@ async def get_result(session_id: str, db: AsyncSession = Depends(get_db)) -> Ses
         segments=segments,
         processing_finished_at=obj.processing_finished_at,
         expires_at=obj.expires_at,
-        reports=[_report_out(r) for r in sorted(obj.reports, key=lambda r: r.created_at)],
+        reports=[
+            _report_out(r, await _report_queue_position(db, r))
+            for r in sorted(obj.reports, key=lambda r: r.created_at)
+        ],
     )
 
 
@@ -359,7 +394,9 @@ async def session_events(session_id: str, request: Request, db: AsyncSession = D
             if obj is None:
                 yield f"event: gone\ndata: {json.dumps({'id': session_id})}\n\n"
                 break
-            payload = json.dumps(_status_out(obj).model_dump(mode="json"))
+            async with maker() as s:
+                pos = await _session_queue_position(s, obj)
+            payload = json.dumps(_status_out(obj, pos).model_dump(mode="json"))
             if payload != last:
                 yield f"data: {payload}\n\n"
                 last = payload
@@ -407,7 +444,7 @@ async def download_transcript(session_id: str, db: AsyncSession = Depends(get_db
 # --------------------------------------------------------------------------
 # Verslagen (LLM)
 # --------------------------------------------------------------------------
-def _report_out(r: Report) -> ReportOut:
+def _report_out(r: Report, queue_position: int | None = None) -> ReportOut:
     return ReportOut(
         id=r.id,
         status=r.status,
@@ -416,6 +453,7 @@ def _report_out(r: Report) -> ReportOut:
         content=r.content,
         error=r.error,
         created_at=r.created_at,
+        queue_position=queue_position,
     )
 
 
@@ -475,7 +513,7 @@ async def get_report(session_id: str, report_id: str, db: AsyncSession = Depends
     r = res.scalar_one_or_none()
     if r is None:
         raise HTTPException(status_code=404, detail="Verslag niet gevonden.")
-    return _report_out(r)
+    return _report_out(r, await _report_queue_position(db, r))
 
 
 @router.patch("/sessions/{session_id}/reports/{report_id}", response_model=ReportOut)

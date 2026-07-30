@@ -38,6 +38,9 @@ class Settings(BaseSettings):
     stt_device: str = "cpu"          # "cpu" | "cuda"  (CPU-fallback werkt altijd)
     stt_compute_type: str = "int8"   # faster-whisper: int8 | int8_float16 | float16 | float32
     stt_concurrency: int = 1         # max gelijktijdige STT-jobs (VRAM-bescherming)
+    # Max gelijktijdige LLM-verslagen. Het LLM-endpoint is doorgaans effectief 1 slot,
+    # dus 1: overige verslagen blijven netjes 'queued' met een wachtrij-positie.
+    llm_concurrency: int = 1
     stt_word_timestamps: bool = True
 
     # --- STT via extern OpenAI-compatibel endpoint (STT_BACKEND=openai) ---
@@ -52,7 +55,10 @@ class Settings(BaseSettings):
     llm_model: str = "qwen3.6-27b"
     llm_api_key: str = "not-needed"
     llm_temperature: float = 0.2
-    llm_timeout_seconds: int = 600
+    # Geen "timeout"-mislukking als het LLM-endpoint traag/bezet is: de call wacht
+    # desnoods lang (max ~1 dag) tot het endpoint 'm bedient. Bij een druk gedeeld
+    # endpoint komt het verslag zo alsnog door i.p.v. te falen. (Env-instelbaar.)
+    llm_timeout_seconds: int = 86400
 
     # Pad naar PROMPTS.md (letterlijke prompt-teksten, single source of truth).
     prompts_file: str = "/app/PROMPTS.md"
