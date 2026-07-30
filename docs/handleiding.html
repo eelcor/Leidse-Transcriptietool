@@ -235,6 +235,23 @@
       gokken. <b>Plak je hier de agenda</b>, dan probeert het model de onderwerpen op die agendapunten
       te <b>matchen</b> (zelfde volgorde en benamingen), en benoemt het welke agendapunten niet aan bod
       kwamen. De context is achtergrond: besluiten en actiepunten komen uit het transcript zelf.</p>
+    <p><b>Waarom dit hier extra telt:</b> we draaien bewust een <b>kleiner, lokaal taalmodel</b> — dat
+      houdt je data vertrouwelijk, maar een kleiner model is wél gevoeliger voor een paar herkenbare
+      foutjes, zeker omdat het transcript <b>geen sprekerlabels</b> heeft. Goede context vangt die
+      grotendeels op.</p>
+    <p><b>Zet daarom in de context:</b></p>
+    <ul>
+      <li><b>Onderwerp, datum en aanleiding</b> van het overleg.</li>
+      <li><b>Wie er meepraten én hun rol</b> — bijv. <i>"Bob = techniek; Colin = nieuwe coördinator"</i>.
+        Dit voorkomt de meest voorkomende fout: een uitspraak of taak aan de <b>verkeerde persoon</b> koppelen.</li>
+      <li><b>Naamvarianten die dezelfde persoon zijn</b>, bijv. <i>"Dave = David"</i> of
+        <i>"Mirjam = Miriam"</i> — anders raken die soms door elkaar.</li>
+      <li>Eventueel de <b>agenda</b> (dan volgt het verslag jouw agendapunten).</li>
+    </ul>
+    <div class="note"><b>Bekende foutjes van een kleiner model</b> — controleer deze altijd zelf, mét
+      of zonder context: <b>wie-doet-wat</b> door elkaar halen, gelijkende <b>namen</b> verwisselen, en
+      <b>getallen/data</b> net verkeerd overnemen. Onzekere namen/getallen staan al met
+      <span class="tag">[?]</span> gemarkeerd, maar het model kan zich ook mét stelligheid vergissen.</div>
     <p>Het model werkt <b>uitsluitend op basis van het transcript</b>: het verzint niets en markeert
       onzekere namen/getallen met <span class="tag">[?]</span>. Elk verslag kun je <b>bewerken</b>,
       <b>kopiëren</b> of downloaden als <b>Word (.docx)</b> of <b>.md</b>:</p>
