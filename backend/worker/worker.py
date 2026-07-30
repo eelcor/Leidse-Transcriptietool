@@ -233,6 +233,47 @@ async def _recover_stuck_transcriptions(ctx: dict) -> None:
     log.warning("%d onderbroken transcriptie(s) hersteld bij worker-start.", len(ids))
 
 
+async def _recover_stuck_reports(ctx: dict) -> None:
+    """Verslagen die op 'running' of 'queued' bleven hangen — bijv. doordat de worker
+    midden in de LLM-call werd herstart, of doordat het LLM-endpoint tijdelijk vastliep —
+    opnieuw inplannen, zodat ze niet eeuwig 'Bezig…' blijven staan. Analoog aan de
+    transcriptie-herstelhook; idempotent (een reeds afgerond verslag wordt overgeslagen)."""
+    maker = get_sessionmaker()
+    async with maker() as db:
+        stuck = (
+            await db.execute(
+                select(Report).where(Report.status.in_([ReportStatus.RUNNING, ReportStatus.QUEUED]))
+            )
+        ).scalars().all()
+        ids = [r.id for r in stuck]
+        for r in stuck:
+            if r.status == ReportStatus.RUNNING:
+                r.status = ReportStatus.QUEUED  # UI toont weer een nette 'in de wachtrij'-staat
+                r.updated_at = _now()
+        if ids:
+            await db.commit()
+    if not ids:
+        return
+    redis = ctx.get("redis")
+    if redis is None:
+        from app.queue import get_pool
+        redis = await get_pool()
+    for rid in ids:
+        jid = f"report:{rid}"
+        for key in (f"arq:in-progress:{jid}", f"arq:retry:{jid}", f"arq:job:{jid}", f"arq:result:{jid}"):
+            try:
+                await redis.delete(key)
+            except Exception:
+                pass
+        try:
+            await redis.zrem("arq:queue", jid)
+            await redis.enqueue_job("generate_report", rid, _job_id=jid)
+            log.warning("Onderbroken verslag opnieuw ingepland: %s", rid[:12])
+        except Exception:
+            log.exception("Kon onderbroken verslag niet opnieuw inplannen: %s", rid[:12])
+    log.warning("%d onderbroken verslag(en) hersteld bij worker-start.", len(ids))
+
+
 async def startup(ctx: dict) -> None:
     settings = get_settings()
     ctx["stt_semaphore"] = asyncio.Semaphore(settings.stt_concurrency)
@@ -247,6 +288,10 @@ async def startup(ctx: dict) -> None:
         await _recover_stuck_transcriptions(ctx)
     except Exception:
         log.exception("Herstel van onderbroken transcripties mislukt.")
+    try:
+        await _recover_stuck_reports(ctx)
+    except Exception:
+        log.exception("Herstel van onderbroken verslagen mislukt.")
 
 
 from app.queue import redis_settings as _redis_settings  # noqa: E402
