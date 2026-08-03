@@ -82,8 +82,16 @@ ask TORCH_VARIANT      "torch-variant (default | cu124)" "$DETECTED_TORCH"
 ask STT_DEVICE         "STT-device (cuda | cpu)" "$STT_DEVICE_DEF"
 ask STT_COMPUTE_TYPE   "STT compute type (float16 | float32 | int8)" "$STT_COMPUTE_DEF"
 ask WORKER_GPU_DEVICE  "GPU voor de worker (CDI, bv. nvidia.com/gpu=0 of =all)" "${DETECTED_DEVICE:-nvidia.com/gpu=all}"
-ask WEB_HTTP_PORT      "HTTP-poort (verhoog als er al een proxy op 80 draait)" "80"
-ask WEB_HTTPS_PORT     "HTTPS-poort (verhoog als er al een proxy op 443 draait)" "443"
+# Draait er al een reverse proxy (Caddy/nginx) op 80/443? Dan bindt de app-Caddy alleen
+# lokaal op vrije poorten en zet jouw bestaande proxy er een reverse_proxy naartoe.
+ask BEHIND_PROXY       "Draait er al een reverse proxy op 80/443? (j/n)" "n"
+case "$BEHIND_PROXY" in
+  [jJyY]*) WEB_BIND_DEF="127.0.0.1:"; HTTP_PORT_DEF=8080; HTTPS_PORT_DEF=8443; CADDY_TLS_HINT="internal" ;;
+  *)       WEB_BIND_DEF="";           HTTP_PORT_DEF=80;   HTTPS_PORT_DEF=443 ;;
+esac
+ask WEB_HTTP_PORT      "HTTP-poort (verhoog als er al een proxy op 80 draait)" "$HTTP_PORT_DEF"
+ask WEB_HTTPS_PORT     "HTTPS-poort (verhoog als er al een proxy op 443 draait)" "$HTTPS_PORT_DEF"
+ask WEB_BIND           "Bind-adres (leeg = alle interfaces; '127.0.0.1:' = alleen lokaal, achter proxy)" "$WEB_BIND_DEF"
 # STT-engine: faster_whisper is robuust (klein/begrensd geheugen). Canary geeft
 # topkwaliteit NL maar heeft een grote inferentie-piek (~8-9GB) -> een GPU die niet
 # met een groot LLM gedeeld wordt, of veel vrije VRAM.
@@ -118,6 +126,7 @@ CADDY_TLS=${CADDY_TLS}
 DEFAULT_SNI=${DEFAULT_SNI}
 WEB_HTTP_PORT=${WEB_HTTP_PORT}
 WEB_HTTPS_PORT=${WEB_HTTPS_PORT}
+WEB_BIND=${WEB_BIND}
 
 DATABASE_URL=postgresql+asyncpg://transcribe:transcribe@db:5432/transcribe
 REDIS_URL=redis://redis:6379/0
@@ -142,7 +151,10 @@ LLM_BASE_URL=${LLM_BASE_URL}
 LLM_MODEL=${LLM_MODEL}
 LLM_API_KEY=${LLM_API_KEY}
 LLM_TEMPERATURE=0.2
-LLM_TIMEOUT_SECONDS=600
+# Geen "timeout"-mislukking: de call wacht desnoods lang (default ~1 dag) i.p.v. te falen.
+LLM_TIMEOUT_SECONDS=86400
+# Max gelijktijdige LLM-verslagen (endpoint = doorgaans 1 slot); overige blijven 'queued'.
+LLM_CONCURRENCY=1
 PROMPTS_FILE=/app/PROMPTS.md
 EOF
 c "   .env klaar:"; sed 's/^/     /' .env
@@ -162,6 +174,29 @@ for i in $(seq 1 60); do
     c "   API is gezond."; break
   fi; sleep 2
 done
-c "==> Klaar. De worker downloadt bij de eerste start het Canary-model (~2GB)."
-c "    Site:  https://${SITE_ADDRESS}${WEB_HTTPS_PORT:+:$([ "$WEB_HTTPS_PORT" = 443 ] && echo '' || echo $WEB_HTTPS_PORT)}"
+if [ "$STT_BACKEND" = "canary" ]; then
+  c "==> Klaar. De worker downloadt bij de eerste start het Canary-model (~2GB)."
+else
+  c "==> Klaar. De worker downloadt bij de eerste start het STT-model (${STT_MODEL})."
+fi
+PORT_SUFFIX=$([ "$WEB_HTTPS_PORT" = 443 ] && echo '' || echo ":$WEB_HTTPS_PORT")
+c "    Site:  https://${SITE_ADDRESS}${PORT_SUFFIX}"
 c "    Logs:  docker compose logs -f worker"
+
+# Achter een bestaande proxy: druk een kant-en-klaar Caddy-siteblok af.
+case "$BEHIND_PROXY" in
+  [jJyY]*)
+    echo
+    c "==> Je draait achter een bestaande reverse proxy. Voeg dit siteblok toe aan je"
+    c "    BESTAANDE Caddyfile (die 80/443 al bezit) en herlaad die Caddy:"
+    cat <<SNIP
+     ${SITE_ADDRESS%% *} {
+         reverse_proxy https://127.0.0.1:${WEB_HTTPS_PORT} {
+             transport http { tls_insecure_skip_verify }
+             flush_interval -1
+         }
+     }
+SNIP
+    c "    (De app-Caddy luistert nu alleen lokaal op 127.0.0.1:${WEB_HTTPS_PORT}.)"
+    ;;
+esac

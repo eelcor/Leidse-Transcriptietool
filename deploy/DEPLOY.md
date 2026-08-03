@@ -161,33 +161,54 @@ Drie manieren om ervan af te komen:
    - **Firefox** (eigen store): Instellingen → Certificaten → Importeren → "vertrouw voor websites".
    Herstart daarna de browser. Let op: dit maakt álle door die Caddy-CA uitgegeven certificaten vertrouwd.
 
-## Naast een bestaande reverse proxy (bv. OpenWebUI's Caddy)
+## Naast een bestaande reverse proxy (bv. een Caddy die al draait)
 
-Draait er al iets op poort 80/443? Twee opties:
+Draait er al een Caddy/nginx op **80/443**? Laat de app die poorten dan niet óók pakken.
+Twee nette manieren:
 
-1. **Andere poorten** voor de meegeleverde Caddy:
-   ```
-   WEB_HTTP_PORT=8080
-   WEB_HTTPS_PORT=8443
-   ```
-   Site draait dan op `https://domein:8443`.
+### Aanbevolen: app-Caddy lokaal, jouw bestaande Caddy ervoor
 
-2. **Bestaande proxy laten proxien** naar de app (geen dubbele Caddy):
-   - Laat de `web`-service weg of publiceer geen poorten, en zet de bestaande proxy
-     zo dat hij `/` en `/api/*` naar de `api`-container (poort 8000) stuurt. Zorg dat
-     de proxy in hetzelfde docker-netwerk zit, of publiceer de api-poort lokaal:
-     ```yaml
-     # in een compose override:
-     api:
-       ports: ["127.0.0.1:8000:8000"]
-     ```
-   - In je bestaande Caddy:
-     ```
-     transcriptie.example.nl {
-         reverse_proxy /api/* 127.0.0.1:8000 { flush_interval -1 }
-         # frontend statisch serveren of ook naar api proxien
-     }
-     ```
+De meegeleverde `web`-Caddy doet alle routing al goed (frontend, `/api`, `/docs`,
+`/caddy-root.crt`, SSE). Laat 'm alléén op localhost luisteren; jouw bestaande Caddy doet de
+publieke TLS en proxyt ernaartoe. Zo hoef je niets aan de routing over te doen.
+
+In `.env`:
+```
+WEB_BIND=127.0.0.1:                 # let op de dubbele punt aan het eind → alleen lokaal
+WEB_HTTP_PORT=8080
+WEB_HTTPS_PORT=8443
+SITE_ADDRESS=transcriptie.example.nl
+CADDY_TLS=internal                  # interne self-signed; de front-Caddy doet de publieke TLS
+DEFAULT_SNI=transcriptie.example.nl
+```
+In je **bestaande** Caddyfile (die 80/443 al bezit) één siteblok erbij:
+```
+transcriptie.example.nl {
+    reverse_proxy https://127.0.0.1:8443 {
+        transport http { tls_insecure_skip_verify }   # interne self-signed cert overslaan
+        flush_interval -1                              # houdt SSE/live-status realtime
+    }
+}
+```
+`docker compose up -d`, `caddy reload` bij je bestaande Caddy — klaar. De `tls_insecure_skip_verify`
+geldt alleen voor de interne hop naar localhost; publiek heb je een echt certificaat via je
+bestaande Caddy.
+
+### Alternatief: geen tweede Caddy, direct naar de api
+
+Publiceer de api lokaal en laat de bestaande proxy alles doorzetten. In een compose-override
+(`docker compose -f docker-compose.yml -f jouw-override.yml up -d`):
+```yaml
+services:
+  api:
+    ports: ["127.0.0.1:8000:8000"]
+    environment: { SERVE_FRONTEND: /app/frontend }   # api serveert dan ook de frontend
+    volumes: ["./frontend:/app/frontend:ro"]
+  web:
+    profiles: ["disabled"]                            # web-container niet starten
+```
+In je bestaande Caddy: `reverse_proxy 127.0.0.1:8000 { flush_interval -1 }`. Nadeel: `/docs`
+(handleiding) serveer je dan zelf (bv. vanuit `./docs`); de eerste manier heeft dat al ingebouwd.
 
 > **Uploads achter een front-proxy.** Bestanden én opnames worden in **chunks van 4 MB**
 > geüpload (met automatische retry), dus je hoeft géén 200 MB-bodylimiet in te stellen —
@@ -248,6 +269,26 @@ De unit is `Type=oneshot` met `RemainAfterExit=yes`: `up -d` start de containers
 service blijft "active", zodat `stop` netjes `docker compose down` aanroept. Na een
 update (`./deploy/update.sh`) hoef je de unit niet te herstarten — dat script beheert de
 containers zelf; de unit bepaalt alleen het gedrag bij boot en handmatig start/stop.
+
+### Ook het LLM-endpoint bij boot starten
+
+De app **host geen LLM**; hij praat met een bestaand OpenAI-compatibel endpoint
+(`LLM_BASE_URL`). Draait dat endpoint op dezelfde host (bv. een `llama-server`/vLLM/LiteLLM-
+proces), dan moet dát óók automatisch terugkomen na een reboot — anders staan verslagen na
+een herstart eindeloos in de wachtrij. Draai het als **user-systemd-service** met *linger*
+aan (dan start het bij boot, zónder sudo of ingelogde sessie):
+
+```bash
+loginctl enable-linger "$USER"                 # user-services starten bij boot
+systemctl --user daemon-reload
+systemctl --user enable --now qwen-llm.service  # jouw LLM-server-unit
+systemctl --user status qwen-llm.service
+```
+
+Een user-unit staat in `~/.config/systemd/user/<naam>.service` met een simpel
+`ExecStart=<jouw start-commando>`, `Restart=on-failure` en `WantedBy=default.target`.
+Controleer na een test-reboot dat zowel het endpoint (`curl $LLM_BASE_URL/models`) als de
+stack (`docker compose ps`) vanzelf draaien.
 
 ## Updaten
 
