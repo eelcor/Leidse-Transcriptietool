@@ -185,14 +185,20 @@ In je **bestaande** Caddyfile (die 80/443 al bezit) één siteblok erbij:
 ```
 transcriptie.example.nl {
     reverse_proxy https://127.0.0.1:8443 {
-        transport http { tls_insecure_skip_verify }   # interne self-signed cert overslaan
+        transport http {
+            tls_insecure_skip_verify                   # interne self-signed cert overslaan
+        }
         flush_interval -1                              # houdt SSE/live-status realtime
+        header_up Host {host}                          # app-Caddy matcht op Host; {host} = hostnaam zonder poort
     }
 }
 ```
 `docker compose up -d`, `caddy reload` bij je bestaande Caddy — klaar. De `tls_insecure_skip_verify`
 geldt alleen voor de interne hop naar localhost; publiek heb je een echt certificaat via je
-bestaande Caddy.
+bestaande Caddy. De `header_up Host {host}` is defensief: de app-Caddy kiest zijn siteblok op de
+**Host-header**, dus die moet gelijk zijn aan `SITE_ADDRESS`. Bij een front op poort 443 met dezelfde
+hostnaam klopt dat vanzelf; deze regel houdt het ook goed als de front op een afwijkende poort draait
+(anders zou de poort in de Host meelopen en niets matchen — end-to-end getest).
 
 ### Alternatief: geen tweede Caddy, direct naar de api
 
@@ -207,8 +213,16 @@ services:
   web:
     profiles: ["disabled"]                            # web-container niet starten
 ```
-In je bestaande Caddy: `reverse_proxy 127.0.0.1:8000 { flush_interval -1 }`. Nadeel: `/docs`
-(handleiding) serveer je dan zelf (bv. vanuit `./docs`); de eerste manier heeft dat al ingebouwd.
+In je bestaande Caddy:
+```
+transcriptie.example.nl {
+    reverse_proxy 127.0.0.1:8000 {
+        flush_interval -1
+    }
+}
+```
+Nadeel: `/docs` (handleiding) serveer je dan zelf (bv. vanuit `./docs`); de eerste manier heeft dat
+al ingebouwd.
 
 > **Uploads achter een front-proxy.** Bestanden én opnames worden in **chunks van 4 MB**
 > geüpload (met automatische retry), dus je hoeft géén 200 MB-bodylimiet in te stellen —

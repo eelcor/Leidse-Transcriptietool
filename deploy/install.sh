@@ -192,8 +192,11 @@ case "$BEHIND_PROXY" in
     cat <<SNIP
      ${SITE_ADDRESS%% *} {
          reverse_proxy https://127.0.0.1:${WEB_HTTPS_PORT} {
-             transport http { tls_insecure_skip_verify }
+             transport http {
+                 tls_insecure_skip_verify
+             }
              flush_interval -1
+             header_up Host {host}
          }
      }
 SNIP
