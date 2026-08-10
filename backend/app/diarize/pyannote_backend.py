@@ -15,6 +15,29 @@ from .base import DiarizeBackend, SpeakerTurn
 
 log = logging.getLogger("transcribe.diarize.pyannote")
 
+_TORCH_LOAD_PATCHED = False
+
+
+def _patch_torch_load() -> None:
+    """torch 2.6 zet torch.load(weights_only=True) als default; pyannote's checkpoints bevatten
+    globals (bv. TorchVersion) die dan niet geladen worden -> UnpicklingError. Deze worker draait
+    UITSLUITEND op de gated pyannote-modellen die we zelf met ons token downloaden (vertrouwde
+    bron), dus forceren we de volledige load. Eenmalig, idempotent."""
+    global _TORCH_LOAD_PATCHED
+    if _TORCH_LOAD_PATCHED:
+        return
+    import torch
+
+    _orig_load = torch.load
+
+    def _full_load(*args, **kwargs):
+        # Forceren (niet setdefault): lightning/pyannote geven soms weights_only=True expliciet mee.
+        kwargs["weights_only"] = False
+        return _orig_load(*args, **kwargs)
+
+    torch.load = _full_load
+    _TORCH_LOAD_PATCHED = True
+
 
 class PyannoteDiarizeBackend(DiarizeBackend):
     name = "pyannote"
@@ -31,6 +54,7 @@ class PyannoteDiarizeBackend(DiarizeBackend):
         import torch
         from pyannote.audio import Pipeline
 
+        _patch_torch_load()
         log.info("pyannote laden: model=%s device=%s", self._model_name, self._device)
         self._pipeline = Pipeline.from_pretrained(self._model_name, use_auth_token=self._hf_token)
         if self._pipeline is None:  # gated model zonder (geldig) token geeft None terug
