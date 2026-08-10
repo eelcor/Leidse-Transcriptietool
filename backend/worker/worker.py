@@ -171,7 +171,7 @@ async def transcribe_session(ctx: dict, session_id: str) -> str:
         if redis is not None:
             await redis.enqueue_job(
                 "diarize_session", session_id, diar_id,
-                _queue_name=DIARIZE_QUEUE, _job_id=f"diarize:{session_id}",
+                _queue_name=DIARIZE_QUEUE, _job_id=f"diarize:{diar_id}",
             )
         log.info("Diarisatie ingepland voor sessie %s (verslag volgt daarna).", session_id[:8])
     elif auto_report_id is not None:

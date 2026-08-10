@@ -42,6 +42,20 @@ class ReportOut(BaseModel):
     queue_position: int | None = None
 
 
+class DiarizationSegmentOut(BaseModel):
+    start: float | None = None
+    end: float | None = None
+    speaker: str | None = None      # stabiel label SPREKER_A/B/… (None = ongelabeld)
+    text: str
+
+
+class DiarizationOut(BaseModel):
+    status: str                                          # queued | running | done | failed
+    num_speakers: int | None = None                      # aantal gevonden sprekers
+    speakers: list[str] = Field(default_factory=list)    # stabiele labels, op eerste spreekmoment
+    segments: list[DiarizationSegmentOut] = Field(default_factory=list)
+
+
 class SessionResultOut(BaseModel):
     id: str
     status: str
@@ -52,6 +66,13 @@ class SessionResultOut(BaseModel):
     processing_finished_at: datetime | None = None
     expires_at: datetime | None = None
     reports: list[ReportOut] = Field(default_factory=list)
+    # Aanwezig als er een diarisatie(-poging) voor deze sessie is; anders None.
+    diarization: DiarizationOut | None = None
+
+
+class RediarizeRequest(BaseModel):
+    # Optioneel gevraagd aantal sprekers (leeg = pyannote bepaalt het zelf).
+    participants: int | None = None
 
 
 class CreateReportRequest(BaseModel):

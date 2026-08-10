@@ -29,7 +29,10 @@ from ..models import Diarization, DiarizationStatus, Report, ReportStatus, Sessi
 from ..schemas import (
     CreateReportRequest,
     CreateSessionResponse,
+    DiarizationOut,
+    DiarizationSegmentOut,
     FeedbackRequest,
+    RediarizeRequest,
     ReportOut,
     SegmentOut,
     SessionResultOut,
@@ -391,12 +394,37 @@ async def get_status(session_id: str, db: AsyncSession = Depends(get_db)) -> Ses
     return _status_out(obj, await _session_queue_position(db, obj))
 
 
+def _diarization_out(diar: Diarization) -> DiarizationOut:
+    """Diarisatie voor de frontend: status + sprekerlabels (op eerste spreekmoment) +
+    de hersneden, gelabelde segments (zonder de zware 'words')."""
+    speakers: list[str] = []
+    segments: list[DiarizationSegmentOut] = []
+    for seg in (diar.payload or {}).get("segments", []):
+        spk = seg.get("speaker")
+        if spk and spk not in speakers:
+            speakers.append(spk)
+        segments.append(DiarizationSegmentOut(
+            start=seg.get("start"), end=seg.get("end"),
+            speaker=spk, text=seg.get("text", ""),
+        ))
+    return DiarizationOut(
+        status=diar.status, num_speakers=diar.num_speakers,
+        speakers=speakers, segments=segments,
+    )
+
+
 @router.get("/sessions/{session_id}", response_model=SessionResultOut)
 async def get_result(session_id: str, db: AsyncSession = Depends(get_db)) -> SessionResultOut:
     obj = await _get_session_or_404(db, session_id, with_reports=True)
     segments = None
     if obj.segments:
-        segments = [SegmentOut(**seg) for seg in obj.segments]
+        # Woord-timestamps (indien aanwezig) blijven server-side; de API geeft {start,end,text}.
+        segments = [SegmentOut(start=s.get("start"), end=s.get("end"), text=s.get("text", "")) for s in obj.segments]
+    # Laatste diarisatie(-poging) voor deze sessie meesturen (None als er geen is).
+    diar = (await db.execute(
+        select(Diarization).where(Diarization.session_id == session_id)
+        .order_by(Diarization.created_at.desc())
+    )).scalars().first()
     return SessionResultOut(
         id=obj.id,
         status=obj.status,
@@ -410,6 +438,7 @@ async def get_result(session_id: str, db: AsyncSession = Depends(get_db)) -> Ses
             _report_out(r, await _report_queue_position(db, r))
             for r in sorted(obj.reports, key=lambda r: r.created_at)
         ],
+        diarization=_diarization_out(diar) if diar else None,
     )
 
 
@@ -422,6 +451,30 @@ async def delete_session(session_id: str, db: AsyncSession = Depends(get_db)) ->
     await db.delete(obj)
     await db.commit()
     return Response(status_code=204)
+
+
+@router.post("/sessions/{session_id}/rediarize", response_model=DiarizationOut)
+async def rediarize(session_id: str, req: RediarizeRequest, db: AsyncSession = Depends(get_db)) -> DiarizationOut:
+    """'Opnieuw indelen': draai ALLEEN de diarisatie + merge opnieuw op het bestaande transcript
+    en de bewaarde audio (geen nieuwe STT, geen verslag). Maakt een nieuwe diarizations-rij en
+    plant een diarize-job in; de frontend volgt de status via GET /sessions/{id}."""
+    obj = await _get_session_or_404(db, session_id)
+    if not obj.transcript:
+        raise HTTPException(status_code=409, detail="Transcript nog niet beschikbaar.")
+    s = get_settings()
+    if s.diarize_backend == "none":
+        raise HTTPException(status_code=409, detail="Sprekersherkenning staat uit.")
+    n = req.participants if (isinstance(req.participants, int) and req.participants > 0) else None
+    now = _now()
+    diar = Diarization(
+        id=new_token(), session_id=session_id, status=DiarizationStatus.QUEUED,
+        backend=s.diarize_backend, model=s.diarize_model,
+        min_speakers=n, max_speakers=n, created_at=now, updated_at=now,
+    )
+    db.add(diar)
+    await db.commit()
+    await queue.enqueue_diarization(session_id, diar.id)
+    return _diarization_out(diar)
 
 
 @router.get("/sessions/{session_id}/events")

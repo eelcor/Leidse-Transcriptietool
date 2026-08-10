@@ -27,7 +27,7 @@ async def client(monkeypatch):
     from app.main import app
 
     # Nep-queue: registreer welke jobs zouden zijn ge-enqueued.
-    enqueued = {"stt": [], "report": []}
+    enqueued = {"stt": [], "report": [], "diarize": []}
 
     async def fake_stt(session_id):
         enqueued["stt"].append(session_id)
@@ -35,8 +35,12 @@ async def client(monkeypatch):
     async def fake_report(report_id):
         enqueued["report"].append(report_id)
 
+    async def fake_diarize(session_id, diar_id):
+        enqueued["diarize"].append((session_id, diar_id))
+
     monkeypatch.setattr(queue, "enqueue_transcription", fake_stt)
     monkeypatch.setattr(queue, "enqueue_report", fake_report)
+    monkeypatch.setattr(queue, "enqueue_diarization", fake_diarize)
 
     await init_db()
 

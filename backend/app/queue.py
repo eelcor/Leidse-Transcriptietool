@@ -50,5 +50,5 @@ async def enqueue_diarization(session_id: str, diar_id: str) -> None:
     pool = await get_pool()
     await pool.enqueue_job(
         "diarize_session", session_id, diar_id,
-        _queue_name=DIARIZE_QUEUE, _job_id=f"diarize:{session_id}",
+        _queue_name=DIARIZE_QUEUE, _job_id=f"diarize:{diar_id}",   # uniek per rij (ook bij opnieuw indelen)
     )
