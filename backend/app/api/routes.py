@@ -27,6 +27,7 @@ from ..config import get_settings
 from ..db import get_db
 from ..models import Diarization, DiarizationStatus, Report, ReportStatus, Session, SessionStatus
 from ..schemas import (
+    ConvertRequest,
     CreateReportRequest,
     CreateSessionResponse,
     DiarizationOut,
@@ -689,28 +690,44 @@ async def download_report_md(session_id: str, report_id: str, db: AsyncSession =
     )
 
 
-@router.get("/sessions/{session_id}/reports/{report_id}/download.docx")
-async def download_report_docx(session_id: str, report_id: str, db: AsyncSession = Depends(get_db)):
-    """Zet het Markdown-verslag om naar een Word-document via pandoc."""
-    r = await _get_report_content_or_404(db, session_id, report_id)
+async def _markdown_to_docx_response(content: str, filename: str):
+    """Zet Markdown om naar een docx via pandoc en geef 'm als FileResponse terug (temp opgeruimd)."""
     fd, out_path = tempfile.mkstemp(suffix=".docx")
     os.close(fd)
 
     def _convert() -> subprocess.CompletedProcess:
         return subprocess.run(
             ["pandoc", "-f", "markdown+hard_line_breaks", "-t", "docx", "-o", out_path],
-            input=r.content, text=True, capture_output=True,
+            input=content, text=True, capture_output=True,
         )
 
     proc = await asyncio.to_thread(_convert)
     if proc.returncode != 0:
         os.remove(out_path)
         raise HTTPException(status_code=500, detail="Word-conversie mislukt (pandoc).")
-    await stats.record_event(db, "download", download_kind="report_docx")
-    await db.commit()
     return FileResponse(
         out_path,
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        filename=f"verslag-{report_id[:8]}.docx",
+        filename=filename,
         background=BackgroundTask(os.remove, out_path),  # temp opruimen na verzenden
     )
+
+
+@router.get("/sessions/{session_id}/reports/{report_id}/download.docx")
+async def download_report_docx(session_id: str, report_id: str, db: AsyncSession = Depends(get_db)):
+    """Zet het Markdown-verslag om naar een Word-document via pandoc."""
+    r = await _get_report_content_or_404(db, session_id, report_id)
+    await stats.record_event(db, "download", download_kind="report_docx")
+    await db.commit()
+    return await _markdown_to_docx_response(r.content, f"verslag-{report_id[:8]}.docx")
+
+
+@router.post("/convert/docx")
+async def convert_docx(req: ConvertRequest):
+    """Stateless Markdown -> docx (niets opgeslagen). Voor client-side export met ingevulde
+    sprekernamen in placeholder-modus: de browser vervangt de labels en stuurt de tekst hierheen,
+    zodat de namen niet in de database belanden."""
+    content = (req.content or "").strip()
+    if not content:
+        raise HTTPException(status_code=422, detail="Lege inhoud.")
+    return await _markdown_to_docx_response(content, "verslag.docx")

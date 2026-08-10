@@ -6,11 +6,11 @@ export const API = {
   async prompts() {
     return (await fetch('/api/prompts')).json();
   },
-  async createSession(language, optimize, report) {
+  async createSession(language, optimize, report, participants) {
     const r = await fetch('/api/sessions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ language, optimize, report }),
+      body: JSON.stringify({ language, optimize, report, participants }),
     });
     if (!r.ok) throw new Error('Kon sessie niet aanmaken');
     return r.json();
@@ -38,8 +38,8 @@ export const API = {
   },
   // Robuuste bestandsupload: hakt het bestand in kleine chunks (past onder proxy-bodylimieten)
   // en hergebruikt de chunked PUT + complete-flow, i.p.v. één grote multipart-POST.
-  async uploadFileChunked(file, language, optimize, report, onProgress) {
-    const sess = await this.createSession(language, optimize, report);
+  async uploadFileChunked(file, language, optimize, report, onProgress, participants) {
+    const sess = await this.createSession(language, optimize, report, participants);
     const id = sess.id;
     const CHUNK = 4 * 1024 * 1024;   // 4 MB
     const mime = file.type || 'application/octet-stream';
@@ -131,5 +131,24 @@ export const API = {
   async deleteReport(sessionId, reportId) {
     const r = await fetch(`/api/sessions/${sessionId}/reports/${reportId}`, { method: 'DELETE' });
     if (!r.ok && r.status !== 404) throw new Error('Verwijderen mislukt (' + r.status + ')');
+  },
+  async rediarize(sessionId, participants) {
+    const r = await fetch(`/api/sessions/${sessionId}/rediarize`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ participants }),
+    });
+    if (!r.ok) throw new Error('Opnieuw indelen mislukt (' + r.status + ')');
+    return r.json();
+  },
+  // Markdown -> docx (stateless), voor client-side export met ingevulde sprekernamen.
+  async convertDocx(content) {
+    const r = await fetch('/api/convert/docx', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content }),
+    });
+    if (!r.ok) throw new Error('Word-conversie mislukt (' + r.status + ')');
+    return r.blob();
   },
 };

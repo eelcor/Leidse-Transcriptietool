@@ -92,3 +92,9 @@ class UpdateReportRequest(BaseModel):
 class FeedbackRequest(BaseModel):
     stars: int
     target: str | None = None   # "transcript" | "verslag"
+
+
+class ConvertRequest(BaseModel):
+    # Markdown -> docx, stateless (niets opgeslagen). Gebruikt voor client-side export met
+    # ingevulde sprekernamen in placeholder-modus (namen belanden zo niet in de database).
+    content: str

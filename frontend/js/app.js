@@ -45,6 +45,8 @@ const ICONS = {
   copy: '<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/>',
   markdown: '<rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 15V9l3 3 3-3v6"/><path d="M17 9v4M15 12l2 2 2-2"/>',
   close: '<path d="M6 6l12 12M18 6L6 18"/>',
+  users: '<path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/>',
+  play: '<path d="M7 4v16l13-8z"/>',
 };
 function ic(name, size = 15) {
   const w = document.createElement('span');
@@ -121,6 +123,9 @@ async function init() {
     .then((r) => { if (r.ok) { const n = $('#cert-note'); if (n) n.hidden = false; } })
     .catch(() => {});
 
+  // Sprekersherkenning: het deelnemersveld alleen tonen als de server diarisatie aan heeft.
+  if (CONFIG.diarize_enabled) { const sc = $('#speakers-config'); if (sc) sc.hidden = false; }
+
   // Navigatie
   $('#nav-new').addEventListener('click', () => { releaseRecorder(); show('home'); });
   $('#nav-retrieve').addEventListener('click', () => show('retrieve'));
@@ -169,6 +174,14 @@ function getReportConfig() {
   return { kinds, context };
 }
 
+// Gevraagd aantal deelnemers (voor sprekerherkenning); null als leeg/onzin.
+function getParticipants() {
+  const inp = $('#participant-count');
+  if (!inp) return null;
+  const v = parseInt((inp.value || '').trim(), 10);
+  return Number.isFinite(v) && v > 0 ? v : null;
+}
+
 // -------------------------------------------------------------------------
 // Bestand uploaden
 // -------------------------------------------------------------------------
@@ -204,7 +217,7 @@ function setupUpload() {
     try {
       const res = await API.uploadFileChunked(file, CONFIG.default_language, optimize, getReportConfig(), (f) => {
         prog.value = Math.round(f * 100);
-      });
+      }, getParticipants());
       openSession(res.id);
     } catch (e) {
       alert('Upload mislukt: ' + e.message);
@@ -364,7 +377,7 @@ function setupRecorder() {
     startBtn.disabled = true;
     try {
       const optimize = $('#opt-record').checked;
-      const sess = await API.createSession(CONFIG.default_language, optimize, getReportConfig());
+      const sess = await API.createSession(CONFIG.default_language, optimize, getReportConfig(), getParticipants());
       sessionId = sess.id;
       uploadChain = Promise.resolve();
       // Chunk-callback ZETTEN vóór start(): elke chunk direct uploaden (in volgorde).
@@ -563,6 +576,7 @@ async function pollStatus(sessionId, render) {
 async function loadResult(sessionId) {
   let res;
   try { res = await API.result(sessionId); } catch { return; }
+  CURRENT_RES = res;
   setStep(3);
   const sb = document.querySelector('.statebar');
   if (sb) sb.hidden = true;   // statusbalk weg; het resultaat spreekt voor zich
@@ -603,7 +617,7 @@ async function loadResult(sessionId) {
     ),
   ));
   const tbox = el('div', { class: 'transcript' });
-  tbox.textContent = res.transcript || '';
+  renderTranscriptBody(tbox, res, loadSpeakerNames(sessionId));
   left.append(tbox);
   if (res.segments && res.segments.length) {
     const tgl = el('button', { class: 'btn ghost sm', style: 'margin-top:10px' }, 'Toon tijdcodes');
@@ -617,9 +631,14 @@ async function loadResult(sessionId) {
           tbox.append(el('div', { class: 'seg' },
             el('span', { class: 'ts' }, s.start != null ? `[${fmtTime(s.start)}]` : ''), ' ' + s.text));
         });
-      } else { tbox.textContent = res.transcript || ''; }
+      } else { renderTranscriptBody(tbox, res, loadSpeakerNames(sessionId)); }
     });
     left.append(tgl);
+  }
+  // Sprekers-blok (alleen als de server diarisatie aan heeft en er een diarisatie is).
+  if (CONFIG.diarize_enabled && res.diarization) {
+    const sb = buildSpeakersBlock(sessionId, res);
+    if (sb) left.append(sb);
   }
   left.append(starWidget(sessionId, 'transcript', 'Hoe bruikbaar is dit transcript?'));
 
@@ -643,6 +662,167 @@ async function loadResult(sessionId) {
 function fmtTime(sec) {
   const m = Math.floor(sec / 60), s = Math.floor(sec % 60);
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+// -------------------------------------------------------------------------
+// Sprekers: namen (localStorage per sessie), label->naam-substitutie, weergave
+// -------------------------------------------------------------------------
+let CURRENT_RES = null;                       // laatst geladen resultaat (voor herrenderen bij naamswijziging)
+const speakersKey = (sid) => `transcribe.speakers.${sid}`;
+function loadSpeakerNames(sid) {
+  try { return JSON.parse(localStorage.getItem(speakersKey(sid)) || '{}') || {}; } catch { return {}; }
+}
+function saveSpeakerNames(sid, map) { localStorage.setItem(speakersKey(sid), JSON.stringify(map)); }
+function hasSpeakerNames(names) { return Object.values(names || {}).some((v) => v && String(v).trim()); }
+
+// Vervang de labels SPREKER_A/B/… door de ingevulde namen. \b voorkomt dat SPREKER_A
+// binnen SPREKER_AA raakt; lege namen laten het label ongemoeid.
+function applySpeakerNames(text, names) {
+  if (!text || !names) return text || '';
+  let out = text;
+  for (const [label, name] of Object.entries(names)) {
+    const nm = (name || '').trim();
+    if (nm) out = out.replace(new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'g'), nm);
+  }
+  return out;
+}
+
+// Startseconde van het langste segment van een spreker (voor het luisterfragment).
+function longestSegmentStart(segments, speaker) {
+  let best = null, bestDur = -1;
+  (segments || []).forEach((s) => {
+    if (s.speaker === speaker && s.start != null && s.end != null && (s.end - s.start) > bestDur) {
+      bestDur = s.end - s.start; best = s.start;
+    }
+  });
+  return best;
+}
+
+let _snipTimer = null;
+function playSnippet(audio, start, seconds = 3) {
+  if (!audio || start == null) return;
+  clearTimeout(_snipTimer);
+  const go = () => {
+    try {
+      audio.currentTime = start;
+      audio.play().then(() => { _snipTimer = setTimeout(() => audio.pause(), seconds * 1000); }).catch(() => {});
+    } catch {}
+  };
+  audio.pause();
+  if (audio.readyState >= 1) { go(); }          // metadata al binnen -> direct seeken
+  else { audio.preload = 'metadata'; audio.addEventListener('loadedmetadata', go, { once: true }); audio.load(); }
+}
+
+// Vul de transcript-box: met diarisatie -> sprekerlabels/namen per beurt; anders platte tekst.
+function renderTranscriptBody(tbox, res, names) {
+  const diar = res && res.diarization;
+  if (diar && diar.status === 'done' && diar.segments && diar.segments.length) {
+    tbox.innerHTML = '';
+    diar.segments.forEach((seg) => {
+      const row = el('div', { class: 'turn' });
+      if (seg.speaker) row.append(el('span', { class: 'spk' }, (names[seg.speaker] || seg.speaker) + ': '));
+      row.append(document.createTextNode(seg.text || ''));
+      tbox.append(row);
+    });
+  } else {
+    tbox.textContent = res.transcript || '';
+  }
+}
+
+// Na een naamswijziging: transcript + verslagen opnieuw renderen (labels -> namen).
+function refreshSpeakerLabels(sessionId) {
+  const tbox = document.querySelector('#result-area .transcript');
+  if (tbox && CURRENT_RES) renderTranscriptBody(tbox, CURRENT_RES, loadSpeakerNames(sessionId));
+  layoutReports(sessionId);
+}
+
+// Het "Sprekers"-blok op de resultaatpagina (alleen als diarisatie aan staat en er data is).
+function buildSpeakersBlock(sessionId, res) {
+  const diar = res.diarization;
+  if (!diar) return null;
+  const names = loadSpeakerNames(sessionId);
+  const panel = el('div', { class: 'panel speakers', id: 'speakers-block' });
+  panel.append(el('div', { class: 'panel-head' }, el('h3', {}, ic('users', 16), ' Sprekers')));
+  const info = el('div', { class: 'muted small', style: 'margin-bottom:10px' });
+  panel.append(info);
+
+  if (diar.status !== 'done') {
+    info.textContent = diar.status === 'failed'
+      ? 'Sprekersherkenning is mislukt — het transcript blijft gewoon bruikbaar.'
+      : 'Sprekers worden ingedeeld…';
+    if (diar.status !== 'failed') pollDiarization(sessionId);
+  } else if (!diar.speakers || !diar.speakers.length) {
+    info.textContent = 'Geen aparte sprekers gevonden.';
+  } else {
+    info.textContent = `${diar.num_speakers || diar.speakers.length} spreker(s) herkend. Vul namen in (optioneel) — ze worden lokaal bewaard en in de weergave en het verslag gebruikt.`;
+    const audio = el('audio', { src: `/api/sessions/${sessionId}/audio`, preload: 'none' });
+    const rows = el('div', { class: 'speaker-rows' });
+    diar.speakers.forEach((label) => {
+      const start = longestSegmentStart(diar.segments, label);
+      const play = el('button', { class: 'btn outline sm', title: 'Luister ~3 seconden van deze spreker',
+        onclick: () => playSnippet(audio, start) }, ic('play', 13), ' 3s');
+      if (start == null) play.disabled = true;
+      const input = el('input', { type: 'text', class: 'spk-name mono', value: names[label] || '', placeholder: 'naam…' });
+      input.addEventListener('input', () => {
+        names[label] = input.value; saveSpeakerNames(sessionId, names); refreshSpeakerLabels(sessionId);
+      });
+      rows.append(el('div', { class: 'speaker-row' }, el('span', { class: 'spk-label' }, label), play, input));
+    });
+    panel.append(rows, audio);
+  }
+
+  // Opnieuw indelen (nieuwe diarisatie op hetzelfde transcript + audio).
+  const redo = el('details', { class: 'opts', style: 'margin-top:12px' },
+    el('summary', {}, 'Opnieuw indelen'));
+  const cnt = el('input', { type: 'number', min: '1', max: '20', step: '1', class: 'mono',
+    style: 'width:120px', placeholder: 'aantal' });
+  const btn = el('button', { class: 'btn outline sm', onclick: async () => {
+    btn.disabled = true;
+    const v = parseInt((cnt.value || '').trim(), 10);
+    try {
+      await API.rediarize(sessionId, Number.isFinite(v) && v > 0 ? v : null);
+      info.textContent = 'Sprekers worden opnieuw ingedeeld…';
+      pollDiarization(sessionId);
+    } catch (e) { alert(e.message); btn.disabled = false; }
+  } }, 'Start opnieuw indelen');
+  redo.append(el('p', { class: 'muted small', style: 'margin:8px 0' },
+    'Draait alléén de sprekersherkenning opnieuw op dit transcript. Geef eventueel een ander aantal deelnemers op.'),
+    el('div', { class: 'redo-row' }, cnt, btn));
+  panel.append(redo);
+  return panel;
+}
+
+// Poll de diarisatie-status tot done/failed en herlaad dan het resultaat.
+let _diarPoll = null;
+function pollDiarization(sessionId) {
+  clearTimeout(_diarPoll);
+  const tick = async () => {
+    let res;
+    try { res = await API.result(sessionId); } catch { return; }
+    const st = res.diarization && res.diarization.status;
+    if (st === 'done' || st === 'failed') { loadResult(sessionId); return; }
+    _diarPoll = setTimeout(tick, 2500);
+  };
+  _diarPoll = setTimeout(tick, 2500);
+}
+
+// Client-side export met ingevulde namen (namen komen zo niet in de DB).
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = el('a', { href: url, download: filename });
+  document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 30000);
+}
+function exportReportMd(sessionId, report) {
+  const content = applySpeakerNames(report.content || '', loadSpeakerNames(sessionId));
+  downloadBlob(new Blob([content], { type: 'text/markdown' }), `verslag-${report.id.slice(0, 8)}.md`);
+}
+async function exportReportDocx(sessionId, report, btn) {
+  const content = applySpeakerNames(report.content || '', loadSpeakerNames(sessionId));
+  if (btn) btn.disabled = true;
+  try { downloadBlob(await API.convertDocx(content), `verslag-${report.id.slice(0, 8)}.docx`); }
+  catch (e) { alert(e.message); }
+  finally { if (btn) btn.disabled = false; }
 }
 
 function buildReportControls(sessionId) {
@@ -723,13 +903,20 @@ function renderReportCard(sessionId, report, parent) {
   const card = el('div', { class: 'report-card', id: 'rep-' + report.id });
   const title = report.custom_prompt ? 'Eigen prompt'
     : (report.kinds || []).map((k) => (SECTIONS.find((s) => s.key === k) || {}).label || k).join(', ');
+  const names = loadSpeakerNames(sessionId);
+  const named = hasSpeakerNames(names);        // namen ingevuld -> client-side export met substitutie
   const actions = el('div', { class: 'panel-actions' });
   if (report.status === 'done') {
+    const wordBtn = named
+      ? el('button', { class: 'btn outline sm', onclick: (e) => exportReportDocx(sessionId, report, e.currentTarget) }, ic('word'), ' Word')
+      : el('a', { class: 'btn outline sm', href: `/api/sessions/${sessionId}/reports/${report.id}/download.docx` }, ic('word'), ' Word');
+    const mdBtn = named
+      ? el('button', { class: 'btn outline sm', onclick: () => exportReportMd(sessionId, report) }, ic('markdown'), ' Markdown')
+      : el('a', { class: 'btn outline sm', href: `/api/sessions/${sessionId}/reports/${report.id}/download.md` }, ic('markdown'), ' Markdown');
     actions.append(
       el('button', { class: 'btn outline sm', onclick: () => openEditor(sessionId, report) }, ic('edit'), ' Bewerken'),
-      el('button', { class: 'btn outline sm', onclick: () => copy(report.content) }, ic('copy'), ' Kopieer'),
-      el('a', { class: 'btn outline sm', href: `/api/sessions/${sessionId}/reports/${report.id}/download.docx` }, ic('word'), ' Word'),
-      el('a', { class: 'btn outline sm', href: `/api/sessions/${sessionId}/reports/${report.id}/download.md` }, ic('markdown'), ' Markdown'),
+      el('button', { class: 'btn outline sm', onclick: () => copy(applySpeakerNames(report.content, names)) }, ic('copy'), ' Kopieer'),
+      wordBtn, mdBtn,
     );
   }
   // Verwijderknop (X) rechtsboven — altijd beschikbaar.
@@ -741,7 +928,7 @@ function renderReportCard(sessionId, report, parent) {
 
   if (report.status === 'done') {
     const body = el('div', { class: 'report-body md' });
-    body.innerHTML = renderMarkdown(report.content || '');
+    body.innerHTML = renderMarkdown(applySpeakerNames(report.content || '', names));
     card.append(body);
   } else if (report.status === 'failed') {
     card.append(el('div', { class: 'error' }, report.error || 'Verslag mislukt.'));
