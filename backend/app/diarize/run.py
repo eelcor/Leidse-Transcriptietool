@@ -13,14 +13,24 @@ from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from .. import storage
+from ..config import get_settings
 from ..models import Diarization, DiarizationStatus, Session
 from .base import DiarizeBackend
+from .merge import merge as merge_segments
 
 log = logging.getLogger("transcribe.diarize.run")
 
 
 def _now() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def _flatten_words(segments: list[dict] | None) -> list[dict]:
+    """Plat de woord-timestamps uit de STT-segments (sessions.segments) tot één lijst."""
+    words: list[dict] = []
+    for seg in segments or []:
+        words.extend(seg.get("words") or [])
+    return words
 
 
 async def run_diarization(maker: async_sessionmaker, session_id: str, diar_id: str, backend: DiarizeBackend) -> str:
@@ -35,6 +45,7 @@ async def run_diarization(maker: async_sessionmaker, session_id: str, diar_id: s
         if diar is None or sess is None:
             return "gone"
         min_spk, max_spk = diar.min_speakers, diar.max_speakers
+        sess_segments = sess.segments
         diar.status = DiarizationStatus.RUNNING
         diar.updated_at = _now()
         await db.commit()
@@ -54,20 +65,30 @@ async def run_diarization(maker: async_sessionmaker, session_id: str, diar_id: s
                 await db.commit()
         return "failed"
 
-    speakers = sorted({t.speaker for t in turns})
+    # Aantal GEVONDEN sprekers = rauwe pyannote-labels (onafhankelijk van de merge).
+    num_speakers = len({t.speaker for t in turns})
+    # Merge de STT-woorden met de spreker-turns tot hersneden, gelabelde segments.
+    s = get_settings()
+    words = _flatten_words(sess_segments)
+    merged = merge_segments(
+        words, [t.as_dict() for t in turns],
+        min_gap=s.diarize_min_gap, min_segment=s.diarize_min_segment,
+    )
     payload = {
         "backend": backend.name,
-        "num_speakers": len(speakers),
+        "num_speakers": num_speakers,
         "turns": [t.as_dict() for t in turns],
+        "segments": merged["segments"],
+        "speaker_map": merged["speaker_map"],
     }
     async with maker() as db:
         diar = await db.get(Diarization, diar_id)
         if diar is None:
             return "gone"
         diar.status = DiarizationStatus.DONE
-        diar.num_speakers = len(speakers)
+        diar.num_speakers = num_speakers
         diar.payload = payload
         diar.updated_at = _now()
         await db.commit()
-    log.info("Diarisatie klaar voor sessie %s: %d spreker(s).", session_id[:8], len(speakers))
+    log.info("Diarisatie klaar voor sessie %s: %d spreker(s).", session_id[:8], num_speakers)
     return "ok"
