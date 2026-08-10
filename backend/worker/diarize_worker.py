@@ -11,16 +11,23 @@ from __future__ import annotations
 import asyncio
 import logging
 from contextlib import nullcontext
+from datetime import datetime, timezone
+
+from sqlalchemy import select
 
 from app.config import get_settings
 from app.db import get_sessionmaker
 from app.diarize.factory import get_diarize_backend
 from app.diarize.run import run_diarization
-from app.models import Diarization
+from app.models import Diarization, DiarizationStatus
 from app.queue import DIARIZE_QUEUE, enqueue_report
 from app.queue import redis_settings as _redis_settings
 
 log = logging.getLogger("transcribe.diarize.worker")
+
+
+def _now() -> datetime:
+    return datetime.now(timezone.utc)
 
 
 async def _enqueue_auto_report(diar_id: str) -> None:
@@ -46,6 +53,42 @@ async def diarize_session(ctx: dict, session_id: str, diar_id: str) -> str:
     return result
 
 
+async def _recover_stuck_diarizations(ctx: dict) -> None:
+    """Diarisaties die op 'running' bleven hangen (worker onderbroken door herstart/crash)
+    opnieuw inplannen. Analoog aan de STT-/verslag-herstelhooks; idempotent."""
+    maker = get_sessionmaker()
+    async with maker() as db:
+        stuck = (await db.execute(
+            select(Diarization).where(Diarization.status == DiarizationStatus.RUNNING)
+        )).scalars().all()
+        pairs = [(d.session_id, d.id) for d in stuck]
+        for d in stuck:
+            d.status = DiarizationStatus.QUEUED
+            d.updated_at = _now()
+        if pairs:
+            await db.commit()
+    if not pairs:
+        return
+    redis = ctx.get("redis")
+    if redis is None:
+        from app.queue import get_pool
+        redis = await get_pool()
+    for sid, did in pairs:
+        jid = f"diarize:{did}"
+        for key in (f"arq:in-progress:{jid}", f"arq:retry:{jid}", f"arq:job:{jid}", f"arq:result:{jid}"):
+            try:
+                await redis.delete(key)
+            except Exception:
+                pass
+        try:
+            await redis.zrem(DIARIZE_QUEUE, jid)
+            await redis.enqueue_job("diarize_session", sid, did, _queue_name=DIARIZE_QUEUE, _job_id=jid)
+            log.warning("Onderbroken diarisatie opnieuw ingepland: %s", did[:12])
+        except Exception:
+            log.exception("Kon onderbroken diarisatie niet opnieuw inplannen: %s", did[:12])
+    log.warning("%d onderbroken diarisatie(s) hersteld bij worker-start.", len(pairs))
+
+
 async def startup(ctx: dict) -> None:
     settings = get_settings()
     ctx["diarize_semaphore"] = asyncio.Semaphore(settings.diarize_concurrency)
@@ -56,6 +99,10 @@ async def startup(ctx: dict) -> None:
         get_diarize_backend().load()
     except Exception:
         log.exception("Diarisatiemodel warm laden mislukt; wordt bij de eerste job opnieuw geprobeerd.")
+    try:
+        await _recover_stuck_diarizations(ctx)
+    except Exception:
+        log.exception("Herstel van onderbroken diarisaties mislukt.")
 
 
 class DiarizeWorkerSettings:

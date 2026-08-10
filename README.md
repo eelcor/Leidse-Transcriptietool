@@ -131,6 +131,12 @@ CUDA-passende `torch` (zie de V100/cu124-noot hieronder).
 > (voldoet aan NeMo's `torch>=2.6.0`). Nieuwere kaarten (RTX Pro 6000 = sm_120)
 > werken wél met de cu13-default.
 >
+> **Sprekerdiarisatie (pyannote):** de diarize-worker heeft een EIGEN, opt-in image met torch,
+> die torch installeert vanaf de build-arg `TORCH_INDEX_URL` (default `cu124` — bevat sm_70 en
+> werkt dus op nieuwe GPU's én V100). Zelfde afweging als hierboven: op afwijkende hardware of
+> driver kies je een passende index. De basis-worker blijft torch-vrij. Zie
+> [`deploy/DEPLOY.md`](deploy/DEPLOY.md), "Sprekerdiarisatie".
+>
 > **Prestatie (getest op V100, fp16):** modellaadtijd ~43s (eenmalig bij
 > worker-startup), daarna ~0,74s per transcriptie van 7s audio (~10× realtime);
 > op CPU ~2,1s (~3,5× realtime). De laadtijd is eenmalig, niet per job.

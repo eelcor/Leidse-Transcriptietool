@@ -101,6 +101,50 @@ Wil je STT niet in de worker draaien maar op een aparte server (net als de LLM)?
 - De backend probeert `verbose_json` (met segment-timestamps) en valt terug op `json`
   (alleen tekst) als de server dat formaat niet ondersteunt.
 
+## Sprekerdiarisatie (optioneel, `DIARIZE_BACKEND=pyannote`)
+
+Sprekerherkenning ("wie zegt wat") draait als **aparte worker op een eigen queue**, met een
+**eigen image** (torch + pyannote). De basis-worker blijft daardoor licht (geen torch). Standaard
+staat het **uit** (`DIARIZE_BACKEND=none`) en wordt de image niet gebouwd.
+
+**Vooraf (eenmalig):** de pyannote-modellen zijn *gated* op HuggingFace. Accepteer de voorwaarden
+op `pyannote/speaker-diarization-3.1` én `pyannote/segmentation-3.0`, maak een **Read-token**
+(huggingface.co/settings/tokens) en zet dat als `DIARIZE_HF_TOKEN`.
+
+**Aanzetten.** In `.env`:
+```
+DIARIZE_BACKEND=pyannote
+DIARIZE_HF_TOKEN=hf_xxx
+DIARIZE_GPU_DEVICE=nvidia.com/gpu=1      # kies één vrije kaart (binnen de container = cuda:0)
+TORCH_INDEX_URL=https://download.pytorch.org/whl/cu124   # cu124 werkt op nieuwe GPU's én V100
+```
+Bouwen en starten (let op het profiel — anders start de diarize-worker niet mee):
+```bash
+docker compose --profile diarize up -d --build
+```
+De eerste keer downloadt de worker de pyannote-modellen (naar de `hf_cache`-volume; daarna offline).
+
+**Kaart-pinning.** `DIARIZE_GPU_DEVICE` wijst via CDI één GPU toe. Binnen de container is die kaart
+**altijd `cuda:0`** (daarom `DIARIZE_DEVICE=cuda`), ongeacht welke host-index je koos. Zo blijft de
+piek-VRAM voorspelbaar naast STT en het LLM. `DIARIZE_CONCURRENCY=1` houdt het bij één job tegelijk.
+
+**torch/GPU.** De image installeert torch van `TORCH_INDEX_URL` (build-arg). `cu124` bevat nog
+sm_70 en werkt dus óók op Tesla V100 — zie de torch/V100-notitie in de README. Draai je op nóg
+oudere hardware of een afwijkende driver, kies dan een passende index (bv. `cu118`).
+
+**Controleer vóór het aanzetten of er genoeg vrij geheugen is** (richtlijn: **minimaal ~3 GB vrij**
+op de gekozen kaart, náást wat er al draait; pyannote 3.1 piekt op een bestand van ~72 min rond
+~1,6 GB):
+```bash
+nvidia-smi --query-gpu=index,name,memory.used,memory.free --format=csv
+```
+> **VRAM-let op:** pyannote.audio is bewust op **3.x** gepind. 4.0.3 heeft een gemelde regressie
+> (piek ~9,5 GB i.p.v. ~1,6 GB op 72 min) — niet opwaarderen zonder de piek opnieuw te meten.
+
+**Uitzetten / terugdraaien.** Zet `DIARIZE_BACKEND=none` in `.env` en `docker compose up -d`
+(zonder `--profile diarize`); de diarize-worker draait dan niet mee en het gedrag is weer identiek
+aan de opstelling zonder diarisatie.
+
 ## Handmatige installatie
 
 ```bash

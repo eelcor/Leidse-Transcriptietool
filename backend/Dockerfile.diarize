@@ -1,0 +1,37 @@
+# Diarize-worker-image: torch + pyannote.audio, LOSGEKOPPELD van de lichte basis-worker.
+#
+# Alleen nodig als je DIARIZE_BACKEND=pyannote draait. Zwaar (torch + CUDA). De basis-worker
+# (Dockerfile.worker) blijft bewust torch-vrij; deze image draait op een EIGEN queue/worker.
+#
+# torch komt van TORCH_INDEX_URL (build-arg). Reden: dev draait op Tesla V100 (sm_70) en
+# prod op een nieuwe RTX Pro 6000 — die willen verschillende torch/CUDA-builds. Default cu124.
+FROM python:3.11-slim
+
+# CUDA/torch-wheelbron. cu124 werkt op zowel nieuwe GPU's als V100; kies een andere index
+# (bv. cu118) als jouw GPU/driver dat vereist. Zie README (torch-variant / V100-notitie).
+ARG TORCH_INDEX_URL=https://download.pytorch.org/whl/cu124
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1
+
+WORKDIR /app
+
+# libsndfile/ffmpeg voor het inladen van de (16kHz mono) wav door pyannote/torchaudio.
+RUN apt-get update && apt-get install -y --no-install-recommends libsndfile1 ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
+
+# torch + torchaudio EERST, in een eigen layer vanaf de gekozen index (cache-vriendelijk en
+# zodat pyannote ze niet naar een niet-passende build upgradet).
+RUN pip install --no-cache-dir --timeout 600 --retries 10 \
+        torch torchaudio --index-url ${TORCH_INDEX_URL}
+
+# App-requirements + pyannote (op 3.x gepind in requirements-diarize.txt).
+COPY requirements.txt requirements-diarize.txt ./
+RUN pip install --no-cache-dir -r requirements-diarize.txt
+
+COPY app ./app
+COPY worker ./worker
+
+# arq-worker die ALLEEN de diarize-queue verwerkt.
+CMD ["arq", "worker.diarize_worker.DiarizeWorkerSettings"]
