@@ -142,9 +142,9 @@ async def transcribe_session(ctx: dict, session_id: str) -> str:
                 updated_at=finished,
             ))
 
-        # Diarisatie: de API heeft de rij al aangemaakt (met het gevraagde aantal sprekers).
-        # Koppel er het eventuele auto-verslag aan; de diarize-job plant dat ná afloop in (zodat
-        # het verslag sprekerlabels heeft). Fallback: rij alsnog maken als 'ie ontbreekt.
+        # Diarisatie: de API heeft de rij aangemaakt ALS deze opname erom vroeg (de toggle).
+        # Geen rij -> diarisatie voor deze sessie overslaan. Wél een rij -> koppel het eventuele
+        # auto-verslag eraan; de diarize-job plant dat ná afloop in (zodat het verslag labels heeft).
         diar_id = None
         if settings.diarize_backend != "none":
             diar = (await db.execute(
@@ -153,16 +153,10 @@ async def transcribe_session(ctx: dict, session_id: str) -> str:
                     Diarization.status == DiarizationStatus.QUEUED,
                 ).order_by(Diarization.created_at.desc())
             )).scalars().first()
-            if diar is None:
-                diar = Diarization(
-                    id=new_token(), session_id=session_id, status=DiarizationStatus.QUEUED,
-                    backend=settings.diarize_backend, model=settings.diarize_model,
-                    created_at=finished, updated_at=finished,
-                )
-                db.add(diar)
-            diar.auto_report_id = auto_report_id
-            diar.updated_at = finished
-            diar_id = diar.id
+            if diar is not None:
+                diar.auto_report_id = auto_report_id
+                diar.updated_at = finished
+                diar_id = diar.id
         await db.commit()
 
     redis = ctx.get("redis")

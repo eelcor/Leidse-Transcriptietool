@@ -162,16 +162,19 @@
           <p class="muted small" style="margin:14px 0 6px">Onderdelen — alles aan = een volledig verslag:</p>
           <div class="chips" id="rep-chips"></div>
         </div>
-      </div>
-
-      <!-- Sprekersherkenning — alleen zichtbaar als de server diarisatie aan heeft -->
-      <div class="card speakers-config" id="speakers-config" hidden>
-        <h2><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></span> Sprekers <span class="muted" style="font-weight:500;font-size:15px">— automatische herkenning</span></h2>
-        <p class="sub">De opname wordt automatisch in sprekers verdeeld. Weet je het aantal deelnemers?
-          Vul het in — dat helpt de herkenning. Laat leeg om het automatisch te laten bepalen.</p>
-        <label class="field" style="max-width:240px"><span>Aantal deelnemers (optioneel)</span>
-          <input type="number" id="participant-count" min="1" max="20" step="1" inputmode="numeric" placeholder="bijv. 5" />
-        </label>
+        <!-- Geavanceerde opties: sprekersidentificatie (alleen als de server diarisatie aan heeft).
+             Staat los van de wel/geen-verslag-keuze — diarisatie werkt ook zonder verslag. -->
+        <details class="opts adv-speakers" id="adv-speakers" hidden>
+          <summary>Geavanceerde opties</summary>
+          <label class="switch">
+            <input type="checkbox" id="opt-diarize" checked />
+            <span class="track"></span>
+            <span class="txt"><b>Sprekersidentificatie</b><small>Verdeel de opname automatisch in sprekers (SPREKER&nbsp;A/B/…); achteraf kun je namen invullen. Kost wat extra verwerkingstijd.</small></span>
+          </label>
+          <label class="field" id="participants-field" style="max-width:240px;margin-top:10px"><span>Aantal deelnemers (optioneel)</span>
+            <input type="number" id="participant-count" min="1" max="20" step="1" inputmode="numeric" placeholder="bijv. 5 — leeg = automatisch" />
+          </label>
+        </details>
       </div>
 
       <!-- Al een sessiecode? Prominent resultaat ophalen -->

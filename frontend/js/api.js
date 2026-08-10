@@ -6,11 +6,11 @@ export const API = {
   async prompts() {
     return (await fetch('/api/prompts')).json();
   },
-  async createSession(language, optimize, report, participants) {
+  async createSession(language, optimize, report, participants, diarize) {
     const r = await fetch('/api/sessions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ language, optimize, report, participants }),
+      body: JSON.stringify({ language, optimize, report, participants, diarize }),
     });
     if (!r.ok) throw new Error('Kon sessie niet aanmaken');
     return r.json();
@@ -38,8 +38,8 @@ export const API = {
   },
   // Robuuste bestandsupload: hakt het bestand in kleine chunks (past onder proxy-bodylimieten)
   // en hergebruikt de chunked PUT + complete-flow, i.p.v. één grote multipart-POST.
-  async uploadFileChunked(file, language, optimize, report, onProgress, participants) {
-    const sess = await this.createSession(language, optimize, report, participants);
+  async uploadFileChunked(file, language, optimize, report, onProgress, participants, diarize) {
+    const sess = await this.createSession(language, optimize, report, participants, diarize);
     const id = sess.id;
     const CHUNK = 4 * 1024 * 1024;   // 4 MB
     const mime = file.type || 'application/octet-stream';

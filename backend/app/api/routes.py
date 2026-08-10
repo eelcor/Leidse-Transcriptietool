@@ -80,12 +80,15 @@ def _speaker_names_block(speaker_names: dict[str, str] | None) -> str | None:
     return "Sprekers (koppeling label → naam):\n" + "\n".join(lines)
 
 
-def _maybe_create_diarization(db: AsyncSession, session_id: str, participants: int | None, now: datetime) -> None:
-    """Maak (bij ingeschakelde diarisatie) de diarizations-rij aan zodra de transcriptie wordt
-    ingepland — met het gevraagde aantal sprekers. De diarize-worker vult 'm later (zie decision #5).
-    Standaard uit (DIARIZE_BACKEND=none) -> geen rij, geen job, geen verschil."""
+def _maybe_create_diarization(
+    db: AsyncSession, session_id: str, participants: int | None, now: datetime, requested: bool = True
+) -> None:
+    """Maak (bij ingeschakelde diarisatie én als deze opname erom vraagt) de diarizations-rij aan
+    zodra de transcriptie wordt ingepland — met het gevraagde aantal sprekers. De diarize-worker
+    vult 'm later. Geen rij -> de STT-worker slaat diarisatie voor deze sessie over.
+    Standaard uit (DIARIZE_BACKEND=none) of `requested=False` -> geen rij, geen job, geen verschil."""
     s = get_settings()
-    if s.diarize_backend == "none":
+    if s.diarize_backend == "none" or not requested:
         return
     n = participants if (isinstance(participants, int) and participants > 0) else None
     db.add(Diarization(
@@ -198,6 +201,8 @@ async def create_session(request: Request, db: AsyncSession = Depends(get_db)) -
         optimize = s.audio_optimize_default
     auto_report = _clean_report_config((body or {}).get("report"))
     participants = (body or {}).get("participants")
+    diarize_req = (body or {}).get("diarize")
+    diarize_req = True if diarize_req is None else bool(diarize_req)
 
     now = _now()
     obj = Session(
@@ -211,8 +216,8 @@ async def create_session(request: Request, db: AsyncSession = Depends(get_db)) -
         updated_at=now,
     )
     db.add(obj)
-    # Diarisatie: rij nu aanmaken met het gevraagde aantal sprekers (no-op als uit).
-    _maybe_create_diarization(db, obj.id, participants, now)
+    # Diarisatie: rij aanmaken als deze opname erom vraagt (toggle) én de server 'm aan heeft.
+    _maybe_create_diarization(db, obj.id, participants, now, diarize_req)
     await db.commit()
     return CreateSessionResponse(id=obj.id, status=obj.status)
 
@@ -281,6 +286,7 @@ async def upload_file(
     optimize: bool | None = None,
     report: str | None = None,
     participants: int | None = None,
+    diarize: bool = True,
     db: AsyncSession = Depends(get_db),
 ) -> CreateSessionResponse:
     s = get_settings()
@@ -334,7 +340,7 @@ async def upload_file(
         audio_bytes=written, language=obj.language,
         report_mode=stats.report_mode(obj.auto_report),
     )
-    _maybe_create_diarization(db, obj.id, participants, _now())
+    _maybe_create_diarization(db, obj.id, participants, _now(), diarize)
     await db.commit()
 
     await queue.enqueue_transcription(obj.id)

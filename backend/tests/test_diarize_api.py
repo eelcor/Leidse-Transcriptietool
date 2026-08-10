@@ -52,6 +52,31 @@ async def test_result_diarization_absent_by_default(client):
     assert r.json()["diarization"] is None
 
 
+async def test_create_session_diarize_toggle(client, monkeypatch):
+    """Per-sessie toggle: diarize=false -> geen diarizations-rij; diarize=true -> wél (met aantal)."""
+    from sqlalchemy import select
+
+    from app.config import get_settings
+
+    monkeypatch.setenv("DIARIZE_BACKEND", "pyannote")
+    get_settings.cache_clear()
+    try:
+        maker = get_sessionmaker()
+        r_off = await client.post("/api/sessions", json={"language": "nl", "diarize": False, "participants": 3})
+        sid_off = r_off.json()["id"]
+        r_on = await client.post("/api/sessions", json={"language": "nl", "diarize": True, "participants": 3})
+        sid_on = r_on.json()["id"]
+        async with maker() as db:
+            off = (await db.execute(select(Diarization).where(Diarization.session_id == sid_off))).scalars().all()
+            on = (await db.execute(select(Diarization).where(Diarization.session_id == sid_on))).scalars().all()
+            assert len(off) == 0
+            assert len(on) == 1
+            assert on[0].min_speakers == 3
+    finally:
+        monkeypatch.delenv("DIARIZE_BACKEND", raising=False)
+        get_settings.cache_clear()
+
+
 async def test_rediarize_disabled_returns_409(client):
     """Default DIARIZE_BACKEND=none -> 'opnieuw indelen' is niet beschikbaar."""
     sid = new_token()

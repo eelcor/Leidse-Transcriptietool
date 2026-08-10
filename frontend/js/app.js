@@ -123,8 +123,15 @@ async function init() {
     .then((r) => { if (r.ok) { const n = $('#cert-note'); if (n) n.hidden = false; } })
     .catch(() => {});
 
-  // Sprekersherkenning: het deelnemersveld alleen tonen als de server diarisatie aan heeft.
-  if (CONFIG.diarize_enabled) { const sc = $('#speakers-config'); if (sc) sc.hidden = false; }
+  // Sprekersidentificatie: "Geavanceerde opties" alleen tonen als de server diarisatie aan heeft.
+  // Het deelnemersveld hangt aan de toggle.
+  if (CONFIG.diarize_enabled) {
+    const adv = $('#adv-speakers'); if (adv) adv.hidden = false;
+    const dz = $('#opt-diarize'), pf = $('#participants-field');
+    const syncPf = () => { if (pf) pf.hidden = !(dz && dz.checked); };
+    if (dz) dz.addEventListener('change', syncPf);
+    syncPf();
+  }
 
   // Navigatie
   $('#nav-new').addEventListener('click', () => { releaseRecorder(); show('home'); });
@@ -182,6 +189,14 @@ function getParticipants() {
   return Number.isFinite(v) && v > 0 ? v : null;
 }
 
+// Sprekersidentificatie aan voor deze opname? (toggle onder Geavanceerde opties; alleen zinvol
+// als de server diarisatie aan heeft).
+function getDiarize() {
+  if (!CONFIG.diarize_enabled) return false;
+  const cb = $('#opt-diarize');
+  return cb ? !!cb.checked : true;
+}
+
 // -------------------------------------------------------------------------
 // Bestand uploaden
 // -------------------------------------------------------------------------
@@ -217,7 +232,7 @@ function setupUpload() {
     try {
       const res = await API.uploadFileChunked(file, CONFIG.default_language, optimize, getReportConfig(), (f) => {
         prog.value = Math.round(f * 100);
-      }, getParticipants());
+      }, getParticipants(), getDiarize());
       openSession(res.id);
     } catch (e) {
       alert('Upload mislukt: ' + e.message);
@@ -377,7 +392,7 @@ function setupRecorder() {
     startBtn.disabled = true;
     try {
       const optimize = $('#opt-record').checked;
-      const sess = await API.createSession(CONFIG.default_language, optimize, getReportConfig(), getParticipants());
+      const sess = await API.createSession(CONFIG.default_language, optimize, getReportConfig(), getParticipants(), getDiarize());
       sessionId = sess.id;
       uploadChain = Promise.resolve();
       // Chunk-callback ZETTEN vóór start(): elke chunk direct uploaden (in volgorde).
