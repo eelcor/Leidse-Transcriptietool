@@ -202,7 +202,7 @@ async def create_session(request: Request, db: AsyncSession = Depends(get_db)) -
     auto_report = _clean_report_config((body or {}).get("report"))
     participants = (body or {}).get("participants")
     diarize_req = (body or {}).get("diarize")
-    diarize_req = True if diarize_req is None else bool(diarize_req)
+    diarize_req = False if diarize_req is None else bool(diarize_req)   # standaard uit; per opname aan te zetten
 
     now = _now()
     obj = Session(
@@ -286,7 +286,7 @@ async def upload_file(
     optimize: bool | None = None,
     report: str | None = None,
     participants: int | None = None,
-    diarize: bool = True,
+    diarize: bool = False,
     db: AsyncSession = Depends(get_db),
 ) -> CreateSessionResponse:
     s = get_settings()
