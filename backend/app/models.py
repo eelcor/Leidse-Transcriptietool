@@ -37,6 +37,15 @@ class ReportStatus:
     TERMINAL = {DONE, FAILED}
 
 
+class DiarizationStatus:
+    QUEUED = "queued"
+    RUNNING = "running"
+    DONE = "done"
+    FAILED = "failed"
+
+    TERMINAL = {DONE, FAILED}
+
+
 class Session(Base):
     __tablename__ = "sessions"
 
@@ -78,6 +87,11 @@ class Session(Base):
     reports: Mapped[list["Report"]] = relationship(
         back_populates="session", cascade="all, delete-orphan"
     )
+    # Sprekerdiarisatie(s) voor deze sessie (optioneel; leeg als DIARIZE_BACKEND=none).
+    # Cascade zodat de opruimservice ze mee verwijdert als de sessie verloopt.
+    diarizations: Mapped[list["Diarization"]] = relationship(
+        back_populates="session", cascade="all, delete-orphan"
+    )
 
 
 class Report(Base):
@@ -99,6 +113,43 @@ class Report(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
     session: Mapped[Session] = relationship(back_populates="reports")
+
+
+class Diarization(Base):
+    """Sprekerdiarisatie-resultaat voor een sessie (nieuwe tabel — geen kolommen op
+    `sessions`, want dit project heeft geen automatische migraties).
+
+    De rij wordt bij het inplannen aangemaakt (status=queued, met het gevraagde
+    min/max aantal sprekers) en door de diarize-worker ingevuld. `payload` bevat het
+    merge-resultaat (gelabelde segments) en het aantal gevonden sprekers. Bewust geen
+    stemprofielen/embeddings: alle sprekerkenmerken zijn vluchtig en verdwijnen met de job.
+    """
+
+    __tablename__ = "diarizations"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    session_id: Mapped[str] = mapped_column(ForeignKey("sessions.id", ondelete="CASCADE"), index=True)
+
+    status: Mapped[str] = mapped_column(String(20), default=DiarizationStatus.QUEUED, index=True)
+    backend: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    model: Mapped[str | None] = mapped_column(String(128), nullable=True)
+
+    # Gevraagd aantal sprekers (van het startscherm); leeg = door pyannote laten bepalen.
+    min_speakers: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    max_speakers: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # Aantal gevonden sprekers (na de merge).
+    num_speakers: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+    # Merge-resultaat: {"turns": [...], "segments": [...], "num_speakers": n}. Vorm groeit in fase 3.
+    payload: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    # Optioneel verslag dat ná de diarisatie moet draaien (zodat het verslag sprekerlabels heeft).
+    auto_report_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    error: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+    session: Mapped[Session] = relationship(back_populates="diarizations")
 
 
 class StatEvent(Base):

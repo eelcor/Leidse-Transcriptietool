@@ -21,13 +21,14 @@ from sqlalchemy import select
 
 from app.config import get_settings
 from app.db import get_sessionmaker
-from app.models import Report, ReportStatus, Session, SessionStatus
+from app.models import Diarization, DiarizationStatus, Report, ReportStatus, Session, SessionStatus
 from app.prompts import build_messages
+from app.queue import DIARIZE_QUEUE
 from app.tokens import new_token
 from app.workdays import compute_expires_at
 from app import stats, storage
 
-from . import audio, diarize, llm
+from . import audio, llm
 from .stt.factory import get_backend
 
 log = logging.getLogger("transcribe.worker")
@@ -97,9 +98,9 @@ async def transcribe_session(ctx: dict, session_id: str) -> str:
         if obj is None:
             return "gone"
         obj.transcript = result.text
-        segments = result.segments_as_dicts() if settings.stt_word_timestamps else None
-        # Extensiehaak (roadmap): optionele sprekerlabels. No-op tenzij ingeschakeld.
-        obj.segments = diarize.apply_diarization(str(wav), segments)
+        # STT-segments (incl. woord-timestamps als STT_WORD_TIMESTAMPS aan staat). NIET muteren
+        # met sprekerlabels: diarisatie draait als aparte job en slaat los op in 'diarizations'.
+        obj.segments = result.segments_as_dicts() if settings.stt_word_timestamps else None
         obj.stt_backend = backend.name
         obj.status = SessionStatus.TRANSCRIBED
         obj.processing_finished_at = finished
@@ -139,6 +140,22 @@ async def transcribe_session(ctx: dict, session_id: str) -> str:
                 created_at=finished,
                 updated_at=finished,
             ))
+
+        # Optionele diarisatie: rij nu aanmaken (status=queued) zodat de aparte diarize-worker
+        # 'm oppakt. Standaard uit (DIARIZE_BACKEND=none) -> geen rij, geen job, geen verschil.
+        diar_id = None
+        if settings.diarize_backend != "none":
+            diar_id = new_token()
+            db.add(Diarization(
+                id=diar_id,
+                session_id=session_id,
+                status=DiarizationStatus.QUEUED,
+                backend=settings.diarize_backend,
+                model=settings.diarize_model,
+                auto_report_id=auto_report_id,
+                created_at=finished,
+                updated_at=finished,
+            ))
         await db.commit()
 
     if auto_report_id is not None:
@@ -146,6 +163,14 @@ async def transcribe_session(ctx: dict, session_id: str) -> str:
         if redis is not None:
             await redis.enqueue_job("generate_report", auto_report_id, _job_id=f"report:{auto_report_id}")
         log.info("Auto-verslag ingepland voor sessie %s.", session_id[:8])
+    if diar_id is not None:
+        redis = ctx.get("redis")
+        if redis is not None:
+            await redis.enqueue_job(
+                "diarize_session", session_id, diar_id,
+                _queue_name=DIARIZE_QUEUE, _job_id=f"diarize:{session_id}",
+            )
+        log.info("Diarisatie ingepland voor sessie %s.", session_id[:8])
     log.info("Sessie %s getranscribeerd (verloopt %s).", session_id[:8], expires.isoformat())
     return "ok"
 

@@ -1,0 +1,11 @@
+# Diarize-worker = basis + pyannote (torch). APARTE image/worker; de basis-worker blijft
+# bewust torch-vrij. Zie backend/Dockerfile.diarize + docker-compose (fase 6).
+-r requirements.txt
+
+# LET OP — pin pyannote.audio op 3.x. Versie 4.0.3 heeft een gemelde VRAM-regressie
+# (piek ~9,5 GB i.p.v. ~1,6 GB op een bestand van 72 minuten). NIET opwaarderen naar 4.x
+# zonder de VRAM-piek opnieuw te meten.
+pyannote.audio>=3.1,<4.0
+
+# torch/torchaudio worden in Dockerfile.diarize geïnstalleerd vanaf TORCH_INDEX_URL
+# (build-arg, default cu124), passend bij de GPU — niet hier pinnen.
