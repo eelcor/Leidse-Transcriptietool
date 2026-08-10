@@ -3,13 +3,20 @@
 # Alleen nodig als je DIARIZE_BACKEND=pyannote draait. Zwaar (torch + CUDA). De basis-worker
 # (Dockerfile.worker) blijft bewust torch-vrij; deze image draait op een EIGEN queue/worker.
 #
-# torch komt van TORCH_INDEX_URL (build-arg). Reden: dev draait op Tesla V100 (sm_70) en
-# prod op een nieuwe RTX Pro 6000 — die willen verschillende torch/CUDA-builds. Default cu124.
+# Twee modelvarianten (zie DEPLOY.md):
+#   - pyannote 3.1 (DEFAULT): torch van cu124 + requirements-diarize.txt (huggingface_hub<1.0).
+#   - community-1 (pyannote 4.x): torch 2.8 van cu126 (behoudt sm_70/V100) + requirements-diarize4.txt.
+#       docker compose build met:
+#         DIARIZE_TORCH_SPEC="torch>=2.8,<2.9 torchaudio>=2.8,<2.9"
+#         DIARIZE_TORCH_INDEX_URL=https://download.pytorch.org/whl/cu126
+#         DIARIZE_REQS=requirements-diarize4.txt
+#       en DIARIZE_MODEL=pyannote/speaker-diarization-community-1 in .env.
 FROM python:3.11-slim
 
-# CUDA/torch-wheelbron. cu124 werkt op zowel nieuwe GPU's als V100; kies een andere index
-# (bv. cu118) als jouw GPU/driver dat vereist. Zie README (torch-variant / V100-notitie).
+# torch-specificatie + wheelbron + welk requirements-bestand (pyannote 3.x vs 4.x).
+ARG TORCH_SPEC="torch torchaudio"
 ARG TORCH_INDEX_URL=https://download.pytorch.org/whl/cu124
+ARG DIARIZE_REQS=requirements-diarize.txt
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
@@ -17,18 +24,20 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app
 
-# libsndfile/ffmpeg voor het inladen van de (16kHz mono) wav door pyannote/torchaudio.
+# libsndfile/ffmpeg voor resampling; pyannote krijgt de golfvorm rechtstreeks (geen torchcodec).
 RUN apt-get update && apt-get install -y --no-install-recommends libsndfile1 ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
-# torch + torchaudio EERST, in een eigen layer vanaf de gekozen index (cache-vriendelijk en
-# zodat pyannote ze niet naar een niet-passende build upgradet).
-RUN pip install --no-cache-dir --timeout 600 --retries 10 \
-        torch torchaudio --index-url ${TORCH_INDEX_URL}
+# torch + torchaudio EERST (eigen laag, cache-vriendelijk) van de gekozen index.
+RUN pip install --no-cache-dir --timeout 900 --retries 10 ${TORCH_SPEC} --index-url ${TORCH_INDEX_URL}
 
-# App-requirements + pyannote (op 3.x gepind in requirements-diarize.txt).
-COPY requirements.txt requirements-diarize.txt ./
-RUN pip install --no-cache-dir -r requirements-diarize.txt
+# Constraint uit de geïnstalleerde torch/torchaudio -> pyannote upgradet torch niet naar een
+# niet-passende build (bv. cu130, die sm_70/V100 niet ondersteunt).
+RUN python -c "import torch,torchaudio;open('/tmp/torch-c.txt','w').write('torch==%s\ntorchaudio==%s\n'%(torch.__version__.split('+')[0],torchaudio.__version__.split('+')[0]))" && cat /tmp/torch-c.txt
+
+# App-requirements + het gekozen pyannote-requirements-bestand.
+COPY requirements.txt requirements-diarize.txt requirements-diarize4.txt ./
+RUN pip install --no-cache-dir -c /tmp/torch-c.txt -r ${DIARIZE_REQS}
 
 COPY app ./app
 COPY worker ./worker

@@ -145,6 +145,37 @@ nvidia-smi --query-gpu=index,name,memory.used,memory.free --format=csv
 (zonder `--profile diarize`); de diarize-worker draait dan niet mee en het gedrag is weer identiek
 aan de opstelling zonder diarisatie.
 
+### Beter tellen: community-1 (pyannote 4.x)
+
+Standaard gebruikt de diarize-worker **speaker-diarization-3.1**. Het nieuwere open model
+**community-1** (pyannote 4.x, VBx-clustering) telt sprekers doorgaans nauwkeuriger — het
+vermindert "spookspreker"-flintertjes — en biedt een *exclusive* modus (elk moment één spreker),
+wat de merge en snelle sprekerwisselingen gladstrijkt. Accepteer eerst ook de voorwaarden van
+`pyannote/speaker-diarization-community-1` op HuggingFace (zelfde token).
+
+Aanzetten in `.env` + herbouwen:
+```
+DIARIZE_MODEL=pyannote/speaker-diarization-community-1
+DIARIZE_EXCLUSIVE=true                     # optioneel: exclusive toewijzing
+DIARIZE_TORCH_SPEC=torch>=2.8,<2.9 torchaudio>=2.8,<2.9
+DIARIZE_TORCH_INDEX_URL=https://download.pytorch.org/whl/cu126
+DIARIZE_REQS=requirements-diarize4.txt
+```
+```bash
+docker compose --profile diarize build diarize && docker compose --profile diarize up -d diarize
+```
+
+Aandachtspunten:
+- **torch/GPU (belangrijk):** pyannote 4 vereist torch ≥ 2.8 en trekt standaard een **CUDA 13**-build
+  mee, en **CUDA 13 laat Volta (Tesla V100, sm_70) vallen**. De **cu126**-index levert torch 2.8 dat
+  sm_70 (én sm_61) nog bevat; een constraint in de Dockerfile houdt torch daarop vast. Nieuwere
+  GPU's (RTX Pro 6000) kunnen cu128. Smoketest: `sm_70` moet in `torch.cuda.get_arch_list()` staan.
+- **Audio-decoding / FFmpeg:** pyannote 4 gebruikt `torchcodec`, dat een specifieke FFmpeg/CUDA-versie
+  verlangt en anders niet laadt. De backend **omzeilt dit door de golfvorm zelf in te voeren** (de
+  16kHz-wav die de worker al maakt) — aan FFmpeg hoeft niets te veranderen.
+- **VRAM:** 4.0.x had een gemelde piek-regressie; in de praktijk paste ~50 min audio binnen ~2–3 GB
+  op de toegewezen kaart. Meet met `nvidia-smi` bij lange opnames.
+
 ## Handmatige installatie
 
 ```bash

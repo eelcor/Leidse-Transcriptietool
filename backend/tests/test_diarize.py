@@ -99,6 +99,28 @@ async def test_run_diarization_gone_when_missing():
     assert res == "gone"
 
 
+def test_to_annotation_handles_3x_and_4x():
+    """3.x: het resultaat IS al een Annotation. 4.x: DiarizeOutput met speaker_diarization en
+    exclusive_speaker_diarization. Pure helper — geen pyannote nodig."""
+    from app.diarize.pyannote_backend import _to_annotation
+
+    class _Ann:
+        def itertracks(self, yield_label=False):
+            return []
+
+    ann = _Ann()
+    assert _to_annotation(ann) is ann                    # 3.x passthrough
+
+    class _DiarizeOutput:
+        def __init__(self):
+            self.speaker_diarization = _Ann()
+            self.exclusive_speaker_diarization = _Ann()
+
+    out = _DiarizeOutput()
+    assert _to_annotation(out) is out.speaker_diarization             # 4.x standaard
+    assert _to_annotation(out, exclusive=True) is out.exclusive_speaker_diarization
+
+
 def test_factory_none_and_unknown(monkeypatch):
     import app.diarize.factory as factory
     from app.config import get_settings

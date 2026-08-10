@@ -23,7 +23,8 @@ def get_diarize_backend() -> DiarizeBackend:
         from .pyannote_backend import PyannoteDiarizeBackend
 
         _instance = PyannoteDiarizeBackend(
-            model=s.diarize_model, hf_token=s.diarize_hf_token, device=s.diarize_device
+            model=s.diarize_model, hf_token=s.diarize_hf_token, device=s.diarize_device,
+            exclusive=s.diarize_exclusive,
         )
     else:
         raise ValueError(f"Onbekende DIARIZE_BACKEND: {s.diarize_backend!r}")

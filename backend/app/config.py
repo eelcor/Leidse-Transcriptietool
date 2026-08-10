@@ -78,6 +78,9 @@ class Settings(BaseSettings):
     diarize_compute_type: str = "float16"        # gereserveerd voor backends met een precisiekeuze
     diarize_hf_token: str = ""                   # HuggingFace-token voor de gated pyannote-modellen
     diarize_concurrency: int = 1                 # max gelijktijdige diarisatie-jobs (VRAM-bescherming)
+    # Alleen bij community-1 (pyannote 4.x): 'exclusive' toewijzing (elk moment één spreker) i.p.v.
+    # de standaard speaker-diarization. Vereenvoudigt de merge; genegeerd door 3.x.
+    diarize_exclusive: bool = False
     # Merge-parameters (fase 3): gaten < min_gap binnen dezelfde spreker dichtplakken;
     # sprekerfragmenten < min_segment weggooien en aan de omliggende spreker toekennen.
     diarize_min_gap: float = 0.5

@@ -92,8 +92,12 @@ services:
       context: ./backend
       dockerfile: Dockerfile.diarize
       args:
-        # torch/CUDA-wheelbron passend bij de GPU (cu124 default; zie README/DEPLOY.md).
-        TORCH_INDEX_URL: "${TORCH_INDEX_URL:-https://download.pytorch.org/whl/cu124}"
+        # Modelvariant, zie DEPLOY.md. Default = pyannote 3.1 (cu124). Voor community-1 (4.x)
+        # zet je in .env: DIARIZE_TORCH_SPEC="torch>=2.8,<2.9 torchaudio>=2.8,<2.9",
+        # DIARIZE_TORCH_INDEX_URL=.../cu126 en DIARIZE_REQS=requirements-diarize4.txt.
+        TORCH_SPEC: "${DIARIZE_TORCH_SPEC:-torch torchaudio}"
+        TORCH_INDEX_URL: "${DIARIZE_TORCH_INDEX_URL:-https://download.pytorch.org/whl/cu124}"
+        DIARIZE_REQS: "${DIARIZE_REQS:-requirements-diarize.txt}"
     env_file: .env
     environment:
       # Eén toegewezen kaart -> binnen de container altijd cuda:0 (DIARIZE_DEVICE=cuda).
