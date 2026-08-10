@@ -757,10 +757,14 @@ function buildSpeakersBlock(sessionId, res) {
     info.textContent = `${diar.num_speakers || diar.speakers.length} spreker(s) herkend. Vul namen in (optioneel) — ze worden lokaal bewaard en in de weergave en het verslag gebruikt.`;
     const audio = el('audio', { src: `/api/sessions/${sessionId}/audio`, preload: 'none' });
     const rows = el('div', { class: 'speaker-rows' });
+    const clips = diar.clips || {};
     diar.speakers.forEach((label) => {
-      const start = longestSegmentStart(diar.segments, label);
-      const play = el('button', { class: 'btn outline sm', title: 'Luister ~3 seconden van deze spreker',
-        onclick: () => playSnippet(audio, start) }, ic('play', 13), ' 3s');
+      // Slim fragment: langste aaneengesloten spraak (server); val terug op het langste segment.
+      const clip = clips[label];
+      const start = clip ? clip[0] : longestSegmentStart(diar.segments, label);
+      const dur = clip ? Math.max(1, Math.round(clip[1] - clip[0])) : 3;
+      const play = el('button', { class: 'btn outline sm', title: `Luister ~${dur} s van deze spreker`,
+        onclick: () => playSnippet(audio, start, dur) }, ic('play', 13), ` ${dur}s`);
       if (start == null) play.disabled = true;
       const input = el('input', { type: 'text', class: 'spk-name mono', value: names[label] || '', placeholder: 'naam…' });
       input.addEventListener('input', () => {

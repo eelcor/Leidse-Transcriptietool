@@ -173,6 +173,43 @@ def merge(words: list[dict], turns: list[dict], min_gap: float = 0.5, min_segmen
     return {"segments": segments, "speaker_map": mapping, "num_labeled_speakers": len(mapping)}
 
 
+def pick_speaker_clips(segments: list[dict], target: float = 4.0, max_gap: float = 0.4) -> dict[str, list[float]]:
+    """Kies per spreker een goed hoorbaar fragment: het LANGSTE aaneengesloten stuk spraak
+    (opeenvolgende woorden < max_gap uit elkaar), en daarvan tot `target` seconden vanaf het
+    begin van dat stuk. Zo begint de clip op een heldere woord-inzet i.p.v. een zachte aanloop
+    of een overlap. Retour: {SPREKER_X: [start, end]}. Puur en testbaar."""
+    by_spk: dict[str, list[tuple[float, float]]] = {}
+    for seg in segments:
+        spk = seg.get("speaker")
+        if not spk:
+            continue
+        for w in seg.get("words") or []:
+            ws, we = w.get("start"), w.get("end")
+            if ws is not None and we is not None:
+                by_spk.setdefault(spk, []).append((ws, we))
+
+    clips: dict[str, list[float]] = {}
+    for spk, words in by_spk.items():
+        words.sort()
+        best: tuple[float, float] | None = None
+        best_dur = -1.0
+        run_start, prev_end = words[0]
+        for ws, we in words[1:]:
+            if ws - prev_end <= max_gap:              # nog steeds continu praten
+                prev_end = max(prev_end, we)
+            else:                                      # gat -> run afsluiten, evalueren
+                if prev_end - run_start > best_dur:
+                    best_dur = prev_end - run_start
+                    best = (run_start, prev_end)
+                run_start, prev_end = ws, we
+        if prev_end - run_start > best_dur:
+            best = (run_start, prev_end)
+        if best:
+            s, e = best
+            clips[spk] = [round(s, 2), round(min(e, s + target), 2)]
+    return clips
+
+
 def labeled_transcript(segments: list[dict]) -> str:
     """Bouw een spreker-geprefixt transcript uit merge-segmenten:
         "SPREKER_A: …\nSPREKER_B: …". Ongelabelde segmenten krijgen geen prefix.

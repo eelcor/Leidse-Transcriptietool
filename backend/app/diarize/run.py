@@ -17,6 +17,7 @@ from ..config import get_settings
 from ..models import Diarization, DiarizationStatus, Session
 from .base import DiarizeBackend
 from .merge import merge as merge_segments
+from .merge import pick_speaker_clips
 
 log = logging.getLogger("transcribe.diarize.run")
 
@@ -80,6 +81,8 @@ async def run_diarization(maker: async_sessionmaker, session_id: str, diar_id: s
         "turns": [t.as_dict() for t in turns],
         "segments": merged["segments"],
         "speaker_map": merged["speaker_map"],
+        # Per spreker een goed hoorbaar fragment (langste aaneengesloten spraak) voor de UI.
+        "clips": pick_speaker_clips(merged["segments"]),
     }
     async with maker() as db:
         diar = await db.get(Diarization, diar_id)

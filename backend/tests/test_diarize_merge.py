@@ -8,6 +8,7 @@ from app.diarize.merge import (
     coalesce_turns,
     labeled_transcript,
     merge,
+    pick_speaker_clips,
 )
 
 
@@ -134,6 +135,23 @@ def test_coalesce_turns_keeps_large_gap_and_other_speakers():
     assert len(merged) == 2                       # gat 0.6 >= 0.5 -> niet samengevoegd
     merged2 = coalesce_turns([T(0, 1, "S0"), T(1.1, 2, "S1")], min_gap=0.5)
     assert len(merged2) == 2                       # andere sprekers nooit samenvoegen
+
+
+# 13) pick_speaker_clips: langste aaneengesloten spraakstuk per spreker.
+def test_pick_speaker_clips_longest_run():
+    segs = [
+        {"speaker": "SPREKER_A", "words": [W(0, 0.5, "a"), W(0.6, 1.0, "b"), W(5.0, 5.3, "c")]},
+        {"speaker": "SPREKER_B", "words": [W(2, 2.4, "x"), W(2.5, 3.0, "y"), W(3.1, 3.6, "z")]},
+    ]
+    clips = pick_speaker_clips(segs, target=4.0, max_gap=0.4)
+    assert clips["SPREKER_A"] == [0.0, 1.0]     # gat naar 5.0 breekt de run af
+    assert clips["SPREKER_B"] == [2.0, 3.6]
+
+
+def test_pick_speaker_clips_truncates_to_target():
+    segs = [{"speaker": "SPREKER_A", "words": [W(i, i + 1, "w") for i in range(0, 6)]}]  # 0..6 continu
+    clips = pick_speaker_clips(segs, target=4.0, max_gap=0.4)
+    assert clips["SPREKER_A"] == [0.0, 4.0]     # afgekapt op target
 
 
 # 12) labeled_transcript: prefix per beurt; ongelabeld zonder prefix.

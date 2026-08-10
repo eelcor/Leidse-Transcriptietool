@@ -411,6 +411,7 @@ def _diarization_out(diar: Diarization) -> DiarizationOut:
     return DiarizationOut(
         status=diar.status, num_speakers=diar.num_speakers,
         speakers=speakers, segments=segments,
+        clips=(diar.payload or {}).get("clips") or {},
     )
 
 

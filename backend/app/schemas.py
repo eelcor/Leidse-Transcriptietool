@@ -54,6 +54,8 @@ class DiarizationOut(BaseModel):
     num_speakers: int | None = None                      # aantal gevonden sprekers
     speakers: list[str] = Field(default_factory=list)    # stabiele labels, op eerste spreekmoment
     segments: list[DiarizationSegmentOut] = Field(default_factory=list)
+    # Per spreker een goed hoorbaar fragment [start, end] (langste aaneengesloten spraak).
+    clips: dict[str, list[float]] = Field(default_factory=dict)
 
 
 class SessionResultOut(BaseModel):
