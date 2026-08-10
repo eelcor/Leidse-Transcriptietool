@@ -13,6 +13,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import time
 from contextlib import nullcontext
 from datetime import datetime, timezone
 
@@ -67,10 +68,16 @@ async def transcribe_session(ctx: dict, session_id: str) -> str:
         sem: asyncio.Semaphore = ctx["stt_semaphore"]
         loop = asyncio.get_running_loop()
         async with sem:  # begrens gelijktijdige STT-jobs (VRAM-bescherming)
+            _t0 = time.perf_counter()
             result = await loop.run_in_executor(
                 None,
                 lambda: backend.transcribe(str(wav), language, settings.stt_word_timestamps),
             )
+            _stt_seconds = time.perf_counter() - _t0
+        # Wandtijd van de STT-stap (voor het meten van de extra kost van woord-timestamps
+        # en later de diarisatie). Geen transcript-inhoud; alleen een duur.
+        log.info("STT klaar voor sessie %s in %.1fs (backend=%s, word_ts=%s).",
+                 session_id[:8], _stt_seconds, backend.name, settings.stt_word_timestamps)
     except Exception as exc:
         log.exception("STT mislukt voor sessie %s", session_id[:8])
         async with maker() as db:

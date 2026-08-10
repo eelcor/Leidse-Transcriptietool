@@ -8,9 +8,32 @@ from __future__ import annotations
 
 import logging
 
-from .base import Segment, STTBackend, TranscriptResult
+from .base import Segment, STTBackend, TranscriptResult, Word
 
 log = logging.getLogger("transcribe.stt.faster_whisper")
+
+
+def _normalize_words(raw_words) -> list[Word]:
+    """Zet faster-whisper's woordobjecten om naar het backend-agnostische Word-schema.
+
+    Pure functie (duck-typed, geen faster-whisper-import) zodat ze zonder model/GPU te
+    testen is. faster-whisper levert per woord `.word`, `.start`, `.end`, `.probability`;
+    ontbrekende velden worden None. Woorden zonder tekst worden overgeslagen.
+    """
+    words: list[Word] = []
+    for w in raw_words or []:
+        text = getattr(w, "word", None)
+        if text is None:
+            continue
+        words.append(
+            Word(
+                start=getattr(w, "start", None),
+                end=getattr(w, "end", None),
+                text=text,
+                probability=getattr(w, "probability", None),
+            )
+        )
+    return words
 
 
 class FasterWhisperBackend(STTBackend):
@@ -49,6 +72,10 @@ class FasterWhisperBackend(STTBackend):
         segments: list[Segment] = []
         texts: list[str] = []
         for seg in segments_iter:
-            segments.append(Segment(start=seg.start, end=seg.end, text=seg.text.strip()))
-            texts.append(seg.text.strip())
+            text = seg.text.strip()
+            segments.append(Segment(
+                start=seg.start, end=seg.end, text=text,
+                words=_normalize_words(getattr(seg, "words", None)),
+            ))
+            texts.append(text)
         return TranscriptResult(text=" ".join(texts).strip(), segments=segments)
