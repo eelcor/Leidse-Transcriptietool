@@ -58,6 +58,9 @@ class CreateReportRequest(BaseModel):
     kinds: list[str] | None = None
     custom_prompt: str | None = None
     context: str | None = None
+    # Alleen bij SPEAKER_NAMES_MODE=direct: koppeling label->naam (bv. {"SPREKER_A": "Jan"}).
+    # In placeholder-modus worden deze GENEGEERD zodat namen niet in de database belanden.
+    speaker_names: dict[str, str] | None = None
 
 
 class UpdateReportRequest(BaseModel):

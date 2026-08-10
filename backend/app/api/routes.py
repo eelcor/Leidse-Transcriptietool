@@ -25,7 +25,7 @@ from sqlalchemy.orm import selectinload
 from .. import prompts, queue, stats, storage
 from ..config import get_settings
 from ..db import get_db
-from ..models import Report, ReportStatus, Session, SessionStatus
+from ..models import Diarization, DiarizationStatus, Report, ReportStatus, Session, SessionStatus
 from ..schemas import (
     CreateReportRequest,
     CreateSessionResponse,
@@ -54,6 +54,47 @@ def _audio_format(filename: str | None, mime: str | None) -> str | None:
     if mime and "/" in mime:
         return mime.split("/")[-1].split(";")[0][:8]
     return None
+
+
+def _speaker_names_block(speaker_names: dict[str, str] | None) -> str | None:
+    """Bouw een hardened 'Sprekers:'-context uit label->naam (alleen SPREKER_*-sleutels).
+
+    Namen worden gesaneerd (nieuwe regels/afbakenings-tokens weg, lengte begrensd) zodat ze de
+    context-afbakening (=== BEGIN/EINDE ===) niet kunnen breken. Gebruikt in SPEAKER_NAMES_MODE=direct.
+    """
+    if not speaker_names or not isinstance(speaker_names, dict):
+        return None
+    lines: list[str] = []
+    for label, name in speaker_names.items():
+        if not isinstance(label, str) or not label.startswith("SPREKER_"):
+            continue
+        clean = (name or "").replace("\n", " ").replace("\r", " ").replace("===", "").strip()[:80]
+        if clean:
+            lines.append(f"{label} = {clean}")
+    if not lines:
+        return None
+    return "Sprekers (koppeling label → naam):\n" + "\n".join(lines)
+
+
+def _maybe_create_diarization(db: AsyncSession, session_id: str, participants: int | None, now: datetime) -> None:
+    """Maak (bij ingeschakelde diarisatie) de diarizations-rij aan zodra de transcriptie wordt
+    ingepland — met het gevraagde aantal sprekers. De diarize-worker vult 'm later (zie decision #5).
+    Standaard uit (DIARIZE_BACKEND=none) -> geen rij, geen job, geen verschil."""
+    s = get_settings()
+    if s.diarize_backend == "none":
+        return
+    n = participants if (isinstance(participants, int) and participants > 0) else None
+    db.add(Diarization(
+        id=new_token(),
+        session_id=session_id,
+        status=DiarizationStatus.QUEUED,
+        backend=s.diarize_backend,
+        model=s.diarize_model,
+        min_speakers=n,
+        max_speakers=n,
+        created_at=now,
+        updated_at=now,
+    ))
 
 
 def _clean_report_config(report: dict | None) -> dict | None:
@@ -113,6 +154,9 @@ async def get_config() -> dict:
         "stt_model": s.stt_model,
         "stt_label": stt_label,
         "llm_model": s.llm_model,
+        # Diarisatie: laat de frontend het "Sprekers"-blok tonen/verbergen (weg als 'none').
+        "diarize_enabled": s.diarize_backend != "none",
+        "speaker_names_mode": s.speaker_names_mode,
     }
 
 
@@ -149,6 +193,7 @@ async def create_session(request: Request, db: AsyncSession = Depends(get_db)) -
     if optimize is None:
         optimize = s.audio_optimize_default
     auto_report = _clean_report_config((body or {}).get("report"))
+    participants = (body or {}).get("participants")
 
     now = _now()
     obj = Session(
@@ -162,6 +207,8 @@ async def create_session(request: Request, db: AsyncSession = Depends(get_db)) -
         updated_at=now,
     )
     db.add(obj)
+    # Diarisatie: rij nu aanmaken met het gevraagde aantal sprekers (no-op als uit).
+    _maybe_create_diarization(db, obj.id, participants, now)
     await db.commit()
     return CreateSessionResponse(id=obj.id, status=obj.status)
 
@@ -229,6 +276,7 @@ async def upload_file(
     language: str | None = None,
     optimize: bool | None = None,
     report: str | None = None,
+    participants: int | None = None,
     db: AsyncSession = Depends(get_db),
 ) -> CreateSessionResponse:
     s = get_settings()
@@ -282,6 +330,7 @@ async def upload_file(
         audio_bytes=written, language=obj.language,
         report_mode=stats.report_mode(obj.auto_report),
     )
+    _maybe_create_diarization(db, obj.id, participants, _now())
     await db.commit()
 
     await queue.enqueue_transcription(obj.id)
@@ -473,13 +522,21 @@ async def create_report(
     if req.kinds and not set(req.kinds).issubset(valid):
         raise HTTPException(status_code=422, detail="Onbekende sectie(s) opgegeven.")
 
+    # Sprekernamen: alleen in direct-modus meenemen (dan komen ze in de context/DB); in
+    # placeholder-modus genegeerd zodat namen niet in de database belanden.
+    context = req.context
+    if get_settings().speaker_names_mode == "direct":
+        names_block = _speaker_names_block(req.speaker_names)
+        if names_block:
+            context = (names_block + "\n\n" + (context or "")).strip()
+
     now = _now()
     report = Report(
         id=new_token(),
         session_id=session_id,
         kinds=req.kinds,
         custom_prompt=req.custom_prompt,
-        context=req.context,
+        context=context,
         status=ReportStatus.QUEUED,
         created_at=now,
         updated_at=now,

@@ -21,6 +21,7 @@ from sqlalchemy import select
 
 from app.config import get_settings
 from app.db import get_sessionmaker
+from app.diarize.merge import labeled_transcript
 from app.models import Diarization, DiarizationStatus, Report, ReportStatus, Session, SessionStatus
 from app.prompts import build_messages
 from app.queue import DIARIZE_QUEUE
@@ -141,36 +142,43 @@ async def transcribe_session(ctx: dict, session_id: str) -> str:
                 updated_at=finished,
             ))
 
-        # Optionele diarisatie: rij nu aanmaken (status=queued) zodat de aparte diarize-worker
-        # 'm oppakt. Standaard uit (DIARIZE_BACKEND=none) -> geen rij, geen job, geen verschil.
+        # Diarisatie: de API heeft de rij al aangemaakt (met het gevraagde aantal sprekers).
+        # Koppel er het eventuele auto-verslag aan; de diarize-job plant dat ná afloop in (zodat
+        # het verslag sprekerlabels heeft). Fallback: rij alsnog maken als 'ie ontbreekt.
         diar_id = None
         if settings.diarize_backend != "none":
-            diar_id = new_token()
-            db.add(Diarization(
-                id=diar_id,
-                session_id=session_id,
-                status=DiarizationStatus.QUEUED,
-                backend=settings.diarize_backend,
-                model=settings.diarize_model,
-                auto_report_id=auto_report_id,
-                created_at=finished,
-                updated_at=finished,
-            ))
+            diar = (await db.execute(
+                select(Diarization).where(
+                    Diarization.session_id == session_id,
+                    Diarization.status == DiarizationStatus.QUEUED,
+                ).order_by(Diarization.created_at.desc())
+            )).scalars().first()
+            if diar is None:
+                diar = Diarization(
+                    id=new_token(), session_id=session_id, status=DiarizationStatus.QUEUED,
+                    backend=settings.diarize_backend, model=settings.diarize_model,
+                    created_at=finished, updated_at=finished,
+                )
+                db.add(diar)
+            diar.auto_report_id = auto_report_id
+            diar.updated_at = finished
+            diar_id = diar.id
         await db.commit()
 
-    if auto_report_id is not None:
-        redis = ctx.get("redis")
-        if redis is not None:
-            await redis.enqueue_job("generate_report", auto_report_id, _job_id=f"report:{auto_report_id}")
-        log.info("Auto-verslag ingepland voor sessie %s.", session_id[:8])
+    redis = ctx.get("redis")
     if diar_id is not None:
-        redis = ctx.get("redis")
+        # Diarisatie aan: alleen de diarize-job inplannen; die plant ná afloop het verslag in.
         if redis is not None:
             await redis.enqueue_job(
                 "diarize_session", session_id, diar_id,
                 _queue_name=DIARIZE_QUEUE, _job_id=f"diarize:{session_id}",
             )
-        log.info("Diarisatie ingepland voor sessie %s.", session_id[:8])
+        log.info("Diarisatie ingepland voor sessie %s (verslag volgt daarna).", session_id[:8])
+    elif auto_report_id is not None:
+        # Geen diarisatie: verslag meteen inplannen (ongewijzigd gedrag).
+        if redis is not None:
+            await redis.enqueue_job("generate_report", auto_report_id, _job_id=f"report:{auto_report_id}")
+        log.info("Auto-verslag ingepland voor sessie %s.", session_id[:8])
     log.info("Sessie %s getranscribeerd (verloopt %s).", session_id[:8], expires.isoformat())
     return "ok"
 
@@ -218,11 +226,25 @@ async def generate_report(ctx: dict, report_id: str) -> str:
             r.updated_at = _now()
             transcript = sess.transcript
             kinds, custom, context = r.kinds, r.custom_prompt, r.context
+            # Is er een afgeronde diarisatie met gelabelde segments? Gebruik dan het
+            # spreker-geprefixte transcript, zodat het verslag sprekers kan toeschrijven.
+            diarized = False
+            diar = (await db.execute(
+                select(Diarization).where(
+                    Diarization.session_id == r.session_id,
+                    Diarization.status == DiarizationStatus.DONE,
+                ).order_by(Diarization.created_at.desc())
+            )).scalars().first()
+            if diar and diar.payload and diar.payload.get("segments"):
+                labeled = labeled_transcript(diar.payload["segments"])
+                if labeled.strip():
+                    transcript = labeled
+                    diarized = True
             await db.commit()
 
         report_started = _now()
         try:
-            messages = build_messages(transcript, kinds, custom, context)
+            messages = build_messages(transcript, kinds, custom, context, diarized=diarized)
             content = await llm.generate(messages)
         except Exception as exc:
             log.exception("Verslag genereren mislukt voor %s", report_id[:8])

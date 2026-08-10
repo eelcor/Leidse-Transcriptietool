@@ -16,10 +16,22 @@ from app.config import get_settings
 from app.db import get_sessionmaker
 from app.diarize.factory import get_diarize_backend
 from app.diarize.run import run_diarization
-from app.queue import DIARIZE_QUEUE
+from app.models import Diarization
+from app.queue import DIARIZE_QUEUE, enqueue_report
 from app.queue import redis_settings as _redis_settings
 
 log = logging.getLogger("transcribe.diarize.worker")
+
+
+async def _enqueue_auto_report(diar_id: str) -> None:
+    """Plan het (vooraf gevraagde) verslag in ná de diarisatie, zodat het sprekerlabels heeft.
+    Wordt ook bij een MISLUKTE diarisatie aangeroepen: het verslag draait dan zonder labels."""
+    maker = get_sessionmaker()
+    async with maker() as db:
+        diar = await db.get(Diarization, diar_id)
+        rid = diar.auto_report_id if diar else None
+    if rid:
+        await enqueue_report(rid)
 
 
 async def diarize_session(ctx: dict, session_id: str, diar_id: str) -> str:
@@ -28,7 +40,10 @@ async def diarize_session(ctx: dict, session_id: str, diar_id: str) -> str:
     sem = ctx.get("diarize_semaphore")
     backend = get_diarize_backend()
     async with (sem or nullcontext()):  # begrens gelijktijdige diarisatie (VRAM-bescherming)
-        return await run_diarization(maker, session_id, diar_id, backend)
+        result = await run_diarization(maker, session_id, diar_id, backend)
+    # Ongeacht de uitkomst: het (vooraf gevraagde) verslag alsnog inplannen.
+    await _enqueue_auto_report(diar_id)
+    return result
 
 
 async def startup(ctx: dict) -> None:
