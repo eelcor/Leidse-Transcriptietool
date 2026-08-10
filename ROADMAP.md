@@ -3,36 +3,28 @@
 Losse, nog niet ingeplande verbeteringen. Bewust klein gehouden; alleen items met
 een concreet integratiepunt in de huidige codebase.
 
-## Spreker-diarisatie (wie zegt wat)
+## Spreker-diarisatie (wie zegt wat) — GEÏMPLEMENTEERD (opt-in)
 
-**Waarom.** Het transcript bevat nu géén sprekeridentificatie. De verslagprompt is
-daarom expres terughoudend: sprekers worden alleen benoemd bij ≥95% zekerheid (zie
-`PROMPTS.md`). Met diarisatie kunnen segments een `speaker`-label krijgen, waarna
-verslagen betrouwbaar sprekers kunnen toewijzen.
+Sprekerherkenning ("wie zegt wat") is er, als **optionele** stap. Standaard **uit**
+(`DIARIZE_BACKEND=none`) → geen enkel gedragsverschil. Aanzetten en configureren: zie
+[`deploy/DEPLOY.md`](deploy/DEPLOY.md) ("Sprekerdiarisatie"); test-/meetbevindingen:
+[`docs/test-sprekers.md`](docs/test-sprekers.md).
 
-**Waarom nog niet.** Pyannote (of gelijkwaardig) draait bij voorkeur op GPU en kost
-extra VRAM + verwerkingstijd bovenop STT. Op de dev-box concurreert dat met de 4×V100
-(Qwen) en de STT op de resterende capaciteit. Vandaar: expliciet opt-in.
+**Hoe het werkt.** Woord-timestamps uit STT → pyannote-diarisatie (aparte worker op een eigen
+queue, torch/pyannote los van de lichte basis-worker) → pure merge-logica koppelt woorden aan
+sprekers en hersnijdt de segments → verslag ná de diarisatie met labels `SPREKER_A/B/…`. Namen
+worden client-side ingevuld (placeholder: niet in de DB) of meegegeven aan het LLM (direct).
+Resultaat in een aparte tabel `diarizations` (geen migraties).
 
-**Scaffolding die er al staat.**
-- Config-vlaggen (gereserveerd, standaard uit) in `backend/app/config.py`:
-  `DIARIZATION_ENABLED`, `DIARIZATION_BACKEND`, `DIARIZATION_MODEL`, `HF_TOKEN`.
-- Extensiehaak `backend/worker/diarize.py` met `apply_diarization(wav_path, segments)` —
-  nu een no-op; contract gedocumenteerd (segments in → segments met `speaker` uit).
-- Aanroep zit al in de pijplijn (`worker/worker.py`, direct ná STT), guarded en no-op
-  by default.
+**Modellen.** `speaker-diarization-3.1` (default) of het nieuwere **community-1** (pyannote 4.x,
+VBx-clustering — telt sprekers nauwkeuriger, minder spookspreker-fragmenten, plus een *exclusive*
+modus). community-1 vereist torch ≥ 2.8 (cu126-build behoudt sm_70/V100).
 
-**Fasering.**
-1. Backend achter de haak (pyannote-3.1), alleen als `DIARIZATION_ENABLED=true`.
-   Draai op een aparte GPU of serialiseer met STT via de bestaande semafoor.
-2. Overlap speaker-turns met de STT-segments; zet per segment een label.
-3. Frontend: sprekerlabels tonen bij "Toon tijdcodes"; prompt-regel versoepelen als er
-   wél diarisatie is (dan mag toeschrijving op basis van de labels).
-4. Kwaliteits-/resourcemeting: verwerkingstijd en VRAM per uur audio vastleggen.
-
-**Aandachtspunten.** Pyannote-modellen zijn gated op HuggingFace (token nodig); model
-lokaal cachen i.v.m. de "los van internet"-filosofie; diarisatie voegt privacygevoelige
-structuur toe (wie-zegt-wat) — houdt binnen dezelfde bewaartermijn/anonimiteit.
+**Vervolg / open.**
+- community-1 breder inzetten (het lost de over-segmentatie beter op dan 3.1).
+- Cosmetisch: torchcodec-import-ruis in de diarize-log onderdrukken.
+- Onderzocht en afgevoerd: **custom audio-DSP** (dereverb/denoise) gaf geen WER- of
+  diarisatiewinst op de testopnames (zie test-sprekers.md).
 
 ## Beveiliging (netwerk-/infralaag)
 
