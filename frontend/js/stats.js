@@ -1,4 +1,6 @@
 // Statistiek-dashboard: haalt /api/stats op en rendert tiles + eenvoudige grafieken.
+import { url } from './base.js';
+
 const $ = (s) => document.querySelector(s);
 const el = (tag, attrs = {}, ...kids) => {
   const n = document.createElement(tag);
@@ -57,7 +59,7 @@ function fmtDur(s) { return s == null ? '—' : (s >= 60 ? `${(s / 60).toFixed(1
 
 async function main() {
   let d;
-  try { d = await (await fetch('/api/stats')).json(); }
+  try { d = await (await fetch(url('api/stats'))).json(); }
   catch { $('#totals').append(el('div', { class: 'empty' }, 'Statistieken niet beschikbaar.')); return; }
 
   // Live

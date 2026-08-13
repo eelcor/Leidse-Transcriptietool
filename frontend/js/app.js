@@ -1,6 +1,7 @@
 import { API } from './api.js';
 import { Recorder, listMics, loadSettings } from './recorder.js';
 import { renderMarkdown } from './md.js';
+import { url } from './base.js';
 
 let CONFIG = { max_upload_mb: 200, retention_workdays: 2, default_language: 'nl', word_timestamps: true };
 let SECTIONS = [];
@@ -119,7 +120,7 @@ async function init() {
 
   // Toon het "certificaat installeren"-linkje alleen als er een interne CA beschikbaar is
   // (dus bij een self-signed opzet; op prod met een echt certificaat blijft het verborgen).
-  fetch('/caddy-root.crt', { method: 'HEAD' })
+  fetch(url('caddy-root.crt'), { method: 'HEAD' })
     .then((r) => { if (r.ok) { const n = $('#cert-note'); if (n) n.hidden = false; } })
     .catch(() => {});
 
@@ -488,7 +489,7 @@ async function openSession(sessionId) {
         el('button', { class: 'btn outline sm',
           html: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/></svg> Kopieer code',
           onclick: (e) => { navigator.clipboard.writeText(sessionId); e.currentTarget.innerHTML = '✓ Gekopieerd'; } }),
-        el('a', { class: 'btn outline sm', href: `/api/sessions/${sessionId}/audio`, download: '' }, ic('download'), ' Download opname'),
+        el('a', { class: 'btn outline sm', href: url(`api/sessions/${sessionId}/audio`), download: '' }, ic('download'), ' Download opname'),
       ),
     ),
     el('div', { class: 'statebar' },
@@ -536,7 +537,7 @@ async function openSession(sessionId) {
     }
   };
   try {
-    sse = new EventSource(`/api/sessions/${sessionId}/events`);
+    sse = new EventSource(url(`api/sessions/${sessionId}/events`));
     sse.onmessage = (e) => render(JSON.parse(e.data));
     sse.addEventListener('gone', () => { $('#status-text').textContent = 'Sessie niet gevonden of verlopen.'; sse.close(); });
     sse.onerror = () => { sse.close(); pollStatus(sessionId, render); };
@@ -628,7 +629,7 @@ async function loadResult(sessionId) {
     el('h3', {}, ic('transcript', 16), ' Transcript'),
     el('div', { class: 'panel-actions' },
       el('button', { class: 'btn outline sm', onclick: () => copy(res.transcript) }, ic('copy'), ' Kopieer'),
-      el('a', { class: 'btn outline sm', href: `/api/sessions/${sessionId}/transcript.txt` }, ic('download'), ' Download .txt'),
+      el('a', { class: 'btn outline sm', href: url(`api/sessions/${sessionId}/transcript.txt`) }, ic('download'), ' Download .txt'),
     ),
   ));
   const tbox = el('div', { class: 'transcript' });
@@ -770,7 +771,7 @@ function buildSpeakersBlock(sessionId, res) {
     info.textContent = 'Geen aparte sprekers gevonden.';
   } else {
     info.textContent = `${diar.num_speakers || diar.speakers.length} spreker(s) herkend. Vul namen in (optioneel) — ze worden lokaal bewaard en in de weergave en het verslag gebruikt.`;
-    const audio = el('audio', { src: `/api/sessions/${sessionId}/audio`, preload: 'none' });
+    const audio = el('audio', { src: url(`api/sessions/${sessionId}/audio`), preload: 'none' });
     const rows = el('div', { class: 'speaker-rows' });
     const clips = diar.clips || {};
     diar.speakers.forEach((label) => {
@@ -928,10 +929,10 @@ function renderReportCard(sessionId, report, parent) {
   if (report.status === 'done') {
     const wordBtn = named
       ? el('button', { class: 'btn outline sm', onclick: (e) => exportReportDocx(sessionId, report, e.currentTarget) }, ic('word'), ' Word')
-      : el('a', { class: 'btn outline sm', href: `/api/sessions/${sessionId}/reports/${report.id}/download.docx` }, ic('word'), ' Word');
+      : el('a', { class: 'btn outline sm', href: url(`api/sessions/${sessionId}/reports/${report.id}/download.docx`) }, ic('word'), ' Word');
     const mdBtn = named
       ? el('button', { class: 'btn outline sm', onclick: () => exportReportMd(sessionId, report) }, ic('markdown'), ' Markdown')
-      : el('a', { class: 'btn outline sm', href: `/api/sessions/${sessionId}/reports/${report.id}/download.md` }, ic('markdown'), ' Markdown');
+      : el('a', { class: 'btn outline sm', href: url(`api/sessions/${sessionId}/reports/${report.id}/download.md`) }, ic('markdown'), ' Markdown');
     actions.append(
       el('button', { class: 'btn outline sm', onclick: () => openEditor(sessionId, report) }, ic('edit'), ' Bewerken'),
       el('button', { class: 'btn outline sm', onclick: () => copy(applySpeakerNames(report.content, names)) }, ic('copy'), ' Kopieer'),
@@ -980,7 +981,7 @@ async function pollReport(sessionId, reportId) {
 // -------------------------------------------------------------------------
 let _tt = null;
 async function loadTiptap() {
-  if (!_tt) _tt = await import('/js/vendor/tiptap.bundle.js');
+  if (!_tt) _tt = await import(url('js/vendor/tiptap.bundle.js'));
   return _tt;
 }
 
