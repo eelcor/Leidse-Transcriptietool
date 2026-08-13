@@ -1,13 +1,16 @@
-// Dunne API-client. Alle calls gaan naar /api (Caddy proxyt naar de FastAPI-service).
+// Dunne API-client. Alle calls gaan naar <basispad>/api (Caddy proxyt naar de FastAPI-service).
+// url() voorziet het app-basispad zodat de app ook onder een reverse-proxy-subpad werkt.
+import { url } from './base.js';
+
 export const API = {
   async config() {
-    return (await fetch('/api/config')).json();
+    return (await fetch(url('api/config'))).json();
   },
   async prompts() {
-    return (await fetch('/api/prompts')).json();
+    return (await fetch(url('api/prompts'))).json();
   },
   async createSession(language, optimize, report) {
-    const r = await fetch('/api/sessions', {
+    const r = await fetch(url('api/sessions'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ language, optimize, report }),
@@ -21,7 +24,7 @@ export const API = {
     let lastErr;
     for (let i = 0; i < attempts; i++) {
       try {
-        const r = await fetch(`/api/sessions/${sessionId}/audio`, { method: 'PUT', headers, body: blob });
+        const r = await fetch(url(`api/sessions/${sessionId}/audio`), { method: 'PUT', headers, body: blob });
         if (r.ok) return r.json();
         // 4xx (behalve 408/429) is definitief -> niet opnieuw proberen (bv. 413 te groot, 409 afgerond).
         if (r.status < 500 && r.status !== 408 && r.status !== 429) {
@@ -54,12 +57,12 @@ export const API = {
     return { id };
   },
   async complete(sessionId) {
-    const r = await fetch(`/api/sessions/${sessionId}/complete`, { method: 'POST' });
+    const r = await fetch(url(`api/sessions/${sessionId}/complete`), { method: 'POST' });
     if (!r.ok) throw new Error('Afronden mislukt');
     return r.json();
   },
   async deleteSession(sessionId) {
-    try { await fetch(`/api/sessions/${sessionId}`, { method: 'DELETE' }); } catch {}
+    try { await fetch(url(`api/sessions/${sessionId}`), { method: 'DELETE' }); } catch {}
   },
   async uploadFile(file, language, optimize, report, onProgress) {
     // XHR voor uploadvoortgang.
@@ -70,9 +73,9 @@ export const API = {
       if (language) q.set('language', language);
       if (optimize !== undefined) q.set('optimize', optimize ? 'true' : 'false');
       if (report) q.set('report', JSON.stringify(report));
-      const url = '/api/upload' + (q.toString() ? `?${q}` : '');
+      const endpoint = url('api/upload') + (q.toString() ? `?${q}` : '');
       const xhr = new XMLHttpRequest();
-      xhr.open('POST', url);
+      xhr.open('POST', endpoint);
       xhr.upload.onprogress = (e) => {
         if (e.lengthComputable && onProgress) onProgress(e.loaded / e.total);
       };
@@ -86,27 +89,27 @@ export const API = {
   },
   async feedback(sessionId, stars, target) {
     try {
-      await fetch(`/api/sessions/${sessionId}/feedback`, {
+      await fetch(url(`api/sessions/${sessionId}/feedback`), {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ stars, target }),
       });
     } catch {}
   },
   async wait() {
-    try { return await (await fetch('/api/wait')).json(); } catch { return null; }
+    try { return await (await fetch(url('api/wait'))).json(); } catch { return null; }
   },
   async status(sessionId) {
-    const r = await fetch(`/api/sessions/${sessionId}/status`);
+    const r = await fetch(url(`api/sessions/${sessionId}/status`));
     if (!r.ok) throw new Error('not-found');
     return r.json();
   },
   async result(sessionId) {
-    const r = await fetch(`/api/sessions/${sessionId}`);
+    const r = await fetch(url(`api/sessions/${sessionId}`));
     if (!r.ok) throw new Error('not-found');
     return r.json();
   },
   async createReport(sessionId, payload) {
-    const r = await fetch(`/api/sessions/${sessionId}/reports`, {
+    const r = await fetch(url(`api/sessions/${sessionId}/reports`), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -115,12 +118,12 @@ export const API = {
     return r.json();
   },
   async getReport(sessionId, reportId) {
-    const r = await fetch(`/api/sessions/${sessionId}/reports/${reportId}`);
+    const r = await fetch(url(`api/sessions/${sessionId}/reports/${reportId}`));
     if (!r.ok) throw new Error('not-found');
     return r.json();
   },
   async updateReport(sessionId, reportId, content) {
-    const r = await fetch(`/api/sessions/${sessionId}/reports/${reportId}`, {
+    const r = await fetch(url(`api/sessions/${sessionId}/reports/${reportId}`), {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ content }),
@@ -129,7 +132,7 @@ export const API = {
     return r.json();
   },
   async deleteReport(sessionId, reportId) {
-    const r = await fetch(`/api/sessions/${sessionId}/reports/${reportId}`, { method: 'DELETE' });
+    const r = await fetch(url(`api/sessions/${sessionId}/reports/${reportId}`), { method: 'DELETE' });
     if (!r.ok && r.status !== 404) throw new Error('Verwijderen mislukt (' + r.status + ')');
   },
 };

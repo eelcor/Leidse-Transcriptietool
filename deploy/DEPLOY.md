@@ -231,6 +231,29 @@ al ingebouwd.
 > zet 'm op bv. `10m`) en op tunnels/CDN's met een strakke bodylimiet. `/api/*` moet met
 > ruime read-timeouts worden doorgezet (bij een lange opname zijn er veel chunk-PUTs).
 
+### Onder een subpad (bijv. `https://example.nl/transcriptie/`)
+
+De frontend gebruikt **relatieve paden** (afgeleid van waar de app geladen wordt), dus de app
+werkt onder elk subpad **zonder configuratie of patch-script** — mits je front-proxy het
+subpad-prefix **strip't** vóór hij doorzet. In je bestaande Caddy:
+```
+example.nl {
+    redir /transcriptie /transcriptie/          # forceer de afsluitende slash
+    handle_path /transcriptie/* {                # handle_path STRIP't het /transcriptie-prefix
+        reverse_proxy https://127.0.0.1:8443 {
+            transport http { tls_insecure_skip_verify }
+            flush_interval -1
+            header_up Host {host}
+        }
+    }
+}
+```
+De app-Caddy krijgt dan gewoon `/api/*`, `/css/*`, enz. (prefix eraf); de browser blijft
+`/transcriptie/...` gebruiken. Werkt ook op de web-root (zonder subpad) — dan is er niets te doen.
+Voor **nginx**: gebruik `location /transcriptie/ { proxy_pass https://127.0.0.1:8443/; }` (let op
+de afsluitende slash achter de upstream — die strip't het prefix), plus een redirect van
+`/transcriptie` naar `/transcriptie/`.
+
 ## LLM-endpoint bereikbaar maken vanuit de container
 
 - LLM op een **andere host**: gebruik dat adres direct in `LLM_BASE_URL`.
