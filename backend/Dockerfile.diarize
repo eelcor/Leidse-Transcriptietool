@@ -1,0 +1,46 @@
+# Diarize-worker-image: torch + pyannote.audio, LOSGEKOPPELD van de lichte basis-worker.
+#
+# Alleen nodig als je DIARIZE_BACKEND=pyannote draait. Zwaar (torch + CUDA). De basis-worker
+# (Dockerfile.worker) blijft bewust torch-vrij; deze image draait op een EIGEN queue/worker.
+#
+# Twee modelvarianten (zie DEPLOY.md):
+#   - pyannote 3.1 (DEFAULT): torch van cu124 + requirements-diarize.txt (huggingface_hub<1.0).
+#   - community-1 (pyannote 4.x): torch 2.8 van cu126 (behoudt sm_70/V100) + requirements-diarize4.txt.
+#       docker compose build met:
+#         DIARIZE_TORCH_SPEC="torch>=2.8,<2.9 torchaudio>=2.8,<2.9"
+#         DIARIZE_TORCH_INDEX_URL=https://download.pytorch.org/whl/cu126
+#         DIARIZE_REQS=requirements-diarize4.txt
+#       en DIARIZE_MODEL=pyannote/speaker-diarization-community-1 in .env.
+FROM python:3.11-slim
+
+# torch-specificatie + wheelbron + welk requirements-bestand (pyannote 3.x vs 4.x).
+ARG TORCH_SPEC="torch torchaudio"
+ARG TORCH_INDEX_URL=https://download.pytorch.org/whl/cu124
+ARG DIARIZE_REQS=requirements-diarize.txt
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1
+
+WORKDIR /app
+
+# libsndfile/ffmpeg voor resampling; pyannote krijgt de golfvorm rechtstreeks (geen torchcodec).
+RUN apt-get update && apt-get install -y --no-install-recommends libsndfile1 ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
+
+# torch + torchaudio EERST (eigen laag, cache-vriendelijk) van de gekozen index.
+RUN pip install --no-cache-dir --timeout 900 --retries 10 ${TORCH_SPEC} --index-url ${TORCH_INDEX_URL}
+
+# Constraint uit de geïnstalleerde torch/torchaudio -> pyannote upgradet torch niet naar een
+# niet-passende build (bv. cu130, die sm_70/V100 niet ondersteunt).
+RUN python -c "import torch,torchaudio;open('/tmp/torch-c.txt','w').write('torch==%s\ntorchaudio==%s\n'%(torch.__version__.split('+')[0],torchaudio.__version__.split('+')[0]))" && cat /tmp/torch-c.txt
+
+# App-requirements + het gekozen pyannote-requirements-bestand.
+COPY requirements.txt requirements-diarize.txt requirements-diarize4.txt ./
+RUN pip install --no-cache-dir -c /tmp/torch-c.txt -r ${DIARIZE_REQS}
+
+COPY app ./app
+COPY worker ./worker
+
+# arq-worker die ALLEEN de diarize-queue verwerkt.
+CMD ["arq", "worker.diarize_worker.DiarizeWorkerSettings"]

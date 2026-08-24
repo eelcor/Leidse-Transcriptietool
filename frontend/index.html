@@ -162,6 +162,19 @@
           <p class="muted small" style="margin:14px 0 6px">Onderdelen — alles aan = een volledig verslag:</p>
           <div class="chips" id="rep-chips"></div>
         </div>
+        <!-- Geavanceerde opties: sprekersidentificatie (alleen als de server diarisatie aan heeft).
+             Staat los van de wel/geen-verslag-keuze — diarisatie werkt ook zonder verslag. -->
+        <details class="opts adv-speakers" id="adv-speakers" hidden>
+          <summary>Geavanceerde opties</summary>
+          <label class="switch">
+            <input type="checkbox" id="opt-diarize" />
+            <span class="track"></span>
+            <span class="txt"><b>Sprekersidentificatie</b><small>Verdeel de opname automatisch in sprekers (SPREKER&nbsp;A/B/…); achteraf kun je namen invullen. Kost wat extra verwerkingstijd.</small></span>
+          </label>
+          <label class="field" id="participants-field" style="max-width:240px;margin-top:10px"><span>Aantal deelnemers (optioneel)</span>
+            <input type="number" id="participant-count" min="1" max="20" step="1" inputmode="numeric" placeholder="bijv. 5 — leeg = automatisch" />
+          </label>
+        </details>
       </div>
 
       <!-- Al een sessiecode? Prominent resultaat ophalen -->

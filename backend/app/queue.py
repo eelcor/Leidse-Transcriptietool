@@ -11,6 +11,10 @@ from arq.connections import ArqRedis, RedisSettings
 
 from .config import get_settings
 
+# Sprekerdiarisatie draait op een EIGEN queue, verwerkt door een aparte worker met
+# torch/pyannote (de basis-worker blijft licht). Zie backend/worker/diarize_worker.py.
+DIARIZE_QUEUE = "arq:queue:diarize"
+
 _pool: ArqRedis | None = None
 
 
@@ -40,3 +44,11 @@ async def enqueue_transcription(session_id: str) -> None:
 async def enqueue_report(report_id: str) -> None:
     pool = await get_pool()
     await pool.enqueue_job("generate_report", report_id, _job_id=f"report:{report_id}")
+
+
+async def enqueue_diarization(session_id: str, diar_id: str) -> None:
+    pool = await get_pool()
+    await pool.enqueue_job(
+        "diarize_session", session_id, diar_id,
+        _queue_name=DIARIZE_QUEUE, _job_id=f"diarize:{diar_id}",   # uniek per rij (ook bij opnieuw indelen)
+    )

@@ -1,0 +1,6 @@
+# EXPERIMENT (branch): pyannote.audio 4.x met het open community-1-model.
+# 4.x gebruikt token= i.p.v. use_auth_token, dus geen huggingface_hub<1.0-pin nodig.
+# VBx-clustering + exclusive mode; mikt op de over-segmentatie/overgangen die we bij 3.1 zagen.
+# LET OP: 4.0.3 had een VRAM-regressie — daarom is dit een aparte trial-image, niet de default.
+-r requirements.txt
+pyannote.audio>=4.0,<5.0

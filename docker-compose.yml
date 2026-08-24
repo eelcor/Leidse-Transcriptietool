@@ -89,6 +89,40 @@ services:
     devices:
       - "${WORKER_GPU_DEVICE:-nvidia.com/gpu=all}"
 
+  # Sprekerdiarisatie op een EIGEN queue (torch/pyannote). Opt-in: start alleen mee met
+  # `docker compose --profile diarize up -d`. Zet dan ook DIARIZE_BACKEND=pyannote in .env.
+  # De basis-worker blijft hierdoor licht (geen torch).
+  diarize:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.diarize
+      args:
+        # Modelvariant, zie DEPLOY.md. Default = pyannote 3.1 (cu124). Voor community-1 (4.x)
+        # zet je in .env: DIARIZE_TORCH_SPEC="torch>=2.8,<2.9 torchaudio>=2.8,<2.9",
+        # DIARIZE_TORCH_INDEX_URL=.../cu126 en DIARIZE_REQS=requirements-diarize4.txt.
+        TORCH_SPEC: "${DIARIZE_TORCH_SPEC:-torch torchaudio}"
+        TORCH_INDEX_URL: "${DIARIZE_TORCH_INDEX_URL:-https://download.pytorch.org/whl/cu124}"
+        DIARIZE_REQS: "${DIARIZE_REQS:-requirements-diarize.txt}"
+    env_file: .env
+    environment:
+      # Eén toegewezen kaart -> binnen de container altijd cuda:0 (DIARIZE_DEVICE=cuda).
+      CUDA_VISIBLE_DEVICES: "0"
+      PYTORCH_CUDA_ALLOC_CONF: "expandable_segments:True"
+    depends_on:
+      db: { condition: service_healthy }
+      redis: { condition: service_started }
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - audiodata:/data
+      - hf_cache:/root/.cache        # pyannote/HF-modelcache (los van internet na 1e download)
+    restart: unless-stopped
+    profiles: ["diarize"]
+    # --- GPU via CDI, GEPIND op één kaart (voorspelbare piek-VRAM naast STT/LLM) ---
+    # DIARIZE_GPU_DEVICE kiest de kaart (bv. nvidia.com/gpu=1). Binnen de container is dat cuda:0.
+    devices:
+      - "${DIARIZE_GPU_DEVICE:-nvidia.com/gpu=0}"
+
   cleanup:
     build:
       context: ./backend

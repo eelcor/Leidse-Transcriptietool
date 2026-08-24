@@ -520,3 +520,15 @@ progress::-webkit-progress-value { background: var(--accent); }
 .stats-cta-go svg { width: 15px; height: 15px; }
 .stats-cta:hover .stats-cta-go { gap: 12px; }
 @media (max-width: 620px) { .stats-cta { flex-wrap: wrap; gap: 14px; } .stats-cta-go { width: 100%; } }
+
+/* Sprekers (diarisatie) */
+.transcript .turn { padding: 3px 0; }
+.transcript .turn .spk { color: var(--accent); font-weight: 600; }
+.speakers { margin-top: 14px; }
+.speaker-rows { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+.speaker-row { display: flex; align-items: center; gap: 8px; }
+.speaker-row .spk-label { flex: 0 0 96px; font-family: var(--mono); font-size: 12.5px; color: var(--muted); }
+.spk-name { flex: 1; min-width: 0; padding: 8px 10px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface-2); color: var(--text); font-size: 14px; }
+.spk-name:focus { outline: none; border-color: var(--line-strong); box-shadow: var(--focus-ring); }
+.redo-row { display: flex; gap: 8px; align-items: center; }
+.redo-row input { padding: 8px 10px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface-2); color: var(--text); }

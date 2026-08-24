@@ -25,11 +25,15 @@ from sqlalchemy.orm import selectinload
 from .. import prompts, queue, stats, storage
 from ..config import get_settings
 from ..db import get_db
-from ..models import Report, ReportStatus, Session, SessionStatus
+from ..models import Diarization, DiarizationStatus, Report, ReportStatus, Session, SessionStatus
 from ..schemas import (
+    ConvertRequest,
     CreateReportRequest,
     CreateSessionResponse,
+    DiarizationOut,
+    DiarizationSegmentOut,
     FeedbackRequest,
+    RediarizeRequest,
     ReportOut,
     SegmentOut,
     SessionResultOut,
@@ -54,6 +58,50 @@ def _audio_format(filename: str | None, mime: str | None) -> str | None:
     if mime and "/" in mime:
         return mime.split("/")[-1].split(";")[0][:8]
     return None
+
+
+def _speaker_names_block(speaker_names: dict[str, str] | None) -> str | None:
+    """Bouw een hardened 'Sprekers:'-context uit label->naam (alleen SPREKER_*-sleutels).
+
+    Namen worden gesaneerd (nieuwe regels/afbakenings-tokens weg, lengte begrensd) zodat ze de
+    context-afbakening (=== BEGIN/EINDE ===) niet kunnen breken. Gebruikt in SPEAKER_NAMES_MODE=direct.
+    """
+    if not speaker_names or not isinstance(speaker_names, dict):
+        return None
+    lines: list[str] = []
+    for label, name in speaker_names.items():
+        if not isinstance(label, str) or not label.startswith("SPREKER_"):
+            continue
+        clean = (name or "").replace("\n", " ").replace("\r", " ").replace("===", "").strip()[:80]
+        if clean:
+            lines.append(f"{label} = {clean}")
+    if not lines:
+        return None
+    return "Sprekers (koppeling label → naam):\n" + "\n".join(lines)
+
+
+def _maybe_create_diarization(
+    db: AsyncSession, session_id: str, participants: int | None, now: datetime, requested: bool = True
+) -> None:
+    """Maak (bij ingeschakelde diarisatie én als deze opname erom vraagt) de diarizations-rij aan
+    zodra de transcriptie wordt ingepland — met het gevraagde aantal sprekers. De diarize-worker
+    vult 'm later. Geen rij -> de STT-worker slaat diarisatie voor deze sessie over.
+    Standaard uit (DIARIZE_BACKEND=none) of `requested=False` -> geen rij, geen job, geen verschil."""
+    s = get_settings()
+    if s.diarize_backend == "none" or not requested:
+        return
+    n = participants if (isinstance(participants, int) and participants > 0) else None
+    db.add(Diarization(
+        id=new_token(),
+        session_id=session_id,
+        status=DiarizationStatus.QUEUED,
+        backend=s.diarize_backend,
+        model=s.diarize_model,
+        min_speakers=n,
+        max_speakers=n,
+        created_at=now,
+        updated_at=now,
+    ))
 
 
 def _clean_report_config(report: dict | None) -> dict | None:
@@ -113,6 +161,9 @@ async def get_config() -> dict:
         "stt_model": s.stt_model,
         "stt_label": stt_label,
         "llm_model": s.llm_model,
+        # Diarisatie: laat de frontend het "Sprekers"-blok tonen/verbergen (weg als 'none').
+        "diarize_enabled": s.diarize_backend != "none",
+        "speaker_names_mode": s.speaker_names_mode,
     }
 
 
@@ -149,6 +200,9 @@ async def create_session(request: Request, db: AsyncSession = Depends(get_db)) -
     if optimize is None:
         optimize = s.audio_optimize_default
     auto_report = _clean_report_config((body or {}).get("report"))
+    participants = (body or {}).get("participants")
+    diarize_req = (body or {}).get("diarize")
+    diarize_req = False if diarize_req is None else bool(diarize_req)   # standaard uit; per opname aan te zetten
 
     now = _now()
     obj = Session(
@@ -162,6 +216,8 @@ async def create_session(request: Request, db: AsyncSession = Depends(get_db)) -
         updated_at=now,
     )
     db.add(obj)
+    # Diarisatie: rij aanmaken als deze opname erom vraagt (toggle) én de server 'm aan heeft.
+    _maybe_create_diarization(db, obj.id, participants, now, diarize_req)
     await db.commit()
     return CreateSessionResponse(id=obj.id, status=obj.status)
 
@@ -229,6 +285,8 @@ async def upload_file(
     language: str | None = None,
     optimize: bool | None = None,
     report: str | None = None,
+    participants: int | None = None,
+    diarize: bool = False,
     db: AsyncSession = Depends(get_db),
 ) -> CreateSessionResponse:
     s = get_settings()
@@ -282,6 +340,7 @@ async def upload_file(
         audio_bytes=written, language=obj.language,
         report_mode=stats.report_mode(obj.auto_report),
     )
+    _maybe_create_diarization(db, obj.id, participants, _now(), diarize)
     await db.commit()
 
     await queue.enqueue_transcription(obj.id)
@@ -342,12 +401,38 @@ async def get_status(session_id: str, db: AsyncSession = Depends(get_db)) -> Ses
     return _status_out(obj, await _session_queue_position(db, obj))
 
 
+def _diarization_out(diar: Diarization) -> DiarizationOut:
+    """Diarisatie voor de frontend: status + sprekerlabels (op eerste spreekmoment) +
+    de hersneden, gelabelde segments (zonder de zware 'words')."""
+    speakers: list[str] = []
+    segments: list[DiarizationSegmentOut] = []
+    for seg in (diar.payload or {}).get("segments", []):
+        spk = seg.get("speaker")
+        if spk and spk not in speakers:
+            speakers.append(spk)
+        segments.append(DiarizationSegmentOut(
+            start=seg.get("start"), end=seg.get("end"),
+            speaker=spk, text=seg.get("text", ""),
+        ))
+    return DiarizationOut(
+        status=diar.status, num_speakers=diar.num_speakers,
+        speakers=speakers, segments=segments,
+        clips=(diar.payload or {}).get("clips") or {},
+    )
+
+
 @router.get("/sessions/{session_id}", response_model=SessionResultOut)
 async def get_result(session_id: str, db: AsyncSession = Depends(get_db)) -> SessionResultOut:
     obj = await _get_session_or_404(db, session_id, with_reports=True)
     segments = None
     if obj.segments:
-        segments = [SegmentOut(**seg) for seg in obj.segments]
+        # Woord-timestamps (indien aanwezig) blijven server-side; de API geeft {start,end,text}.
+        segments = [SegmentOut(start=s.get("start"), end=s.get("end"), text=s.get("text", "")) for s in obj.segments]
+    # Laatste diarisatie(-poging) voor deze sessie meesturen (None als er geen is).
+    diar = (await db.execute(
+        select(Diarization).where(Diarization.session_id == session_id)
+        .order_by(Diarization.created_at.desc())
+    )).scalars().first()
     return SessionResultOut(
         id=obj.id,
         status=obj.status,
@@ -361,6 +446,7 @@ async def get_result(session_id: str, db: AsyncSession = Depends(get_db)) -> Ses
             _report_out(r, await _report_queue_position(db, r))
             for r in sorted(obj.reports, key=lambda r: r.created_at)
         ],
+        diarization=_diarization_out(diar) if diar else None,
     )
 
 
@@ -373,6 +459,30 @@ async def delete_session(session_id: str, db: AsyncSession = Depends(get_db)) ->
     await db.delete(obj)
     await db.commit()
     return Response(status_code=204)
+
+
+@router.post("/sessions/{session_id}/rediarize", response_model=DiarizationOut)
+async def rediarize(session_id: str, req: RediarizeRequest, db: AsyncSession = Depends(get_db)) -> DiarizationOut:
+    """'Opnieuw indelen': draai ALLEEN de diarisatie + merge opnieuw op het bestaande transcript
+    en de bewaarde audio (geen nieuwe STT, geen verslag). Maakt een nieuwe diarizations-rij en
+    plant een diarize-job in; de frontend volgt de status via GET /sessions/{id}."""
+    obj = await _get_session_or_404(db, session_id)
+    if not obj.transcript:
+        raise HTTPException(status_code=409, detail="Transcript nog niet beschikbaar.")
+    s = get_settings()
+    if s.diarize_backend == "none":
+        raise HTTPException(status_code=409, detail="Sprekersherkenning staat uit.")
+    n = req.participants if (isinstance(req.participants, int) and req.participants > 0) else None
+    now = _now()
+    diar = Diarization(
+        id=new_token(), session_id=session_id, status=DiarizationStatus.QUEUED,
+        backend=s.diarize_backend, model=s.diarize_model,
+        min_speakers=n, max_speakers=n, created_at=now, updated_at=now,
+    )
+    db.add(diar)
+    await db.commit()
+    await queue.enqueue_diarization(session_id, diar.id)
+    return _diarization_out(diar)
 
 
 @router.get("/sessions/{session_id}/events")
@@ -473,13 +583,21 @@ async def create_report(
     if req.kinds and not set(req.kinds).issubset(valid):
         raise HTTPException(status_code=422, detail="Onbekende sectie(s) opgegeven.")
 
+    # Sprekernamen: alleen in direct-modus meenemen (dan komen ze in de context/DB); in
+    # placeholder-modus genegeerd zodat namen niet in de database belanden.
+    context = req.context
+    if get_settings().speaker_names_mode == "direct":
+        names_block = _speaker_names_block(req.speaker_names)
+        if names_block:
+            context = (names_block + "\n\n" + (context or "")).strip()
+
     now = _now()
     report = Report(
         id=new_token(),
         session_id=session_id,
         kinds=req.kinds,
         custom_prompt=req.custom_prompt,
-        context=req.context,
+        context=context,
         status=ReportStatus.QUEUED,
         created_at=now,
         updated_at=now,
@@ -579,28 +697,44 @@ async def download_report_md(session_id: str, report_id: str, db: AsyncSession =
     )
 
 
-@router.get("/sessions/{session_id}/reports/{report_id}/download.docx")
-async def download_report_docx(session_id: str, report_id: str, db: AsyncSession = Depends(get_db)):
-    """Zet het Markdown-verslag om naar een Word-document via pandoc."""
-    r = await _get_report_content_or_404(db, session_id, report_id)
+async def _markdown_to_docx_response(content: str, filename: str):
+    """Zet Markdown om naar een docx via pandoc en geef 'm als FileResponse terug (temp opgeruimd)."""
     fd, out_path = tempfile.mkstemp(suffix=".docx")
     os.close(fd)
 
     def _convert() -> subprocess.CompletedProcess:
         return subprocess.run(
             ["pandoc", "-f", "markdown+hard_line_breaks", "-t", "docx", "-o", out_path],
-            input=r.content, text=True, capture_output=True,
+            input=content, text=True, capture_output=True,
         )
 
     proc = await asyncio.to_thread(_convert)
     if proc.returncode != 0:
         os.remove(out_path)
         raise HTTPException(status_code=500, detail="Word-conversie mislukt (pandoc).")
-    await stats.record_event(db, "download", download_kind="report_docx")
-    await db.commit()
     return FileResponse(
         out_path,
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        filename=f"verslag-{report_id[:8]}.docx",
+        filename=filename,
         background=BackgroundTask(os.remove, out_path),  # temp opruimen na verzenden
     )
+
+
+@router.get("/sessions/{session_id}/reports/{report_id}/download.docx")
+async def download_report_docx(session_id: str, report_id: str, db: AsyncSession = Depends(get_db)):
+    """Zet het Markdown-verslag om naar een Word-document via pandoc."""
+    r = await _get_report_content_or_404(db, session_id, report_id)
+    await stats.record_event(db, "download", download_kind="report_docx")
+    await db.commit()
+    return await _markdown_to_docx_response(r.content, f"verslag-{report_id[:8]}.docx")
+
+
+@router.post("/convert/docx")
+async def convert_docx(req: ConvertRequest):
+    """Stateless Markdown -> docx (niets opgeslagen). Voor client-side export met ingevulde
+    sprekernamen in placeholder-modus: de browser vervangt de labels en stuurt de tekst hierheen,
+    zodat de namen niet in de database belanden."""
+    content = (req.content or "").strip()
+    if not content:
+        raise HTTPException(status_code=422, detail="Lege inhoud.")
+    return await _markdown_to_docx_response(content, "verslag.docx")

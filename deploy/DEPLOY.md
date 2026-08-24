@@ -101,6 +101,81 @@ Wil je STT niet in de worker draaien maar op een aparte server (net als de LLM)?
 - De backend probeert `verbose_json` (met segment-timestamps) en valt terug op `json`
   (alleen tekst) als de server dat formaat niet ondersteunt.
 
+## Sprekerdiarisatie (optioneel, `DIARIZE_BACKEND=pyannote`)
+
+Sprekerherkenning ("wie zegt wat") draait als **aparte worker op een eigen queue**, met een
+**eigen image** (torch + pyannote). De basis-worker blijft daardoor licht (geen torch). Standaard
+staat het **uit** (`DIARIZE_BACKEND=none`) en wordt de image niet gebouwd.
+
+**Vooraf (eenmalig):** de pyannote-modellen zijn *gated* op HuggingFace. Accepteer de voorwaarden
+op `pyannote/speaker-diarization-3.1` én `pyannote/segmentation-3.0`, maak een **Read-token**
+(huggingface.co/settings/tokens) en zet dat als `DIARIZE_HF_TOKEN`.
+
+**Aanzetten.** In `.env`:
+```
+DIARIZE_BACKEND=pyannote
+DIARIZE_HF_TOKEN=hf_xxx
+DIARIZE_GPU_DEVICE=nvidia.com/gpu=1      # kies één vrije kaart (binnen de container = cuda:0)
+TORCH_INDEX_URL=https://download.pytorch.org/whl/cu124   # cu124 werkt op nieuwe GPU's én V100
+```
+Bouwen en starten (let op het profiel — anders start de diarize-worker niet mee):
+```bash
+docker compose --profile diarize up -d --build
+```
+De eerste keer downloadt de worker de pyannote-modellen (naar de `hf_cache`-volume; daarna offline).
+
+**Kaart-pinning.** `DIARIZE_GPU_DEVICE` wijst via CDI één GPU toe. Binnen de container is die kaart
+**altijd `cuda:0`** (daarom `DIARIZE_DEVICE=cuda`), ongeacht welke host-index je koos. Zo blijft de
+piek-VRAM voorspelbaar naast STT en het LLM. `DIARIZE_CONCURRENCY=1` houdt het bij één job tegelijk.
+
+**torch/GPU.** De image installeert torch van `TORCH_INDEX_URL` (build-arg). `cu124` bevat nog
+sm_70 en werkt dus óók op Tesla V100 — zie de torch/V100-notitie in de README. Draai je op nóg
+oudere hardware of een afwijkende driver, kies dan een passende index (bv. `cu118`).
+
+**Controleer vóór het aanzetten of er genoeg vrij geheugen is** (richtlijn: **minimaal ~3 GB vrij**
+op de gekozen kaart, náást wat er al draait; pyannote 3.1 piekt op een bestand van ~72 min rond
+~1,6 GB):
+```bash
+nvidia-smi --query-gpu=index,name,memory.used,memory.free --format=csv
+```
+> **VRAM-let op:** pyannote.audio is bewust op **3.x** gepind. 4.0.3 heeft een gemelde regressie
+> (piek ~9,5 GB i.p.v. ~1,6 GB op 72 min) — niet opwaarderen zonder de piek opnieuw te meten.
+
+**Uitzetten / terugdraaien.** Zet `DIARIZE_BACKEND=none` in `.env` en `docker compose up -d`
+(zonder `--profile diarize`); de diarize-worker draait dan niet mee en het gedrag is weer identiek
+aan de opstelling zonder diarisatie.
+
+### Beter tellen: community-1 (pyannote 4.x)
+
+Standaard gebruikt de diarize-worker **speaker-diarization-3.1**. Het nieuwere open model
+**community-1** (pyannote 4.x, VBx-clustering) telt sprekers doorgaans nauwkeuriger — het
+vermindert "spookspreker"-flintertjes — en biedt een *exclusive* modus (elk moment één spreker),
+wat de merge en snelle sprekerwisselingen gladstrijkt. Accepteer eerst ook de voorwaarden van
+`pyannote/speaker-diarization-community-1` op HuggingFace (zelfde token).
+
+Aanzetten in `.env` + herbouwen:
+```
+DIARIZE_MODEL=pyannote/speaker-diarization-community-1
+DIARIZE_EXCLUSIVE=true                     # optioneel: exclusive toewijzing
+DIARIZE_TORCH_SPEC=torch>=2.8,<2.9 torchaudio>=2.8,<2.9
+DIARIZE_TORCH_INDEX_URL=https://download.pytorch.org/whl/cu126
+DIARIZE_REQS=requirements-diarize4.txt
+```
+```bash
+docker compose --profile diarize build diarize && docker compose --profile diarize up -d diarize
+```
+
+Aandachtspunten:
+- **torch/GPU (belangrijk):** pyannote 4 vereist torch ≥ 2.8 en trekt standaard een **CUDA 13**-build
+  mee, en **CUDA 13 laat Volta (Tesla V100, sm_70) vallen**. De **cu126**-index levert torch 2.8 dat
+  sm_70 (én sm_61) nog bevat; een constraint in de Dockerfile houdt torch daarop vast. Nieuwere
+  GPU's (RTX Pro 6000) kunnen cu128. Smoketest: `sm_70` moet in `torch.cuda.get_arch_list()` staan.
+- **Audio-decoding / FFmpeg:** pyannote 4 gebruikt `torchcodec`, dat een specifieke FFmpeg/CUDA-versie
+  verlangt en anders niet laadt. De backend **omzeilt dit door de golfvorm zelf in te voeren** (de
+  16kHz-wav die de worker al maakt) — aan FFmpeg hoeft niets te veranderen.
+- **VRAM:** 4.0.x had een gemelde piek-regressie; in de praktijk paste ~50 min audio binnen ~2–3 GB
+  op de toegewezen kaart. Meet met `nvidia-smi` bij lange opnames.
+
 ## Handmatige installatie
 
 ```bash

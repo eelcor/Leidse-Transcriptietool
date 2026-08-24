@@ -68,13 +68,26 @@ class Settings(BaseSettings):
     # het schema somt anders alle endpoints op). Zet EXPOSE_API_DOCS=true voor lokaal debuggen.
     expose_api_docs: bool = False
 
-    # --- Diarisatie (sprekerlabels) — GERESERVEERD, standaard uit (zie ROADMAP.md) ---
-    # Roadmap: optionele spreker-diarisatie (bv. pyannote) die ná STT sprekerlabels aan de
-    # segments hangt. Zwaar qua VRAM/latency, daarom expliciet opt-in. Nog niet geïmplementeerd.
-    diarization_enabled: bool = False
-    diarization_backend: str = "none"          # "none" | "pyannote" (nog niet geïmplementeerd)
-    diarization_model: str = "pyannote/speaker-diarization-3.1"
-    hf_token: str = ""                          # HuggingFace-token voor gated pyannote-modellen
+    # --- Diarisatie (sprekerlabels) — optioneel, standaard UIT (DIARIZE_BACKEND=none) ---
+    # Optionele spreker-diarisatie (pyannote) die ná STT sprekerlabels toewijst. Draait als
+    # aparte job op een eigen queue/worker, zodat torch/pyannote uit de basis-worker blijven.
+    # 'none' (default) = geen enkel gedragsverschil met de niet-diarisatie-opstelling.
+    diarize_backend: str = "none"                # "none" | "pyannote"
+    diarize_model: str = "pyannote/speaker-diarization-3.1"
+    diarize_device: str = "cuda"                 # "cuda" | "cpu"
+    diarize_compute_type: str = "float16"        # gereserveerd voor backends met een precisiekeuze
+    diarize_hf_token: str = ""                   # HuggingFace-token voor de gated pyannote-modellen
+    diarize_concurrency: int = 1                 # max gelijktijdige diarisatie-jobs (VRAM-bescherming)
+    # Alleen bij community-1 (pyannote 4.x): 'exclusive' toewijzing (elk moment één spreker) i.p.v.
+    # de standaard speaker-diarization. Vereenvoudigt de merge; genegeerd door 3.x.
+    diarize_exclusive: bool = False
+    # Merge-parameters (fase 3): gaten < min_gap binnen dezelfde spreker dichtplakken;
+    # sprekerfragmenten < min_segment weggooien en aan de omliggende spreker toekennen.
+    diarize_min_gap: float = 0.5
+    diarize_min_segment: float = 0.5
+    # Namen: 'placeholder' = LLM én DB zien alleen SPREKER_A/B/C; namen leven client-side.
+    # 'direct' = ingevulde namen gaan mee in de LLM-context en komen in het verslag (dus in de DB).
+    speaker_names_mode: str = "placeholder"      # "placeholder" | "direct"
 
     @property
     def max_upload_bytes(self) -> int:

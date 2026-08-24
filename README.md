@@ -46,6 +46,11 @@ net zo laagdrempelig is. En heb je geen dictafoon of memorecorder? Dan doe je he
   losse secties, of een eigen prompt — met **Word (.docx)/Markdown**-export. Geef een
   **agenda** mee bij de context en de onderwerpen worden daarop gematcht. De modelnamen komen
   uit de env en worden in de app getoond (`/api/config`).
+- **Sprekerherkenning (optioneel, standaard uit):** met `DIARIZE_BACKEND=pyannote` krijgt het
+  transcript sprekerlabels (`SPREKER_A/B/…`) en kun je in de app namen invullen en een fragment
+  per spreker beluisteren. Draait als aparte, opt-in worker (torch/pyannote); modellen 3.1 of het
+  nauwkeurigere **community-1** (pyannote 4.x). Zie [`deploy/DEPLOY.md`](deploy/DEPLOY.md) en
+  [`docs/test-sprekers.md`](docs/test-sprekers.md). Zónder aanzetten verandert er niets.
 - **Bewaartermijn:** alles wordt automatisch verwijderd **2 werkdagen ná de
   verwerking** (weekenden tellen niet mee).
 - **Dashboard:** een openbaar, **volledig anoniem** [statistiekdashboard](docs/screenshots/dashboard.png)
@@ -131,6 +136,12 @@ CUDA-passende `torch` (zie de V100/cu124-noot hieronder).
 > (voldoet aan NeMo's `torch>=2.6.0`). Nieuwere kaarten (RTX Pro 6000 = sm_120)
 > werken wél met de cu13-default.
 >
+> **Sprekerdiarisatie (pyannote):** de diarize-worker heeft een EIGEN, opt-in image met torch,
+> die torch installeert vanaf de build-arg `TORCH_INDEX_URL` (default `cu124` — bevat sm_70 en
+> werkt dus op nieuwe GPU's én V100). Zelfde afweging als hierboven: op afwijkende hardware of
+> driver kies je een passende index. De basis-worker blijft torch-vrij. Zie
+> [`deploy/DEPLOY.md`](deploy/DEPLOY.md), "Sprekerdiarisatie".
+>
 > **Prestatie (getest op V100, fp16):** modellaadtijd ~43s (eenmalig bij
 > worker-startup), daarna ~0,74s per transcriptie van 7s audio (~10× realtime);
 > op CPU ~2,1s (~3,5× realtime). De laadtijd is eenmalig, niet per job.
@@ -160,6 +171,9 @@ Alles via env-vars — zie [`.env.example`](.env.example). Belangrijkste:
 | `LLM_BASE_URL` / `LLM_MODEL` / `LLM_API_KEY` | OpenAI-compatibel LLM-endpoint (LiteLLM/vLLM/Ollama/…) |
 | `RETENTION_WORKDAYS` | bewaartermijn in werkdagen (default 2) |
 | `MAX_UPLOAD_MB` | max uploadgrootte (default 200) |
+| `DIARIZE_BACKEND` | `none` (default) of `pyannote` — sprekerherkenning (opt-in) |
+| `DIARIZE_MODEL` | `…speaker-diarization-3.1` of `…community-1` (pyannote 4.x, nauwkeuriger) |
+| `SPEAKER_NAMES_MODE` | `placeholder` (namen client-side) of `direct` (namen in verslag/DB) |
 
 ## Ontwikkelen & testen
 
@@ -196,6 +210,13 @@ De tests draaien zonder Redis/GPU: SQLite + een nep-queue.
 - **Minimale logging:** transcript-inhoud wordt nooit gelogd.
 - **Client-side voorkeuren:** recorder-instellingen staan in `localStorage`, nooit
   op de server.
+- **Sprekernamen (bij diarisatie):** in de default `SPEAKER_NAMES_MODE=placeholder` zien het
+  LLM én de database alleen `SPREKER_A/B/…`; de ingevulde namen blijven **client-side**
+  (`localStorage`) en worden alleen in de browser en bij de export toegevoegd. In `direct`
+  gaan de namen mee in de LLM-context en komen ze in het verslag (dus in de DB, gedurende de
+  bewaartermijn). **Let op — placeholder is een reductie, geen anonimisering:** het voorkomt dat
+  namen als gestructureerd veld in Postgres belanden, maar niet dat mensen elkaar in de opname bij
+  naam noemen — díe namen staan gewoon in het transcript.
 - **Automatische verwijdering:** `expires_at` wordt **werkdag-bewust** gezet zodra
   de verwerking klaar is (niet bij upload) — dus het venster van 2 werkdagen begint
   pas als het transcript beschikbaar is. Audio én transcript blijven die periode
