@@ -72,9 +72,20 @@
 	# gebruikers na een update op een oude index.html/app.js blijven hangen.
 	handle {
 		root * /srv
-		try_files {path} /index.html
 		header Cache-Control "no-cache"
-		file_server
+		# Ontbrekende ASSETS (paden met een extensie, bv. .js/.css/.woff2) geven een ECHTE 404 —
+		# niet de SPA-fallback naar index.html. Anders wordt een ontbrekend script (zoals de
+		# editor-bundle) als text/html geserveerd en loopt de module-import met een MIME-fout stuk.
+		@asset path_regexp \.[A-Za-z0-9]+$
+		handle @asset {
+			try_files {path} =404
+			file_server
+		}
+		# Overige paden (navigatie zonder extensie): SPA-fallback naar index.html.
+		handle {
+			try_files {path} /index.html
+			file_server
+		}
 	}
 
 	request_body {
