@@ -60,6 +60,11 @@ async def transcribe_session(ctx: dict, session_id: str) -> str:
         raw_path = obj.audio_path
         language = obj.language
         optimize = obj.optimize_audio
+        # Woordenlijst/jargon (glossary) rijdt mee in de report-config (auto_report); gebruik 'm
+        # als STT-hotwords zodat namen/termen goed worden herkend. Ingekort tot een veilige lengte.
+        glossary = ((obj.auto_report or {}).get("glossary") or None) if obj.auto_report else None
+        if glossary:
+            glossary = glossary.strip()[:800] or None
         await db.commit()
 
     try:
@@ -73,7 +78,7 @@ async def transcribe_session(ctx: dict, session_id: str) -> str:
             _t0 = time.perf_counter()
             result = await loop.run_in_executor(
                 None,
-                lambda: backend.transcribe(str(wav), language, settings.stt_word_timestamps),
+                lambda: backend.transcribe(str(wav), language, settings.stt_word_timestamps, hotwords=glossary),
             )
             _stt_seconds = time.perf_counter() - _t0
         # Wandtijd van de STT-stap (voor het meten van de extra kost van woord-timestamps
@@ -141,7 +146,9 @@ async def transcribe_session(ctx: dict, session_id: str) -> str:
 
         auto = obj.auto_report
         auto_report_id = None
-        if auto:
+        # Alleen een verslag inplannen als er echt een verslag/vragenlijst is gevraagd. Een
+        # config met ALLEEN een glossary (voor STT-hotwords) mag geen leeg verslag triggeren.
+        if auto and (auto.get("kinds") or auto.get("custom_prompt")):
             auto_report_id = new_token()
             db.add(Report(
                 id=auto_report_id,

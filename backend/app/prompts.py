@@ -121,6 +121,16 @@ def available_sections() -> list[dict[str, str]]:
     return [{"key": k, "label": label} for k, (_, label) in SECTIONS.items()]
 
 
+def glossary_block(glossary: str | None) -> str:
+    """Terminologie/woordenlijst als DATA-blok voor in de context. Leeg -> lege string.
+    De basis-instructie zegt de LLM deze lijst als leidend te gebruiken voor de spelling."""
+    g = (glossary or "").strip()
+    if not g:
+        return ""
+    return ("=== BEGIN TERMINOLOGIE (woordenlijst/jargon, aangeleverd door de gebruiker) ===\n"
+            + g + "\n=== EINDE TERMINOLOGIE ===")
+
+
 def build_messages(
     transcript: str,
     kinds: list[str] | None,

@@ -117,15 +117,27 @@ def _fold_template(template: str | None, custom: str | None, context: str | None
     return prompts.template_task(), new_context
 
 
+def _fold_glossary(glossary: str | None, context: str | None) -> str | None:
+    """Woordenlijst/jargon als TERMINOLOGIE-DATA-blok vóór in de context (voor de LLM-spelling)."""
+    block = prompts.glossary_block(glossary)
+    if not block:
+        return context
+    return (block + "\n\n" + context).strip() if context else block
+
+
 def _clean_report_config(report: dict | None) -> dict | None:
     """Valideer/normaliseer een verslag-config voor auto-generatie na transcriptie.
-    Geeft een schone dict terug, of None als er geen (geldig) verslag gevraagd is."""
+    Geeft een schone dict terug, of None als er geen (geldig) verslag/glossary gevraagd is.
+
+    Glossary landt op TWEE plekken (migratie-vrij): ingevouwen in `context` (terminologie voor de
+    LLM) én als losse `glossary`-sleutel (rauwe termen, die de STT-worker als hotwords gebruikt)."""
     if not report or not isinstance(report, dict):
         return None
     kinds = report.get("kinds") or None
     custom = (report.get("custom_prompt") or "").strip() or None
     context = (report.get("context") or "").strip() or None
     template = (report.get("template") or "").strip() or None
+    glossary = (report.get("glossary") or "").strip() or None
     if kinds:
         valid = set(prompts.SECTIONS.keys())
         kinds = [k for k in kinds if k in valid]
@@ -135,9 +147,14 @@ def _clean_report_config(report: dict | None) -> dict | None:
     if template:
         custom, context = _fold_template(template, custom, context)
         kinds = None
-    if not kinds and not custom:
+    if glossary:
+        context = _fold_glossary(glossary, context)
+    if not kinds and not custom and not glossary:
         return None
-    return {"kinds": kinds, "custom_prompt": custom, "context": context}
+    cfg: dict = {"kinds": kinds, "custom_prompt": custom, "context": context}
+    if glossary:
+        cfg["glossary"] = glossary   # rauw, los van de context-fold -> voor STT-hotwords
+    return cfg
 
 
 async def _get_session_or_404(db: AsyncSession, session_id: str, with_reports: bool = False) -> Session:
@@ -741,6 +758,9 @@ async def create_report(
     if template:
         custom_prompt, context = _fold_template(template, custom_prompt, context)
         kinds = None
+    # Woordenlijst/jargon -> terminologie-DATA-blok in context (juiste spelling in het verslag).
+    if (req.glossary or "").strip():
+        context = _fold_glossary(req.glossary, context)
 
     now = _now()
     report = Report(

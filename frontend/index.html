@@ -192,6 +192,18 @@
             <p class="muted small" id="tpl-hint" style="margin-top:6px">Zolang hier vragen staan, worden díe beantwoord in plaats van een verslag.</p>
           </details>
         </div>
+        <!-- Woordenlijst/jargon: stuurt zowel de transcriptie (herkenning) als het verslag (spelling).
+             Altijd zichtbaar (werkt ook zonder verslag), los van de wel/geen-verslag-keuze. -->
+        <details class="opts" id="glossary-wrap" style="margin-top:6px">
+          <summary>Woordenlijst / jargon (optioneel)</summary>
+          <p class="muted small" style="margin:8px 0">Namen, vaktermen en afkortingen die vaak fout gaan — helpt
+            zowel de <b>transcriptie</b> (betere herkenning) als het <b>verslag</b> (juiste spelling). Eén term per regel.</p>
+          <label class="field"><span>Voorbeeld kiezen (vult het vak, pas gerust aan)</span>
+            <select id="glossary-preset"><option value="">— geen —</option></select>
+          </label>
+          <textarea id="glossary-text" rows="4" placeholder="Bijv.:&#10;Leidse Ring Noord&#10;omgevingsvisie&#10;GGD Hollands Midden&#10;wethouder Van der Meer"></textarea>
+        </details>
+
         <!-- Geavanceerde opties: sprekersidentificatie (alleen als de server diarisatie aan heeft).
              Staat los van de wel/geen-verslag-keuze — diarisatie werkt ook zonder verslag. -->
         <details class="opts adv-speakers" id="adv-speakers" hidden>

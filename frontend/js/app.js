@@ -188,19 +188,49 @@ function setupReportConfig() {
       }
     });
   }
+
+  // Woordenlijst-presets vullen + toepassen.
+  const gpre = $('#glossary-preset');
+  const gtext = $('#glossary-text');
+  if (gpre && gtext) {
+    Object.keys(GLOSSARY_PRESETS).forEach((name) => gpre.append(el('option', { value: name }, name)));
+    gpre.addEventListener('change', () => {
+      const preset = GLOSSARY_PRESETS[gpre.value];
+      if (preset) { gtext.value = preset; const w = $('#glossary-wrap'); if (w) w.open = true; }
+    });
+  }
 }
 
 // Lees de gekozen verslag-config; geeft {kinds,custom_prompt,context} of null.
+// Ingebouwde voorbeeld-woordenlijsten (presets). Per-opname; niets server-side bewaard.
+const GLOSSARY_PRESETS = {
+  'Gemeente / bestuurlijk': ['college van B&W', 'wethouder', 'portefeuillehouder', 'raadscommissie',
+    'motie', 'amendement', 'omgevingsvisie', 'omgevingsplan', 'kadernota', 'begroting',
+    'coalitieakkoord', 'zienswijze', 'bestemmingsplan'].join('\n'),
+  'Zorg / sociaal domein': ['Wmo', 'jeugdzorg', 'GGZ', 'GGD', 'cliëntondersteuning', 'indicatiestelling',
+    'mantelzorg', 'sociaal wijkteam', 'beschermd wonen', 'PGB'].join('\n'),
+};
+
+function getGlossary() {
+  return (($('#glossary-text') || {}).value || '').trim() || null;
+}
+
 function getReportConfig() {
+  const glossary = getGlossary();
   const mode = (document.querySelector('input[name="rep-mode"]:checked') || {}).value || 'none';
-  if (mode === 'none') return null;
+  // Geen verslag, maar wél een woordenlijst? Stuur alleen de glossary mee (voor de transcriptie).
+  if (mode === 'none') return glossary ? { glossary } : null;
   const context = ($('#rep-context').value || '').trim() || null;
   // Sjabloon met vragen heeft voorrang: dan worden de vragen beantwoord i.p.v. een verslag.
   const template = (($('#tpl-text') || {}).value || '').trim();
-  if (template) return { template, context };
-  const kinds = Object.entries(repBoxes).filter(([, cb]) => cb.checked).map(([k]) => k);
-  if (!kinds.length) return null;                        // niets aangevinkt -> geen verslag
-  return { kinds, context };
+  const cfg = template ? { template, context }
+    : (() => {
+      const kinds = Object.entries(repBoxes).filter(([, cb]) => cb.checked).map(([k]) => k);
+      return kinds.length ? { kinds, context } : null;
+    })();
+  if (!cfg) return glossary ? { glossary } : null;       // niets aangevinkt -> hooguit de glossary
+  if (glossary) cfg.glossary = glossary;
+  return cfg;
 }
 
 // Gevraagd aantal deelnemers (voor sprekerherkenning); null als leeg/onzin.
