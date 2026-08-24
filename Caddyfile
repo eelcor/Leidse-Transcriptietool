@@ -23,6 +23,14 @@
 	tls {$CADDY_TLS:internal}
 	encode gzip
 
+	# Optioneel subpad achter een reverse-proxy die het prefix NIET zelf strip't.
+	# Leeg (default) => de app draait op de web-root en dit is een no-op: de sentinel-
+	# default matcht nooit een echt pad. Zet BASE_PATH=/transcriptie => Caddy strip't dat
+	# prefix hier, zodat álle onderstaande routes (/api/*, /docs/*, de frontend) ongewijzigd
+	# op de root blijven werken. De downstream-proxy hoeft dan alleen een domme pass-through
+	# te zijn (geen path-rewrite); de browser vraagt dankzij url()/base.js al de subpad-URL's op.
+	uri strip_prefix {$BASE_PATH:/__no_base_path__}
+
 	# Security-headers (defense-in-depth). Het systeem draait op een geïsoleerd VLAN;
 	# dit is de applicatielaag daarbovenop. De frontend is CSP-veilig: geen externe CDN,
 	# geen inline scripts (alleen /js/app.js), dus een strak script-src 'self' kan.

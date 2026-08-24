@@ -16,6 +16,11 @@ services:
       CADDY_TLS: "${CADDY_TLS:-internal}"
       # Certificaat voor SNI-loze verbindingen (IP-toegang). Zet op je hoofd-hostnaam.
       DEFAULT_SNI: "${DEFAULT_SNI:-localhost}"
+      # Optioneel subpad als de app achter een reverse-proxy op bv. /transcriptie draait
+      # en die proxy het prefix NIET strip't. Niet gezet/leeg = web-root (standaard): dan
+      # geven we een sentinel-prefix door dat nooit matcht, zodat Caddy's strip een no-op is.
+      # Zet BASE_PATH=/transcriptie om het subpad te activeren. Zie Caddyfile/DEPLOY.md.
+      BASE_PATH: "${BASE_PATH:-/__no_base_path__}"
     ports:
       # Poorten configureerbaar zodat je naast een bestaande reverse-proxy kunt draaien.
       # Draait er al een Caddy/nginx op 80/443? Zet WEB_HTTP_PORT/WEB_HTTPS_PORT op vrije
