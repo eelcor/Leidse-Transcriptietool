@@ -201,6 +201,24 @@ function getDiarize() {
 // -------------------------------------------------------------------------
 // Bestand uploaden
 // -------------------------------------------------------------------------
+// Bestandsextensies die ffmpeg als audio(-drager) aankan.
+const AUDIO_EXT = /\.(wav|mp3|m4a|mp4|ogg|oga|opus|webm|flac|aac|wma|aiff?|amr|mkv|mov|3gp|caf)$/i;
+// Herkent audio aan MIME of extensie; wijst duidelijk niet-audio (Word/PDF/beeld/tekst) af.
+function looksLikeAudio(file) {
+  if (!file) return false;
+  const name = (file.name || '').toLowerCase();
+  const type = (file.type || '').toLowerCase();
+  // audio/* en video/* (containers met een audiospoor) mogen — ffmpeg pakt de audio eruit.
+  if (type.startsWith('audio/') || type.startsWith('video/')) return true;
+  // Onbekend/leeg MIME: vertrouw op de extensie.
+  if (!type) return AUDIO_EXT.test(name);
+  // Bekend maar niet-audio MIME (application/pdf, .docx, image/*, text/*): alleen als de
+  // extensie tóch audio is (zeldzaam); anders afwijzen.
+  return AUDIO_EXT.test(name);
+}
+const NOT_AUDIO_MSG = 'Dit lijkt geen audiobestand. Upload een audio-opname (wav, mp3, m4a, ogg, webm, flac …). '
+  + 'Een Word/PDF/tekstbestand kan hier niet — gebruik daarvoor de tekst-optie (transcript of aantekeningen).';
+
 function setupUpload() {
   const input = $('#file-input');
   const btn = $('#upload-btn');
@@ -217,6 +235,7 @@ function setupUpload() {
       e.preventDefault(); over(false);
       const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
       if (!f) return;
+      if (!looksLikeAudio(f)) { alert(NOT_AUDIO_MSG); return; }  // drag-&-drop negeert accept -> zelf checken
       try { const dt = new DataTransfer(); dt.items.add(f); input.files = dt.files; }
       catch { /* oudere browser: file-input laat 'm dan zelf niet zetten */ }
     });
@@ -225,6 +244,7 @@ function setupUpload() {
   btn.addEventListener('click', async () => {
     const file = input.files[0];
     if (!file) { alert('Kies eerst een bestand.'); return; }
+    if (!looksLikeAudio(file)) { alert(NOT_AUDIO_MSG); return; }
     const maxBytes = CONFIG.max_upload_mb * 1024 * 1024;
     if (file.size > maxBytes) { alert(`Bestand te groot (max ${CONFIG.max_upload_mb} MB).`); return; }
     const optimize = $('#opt-upload').checked;

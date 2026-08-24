@@ -80,6 +80,18 @@ async def transcribe_session(ctx: dict, session_id: str) -> str:
         # en later de diarisatie). Geen transcript-inhoud; alleen een duur.
         log.info("STT klaar voor sessie %s in %.1fs (backend=%s, word_ts=%s).",
                  session_id[:8], _stt_seconds, backend.name, settings.stt_word_timestamps)
+    except audio.NoAudioError:
+        # Permanente gebruikersfout (geen audiospoor): duidelijke melding, GEEN retry.
+        log.warning("Geen audiospoor in sessie %s — waarschijnlijk een niet-audiobestand.", session_id[:8])
+        async with maker() as db:
+            obj = (await db.execute(select(Session).where(Session.id == session_id))).scalar_one_or_none()
+            if obj is not None:
+                obj.status = SessionStatus.FAILED
+                obj.error = "Geen audiospoor gevonden — is dit wel een audiobestand? (Word/PDF/tekst kan niet worden getranscribeerd.)"
+                obj.updated_at = _now()
+                await stats.record_event(db, "failed", target="transcribe")
+                await db.commit()
+        return "no-audio"  # niet re-raisen -> arq probeert het niet opnieuw
     except Exception as exc:
         log.exception("STT mislukt voor sessie %s", session_id[:8])
         async with maker() as db:
