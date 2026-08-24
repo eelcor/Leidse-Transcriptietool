@@ -103,6 +103,12 @@ def base_instruction() -> str:
 
 
 @lru_cache
+def template_task() -> str:
+    """De 'vragenlijst'-taak: beantwoord de aangeleverde vragen i.p.v. een gewoon verslag."""
+    return _first_code_block_after(_load_raw(), "## 9. Vragenlijst")
+
+
+@lru_cache
 def section_task(key: str) -> str:
     if key not in SECTIONS:
         raise KeyError(f"Onbekende sectie: {key!r}")

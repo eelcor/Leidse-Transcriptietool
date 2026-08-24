@@ -181,6 +181,16 @@
           <textarea id="rep-context" rows="3" placeholder="Context (optioneel, maar sterk aanbevolen) — onderwerp, datum, deelnemers, aanleiding, achtergrond, of dingen die goed zijn om te weten. Plak hier ook gerust de agenda (dan matchen we de onderwerpen daarop)."></textarea>
           <p class="muted small" style="margin:14px 0 6px">Onderdelen — alles aan = een volledig verslag:</p>
           <div class="chips" id="rep-chips"></div>
+
+          <details class="opts" id="tpl-wrap" style="margin-top:14px">
+            <summary>Of: beantwoord vragen uit een sjabloon</summary>
+            <p class="muted small" style="margin:8px 0">Upload of plak een lijst vragen. In plaats van een verslag wordt
+              <b>elke vraag beantwoord</b> op basis van het gesprek (of je aantekeningen). Staat een antwoord er niet in,
+              dan zegt het model dat expliciet.</p>
+            <label class="field"><input type="file" id="tpl-file" accept=".txt,.md,.markdown,.docx,.rtf,.odt,.doc,.html,.htm" /></label>
+            <textarea id="tpl-text" rows="4" placeholder="1. Wat is er besloten over onderwerp X?&#10;2. Welke acties zijn afgesproken en door wie?&#10;3. Welke risico's zijn genoemd?"></textarea>
+            <p class="muted small" id="tpl-hint" style="margin-top:6px">Zolang hier vragen staan, worden díe beantwoord in plaats van een verslag.</p>
+          </details>
         </div>
         <!-- Geavanceerde opties: sprekersidentificatie (alleen als de server diarisatie aan heeft).
              Staat los van de wel/geen-verslag-keuze — diarisatie werkt ook zonder verslag. -->

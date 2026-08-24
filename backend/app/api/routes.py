@@ -105,6 +105,18 @@ def _maybe_create_diarization(
     ))
 
 
+def _fold_template(template: str | None, custom: str | None, context: str | None) -> tuple[str | None, str | None]:
+    """Sjabloon met vragen -> 'beantwoord de vragen'-modus. Zet de vragenlijst-instructie als
+    custom_prompt en prepend de vragen als DATA-blok in context (injectie-veilig, net als de
+    sprekernamen). Geen sjabloon -> ongewijzigd. Migratie-vrij: alles landt in bestaande velden."""
+    if not (template and template.strip()):
+        return custom, context
+    q_block = ("=== BEGIN VRAGEN (sjabloon, aangeleverd door de gebruiker) ===\n"
+               + template.strip() + "\n=== EINDE VRAGEN ===")
+    new_context = (q_block + "\n\n" + context).strip() if context else q_block
+    return prompts.template_task(), new_context
+
+
 def _clean_report_config(report: dict | None) -> dict | None:
     """Valideer/normaliseer een verslag-config voor auto-generatie na transcriptie.
     Geeft een schone dict terug, of None als er geen (geldig) verslag gevraagd is."""
@@ -113,11 +125,16 @@ def _clean_report_config(report: dict | None) -> dict | None:
     kinds = report.get("kinds") or None
     custom = (report.get("custom_prompt") or "").strip() or None
     context = (report.get("context") or "").strip() or None
+    template = (report.get("template") or "").strip() or None
     if kinds:
         valid = set(prompts.SECTIONS.keys())
         kinds = [k for k in kinds if k in valid]
         if not kinds:
             kinds = None
+    # Sjabloon vouwt in custom_prompt/context en vervangt het gewone verslag (kinds vervallen dan).
+    if template:
+        custom, context = _fold_template(template, custom, context)
+        kinds = None
     if not kinds and not custom:
         return None
     return {"kinds": kinds, "custom_prompt": custom, "context": context}
@@ -460,6 +477,19 @@ async def create_text_session(
     return CreateSessionResponse(id=obj.id, status=obj.status)
 
 
+@router.post("/extract-text")
+async def extract_text(file: UploadFile = File(...)) -> dict:
+    """Stateless: lees een geüpload tekst-/documentbestand (.txt/.md/.docx/.rtf/.odt) naar platte
+    tekst. Voor het invullen van een vragen-sjabloon in de browser; niets opgeslagen."""
+    raw = await file.read()
+    if len(raw) > get_settings().max_upload_bytes:
+        raise HTTPException(status_code=413, detail="Bestand te groot.")
+    text = await _extract_text_from_upload(file.filename, raw)
+    if not text.strip():
+        raise HTTPException(status_code=422, detail="Geen tekst gevonden in het bestand.")
+    return {"text": text}
+
+
 # --------------------------------------------------------------------------
 # Status & resultaat ophalen
 # --------------------------------------------------------------------------
@@ -689,8 +719,9 @@ async def create_report(
     obj = await _get_session_or_404(db, session_id)
     if not obj.transcript:
         raise HTTPException(status_code=409, detail="Transcript nog niet beschikbaar.")
-    if not req.kinds and not req.custom_prompt:
-        raise HTTPException(status_code=422, detail="Geef 'kinds' of 'custom_prompt' op.")
+    template = (req.template or "").strip() or None
+    if not req.kinds and not req.custom_prompt and not template:
+        raise HTTPException(status_code=422, detail="Geef 'kinds', 'custom_prompt' of 'template' op.")
 
     valid = set(prompts.SECTIONS.keys())
     if req.kinds and not set(req.kinds).issubset(valid):
@@ -704,12 +735,19 @@ async def create_report(
         if names_block:
             context = (names_block + "\n\n" + (context or "")).strip()
 
+    # Sjabloon met vragen -> vervangt het verslag (kinds vervallen); vragen als DATA-blok in context.
+    kinds = req.kinds
+    custom_prompt = req.custom_prompt
+    if template:
+        custom_prompt, context = _fold_template(template, custom_prompt, context)
+        kinds = None
+
     now = _now()
     report = Report(
         id=new_token(),
         session_id=session_id,
-        kinds=req.kinds,
-        custom_prompt=req.custom_prompt,
+        kinds=kinds,
+        custom_prompt=custom_prompt,
         context=context,
         status=ReportStatus.QUEUED,
         created_at=now,

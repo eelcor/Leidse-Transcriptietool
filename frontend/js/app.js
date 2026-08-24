@@ -170,6 +170,24 @@ function setupReportConfig() {
   };
   document.querySelectorAll('input[name="rep-mode"]').forEach((r) => r.addEventListener('change', applyRepMode));
   applyRepMode();
+
+  // Sjabloonbestand (.txt/.md/.docx/…) inlezen naar het vragen-tekstvak (docx via de server).
+  const tplFile = $('#tpl-file');
+  const tplText = $('#tpl-text');
+  if (tplFile && tplText) {
+    tplFile.addEventListener('change', async () => {
+      const f = tplFile.files[0];
+      if (!f) return;
+      try {
+        tplText.value = 'Bezig met inlezen…';
+        tplText.value = await API.extractText(f);
+        const w = $('#tpl-wrap'); if (w) w.open = true;
+      } catch (e) {
+        tplText.value = '';
+        alert('Kon het sjabloonbestand niet lezen: ' + e.message);
+      }
+    });
+  }
 }
 
 // Lees de gekozen verslag-config; geeft {kinds,custom_prompt,context} of null.
@@ -177,6 +195,9 @@ function getReportConfig() {
   const mode = (document.querySelector('input[name="rep-mode"]:checked') || {}).value || 'none';
   if (mode === 'none') return null;
   const context = ($('#rep-context').value || '').trim() || null;
+  // Sjabloon met vragen heeft voorrang: dan worden de vragen beantwoord i.p.v. een verslag.
+  const template = (($('#tpl-text') || {}).value || '').trim();
+  if (template) return { template, context };
   const kinds = Object.entries(repBoxes).filter(([, cb]) => cb.checked).map(([k]) => k);
   if (!kinds.length) return null;                        // niets aangevinkt -> geen verslag
   return { kinds, context };
@@ -934,12 +955,19 @@ function buildReportControls(sessionId) {
       if (!t) { alert('Typ een prompt.'); return; }
       start(null, t);
     } }, 'Voer prompt uit'),
+    el('div', { class: 'or-sep' }, 'of'),
+    el('textarea', { id: 'tpl-prompt', rows: '3', placeholder: 'Vragen uit een sjabloon (één per regel) — elke vraag wordt beantwoord op basis van het gesprek, in plaats van een verslag.' }),
+    el('button', { class: 'btn outline block', style: 'margin-top:10px', onclick: () => {
+      const t = $('#tpl-prompt').value.trim();
+      if (!t) { alert('Plak eerst een of meer vragen.'); return; }
+      start(null, null, t);
+    } }, 'Beantwoord de vragen'),
   );
 
-  async function start(kinds, custom) {
+  async function start(kinds, custom, template) {
     const context = ($('#ctx') && $('#ctx').value.trim()) || null;
     try {
-      const r = await API.createReport(sessionId, { kinds, custom_prompt: custom || null, context });
+      const r = await API.createReport(sessionId, { kinds, custom_prompt: custom || null, context, template: template || null });
       REPORTS.push(r);
       layoutReports(sessionId);
     } catch (e) { alert(e.message); }
