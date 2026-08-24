@@ -217,7 +217,9 @@ function looksLikeAudio(file) {
   return AUDIO_EXT.test(name);
 }
 const NOT_AUDIO_MSG = 'Dit lijkt geen audiobestand. Upload een audio-opname (wav, mp3, m4a, ogg, webm, flac …). '
-  + 'Een Word/PDF/tekstbestand kan hier niet — gebruik daarvoor de tekst-optie (transcript of aantekeningen).';
+  + 'Een Word/PDF/tekstbestand kan hier niet — kies bovenaan "Transcript of aantekeningen".';
+// Tekstbestanden die het tekst-endpoint kan lezen (pandoc voor docx/rtf/odt).
+const TEXT_EXT = /\.(txt|md|markdown|docx|rtf|odt|doc|html|htm)$/i;
 
 function setupUpload() {
   const input = $('#file-input');
@@ -241,7 +243,44 @@ function setupUpload() {
     });
   }
 
+  // Audio- vs tekst-tak wisselen.
+  const upAudio = $('#up-audio');
+  const upText = $('#up-text');
+  const currentKind = () => (document.querySelector('input[name="up-kind"]:checked') || {}).value || 'audio';
+  const applyKind = () => {
+    const k = currentKind();
+    if (upAudio) upAudio.hidden = k !== 'audio';
+    if (upText) upText.hidden = k !== 'text';
+  };
+  document.querySelectorAll('input[name="up-kind"]').forEach((r) => r.addEventListener('change', applyKind));
+  applyKind();
+
+  // Tekst (aantekeningen/transcript) -> sessie zonder audio/STT.
+  async function submitText() {
+    const tfile = ($('#text-file').files || [])[0] || null;
+    const ttext = ($('#text-input').value || '').trim();
+    if (!tfile && !ttext) { alert('Plak of upload eerst tekst (aantekeningen of een transcript).'); return; }
+    if (tfile && !TEXT_EXT.test(tfile.name || '')) {
+      alert('Kies een tekstbestand (.txt, .md, Word/.docx, .rtf of .odt) — of plak de tekst in het vak.');
+      return;
+    }
+    if (tfile && tfile.size > CONFIG.max_upload_mb * 1024 * 1024) {
+      alert(`Bestand te groot (max ${CONFIG.max_upload_mb} MB).`); return;
+    }
+    const sourceKind = (document.querySelector('input[name="txt-kind"]:checked') || {}).value || 'notes';
+    btn.disabled = true;
+    try {
+      const res = await API.createTextSession(tfile, ttext, CONFIG.default_language, getReportConfig(), sourceKind);
+      openSession(res.id);
+    } catch (e) {
+      alert('Verwerken mislukt: ' + e.message);
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
   btn.addEventListener('click', async () => {
+    if (currentKind() === 'text') { await submitText(); return; }
     const file = input.files[0];
     if (!file) { alert('Kies eerst een bestand.'); return; }
     if (!looksLikeAudio(file)) { alert(NOT_AUDIO_MSG); return; }

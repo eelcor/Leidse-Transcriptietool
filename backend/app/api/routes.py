@@ -15,7 +15,7 @@ import subprocess
 import tempfile
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, Response, UploadFile
 from fastapi.responses import FileResponse, PlainTextResponse, StreamingResponse
 from starlette.background import BackgroundTask
 from sqlalchemy import func, select
@@ -26,6 +26,7 @@ from .. import prompts, queue, stats, storage
 from ..config import get_settings
 from ..db import get_db
 from ..models import Diarization, DiarizationStatus, Report, ReportStatus, Session, SessionStatus
+from ..workdays import compute_expires_at
 from ..schemas import (
     ConvertRequest,
     CreateReportRequest,
@@ -344,6 +345,118 @@ async def upload_file(
     await db.commit()
 
     await queue.enqueue_transcription(obj.id)
+    return CreateSessionResponse(id=obj.id, status=obj.status)
+
+
+# Formaten die we via pandoc (al aanwezig voor de Word-export) naar tekst kunnen lezen.
+_PANDOC_TEXT_EXT = {"docx", "odt", "rtf", "doc", "html", "htm", "epub"}
+
+
+async def _extract_text_from_upload(filename: str | None, raw: bytes) -> str:
+    """Lees een geüpload document naar platte tekst/markdown. .txt/.md (en onbekend) direct als
+    tekst; .docx/.rtf/.odt/... via pandoc. Geen nieuwe dependency (pandoc draait al)."""
+    ext = ""
+    if filename and "." in filename:
+        ext = filename.rsplit(".", 1)[-1].lower()
+    if ext in _PANDOC_TEXT_EXT:
+        fd, in_path = tempfile.mkstemp(suffix="." + ext)
+        try:
+            with os.fdopen(fd, "wb") as f:
+                f.write(raw)
+
+            def _convert() -> subprocess.CompletedProcess:
+                return subprocess.run(
+                    ["pandoc", in_path, "-t", "markdown-raw_html", "--wrap=none"],
+                    capture_output=True, text=True,
+                )
+
+            proc = await asyncio.to_thread(_convert)
+        finally:
+            try:
+                os.remove(in_path)
+            except OSError:
+                pass
+        if proc.returncode != 0:
+            raise HTTPException(status_code=422, detail="Kon dit documentbestand niet lezen.")
+        return proc.stdout.strip()
+    # Platte tekst/markdown of onbekend: tolerant decoderen.
+    for enc in ("utf-8", "utf-8-sig", "latin-1"):
+        try:
+            return raw.decode(enc).strip()
+        except UnicodeDecodeError:
+            continue
+    return raw.decode("utf-8", errors="replace").strip()
+
+
+@router.post("/sessions/text", response_model=CreateSessionResponse)
+async def create_text_session(
+    file: UploadFile | None = File(default=None),
+    text: str | None = Form(default=None),
+    language: str | None = Form(default=None),
+    report: str | None = Form(default=None),
+    source_kind: str = Form(default="notes"),
+    db: AsyncSession = Depends(get_db),
+) -> CreateSessionResponse:
+    """Maak een sessie van AANGELEVERDE TEKST (aantekeningen of een bestaand transcript) — zonder
+    audio/STT. De tekst wordt de 'bron' en er wordt meteen een verslag ingepland. Bron: een geüpload
+    bestand (.txt/.md/.docx/.rtf/.odt) óf geplakte tekst. `source_kind` stuurt de prompt-framing:
+    'notes' = aantekeningen (structureren, niets verzinnen), 'transcript' = woordelijk transcript."""
+    s = get_settings()
+    src = source_kind if source_kind in ("notes", "transcript") else "notes"
+
+    # Brontekst: geüpload bestand heeft voorrang, anders het tekstveld.
+    body_text = ""
+    if file is not None:
+        raw = await file.read()
+        if len(raw) > s.max_upload_bytes:
+            raise HTTPException(status_code=413, detail="Maximale bestandsgrootte overschreden.")
+        body_text = await _extract_text_from_upload(file.filename, raw)
+    elif text:
+        body_text = text
+    body_text = (body_text or "").strip()
+    if not body_text:
+        raise HTTPException(status_code=422, detail="Geen tekst gevonden om te verwerken.")
+    if len(body_text) > 1_000_000:  # ruime veiligheidsgrens (context is 256K tokens)
+        body_text = body_text[:1_000_000]
+
+    auto_report = None
+    if report:
+        try:
+            auto_report = _clean_report_config(json.loads(report))
+        except (ValueError, TypeError):
+            auto_report = None
+    if auto_report is None:  # tekst -> verslag is het hele doel; standaard een volledig verslag
+        auto_report = {"kinds": ["volledig"], "custom_prompt": None, "context": None}
+
+    now = _now()
+    obj = Session(
+        id=new_token(),
+        status=SessionStatus.TRANSCRIBED,   # geen STT: de aangeleverde tekst ís de bron
+        language=language or s.default_language,
+        optimize_audio=False,
+        auto_report=auto_report,
+        source=src,                         # 'notes' | 'transcript' -> stuurt prompt-framing
+        transcript=body_text,
+        created_at=now,
+        processing_started_at=now,
+        processing_finished_at=now,
+        expires_at=compute_expires_at(now, s.retention_workdays),
+        updated_at=now,
+    )
+    db.add(obj)
+    auto_report_id = new_token()
+    db.add(Report(
+        id=auto_report_id, session_id=obj.id,
+        kinds=auto_report.get("kinds"), custom_prompt=auto_report.get("custom_prompt"),
+        context=auto_report.get("context"), status=ReportStatus.QUEUED,
+        created_at=now, updated_at=now,
+    ))
+    await stats.record_event(
+        db, "transcribed", source=src, language=obj.language,
+        words=len(body_text.split()), report_mode=stats.report_mode(auto_report),
+    )
+    await db.commit()
+    await queue.enqueue_report(auto_report_id)
     return CreateSessionResponse(id=obj.id, status=obj.status)
 
 

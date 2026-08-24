@@ -48,19 +48,38 @@
       <div class="cards">
         <!-- Uploaden -->
         <div class="card dropzone" id="upload-card">
-          <h2><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4M8 8l4-4 4 4"/><path d="M4 15v3a2 2 0 002 2h12a2 2 0 002-2v-3"/></svg></span> Audiobestand uploaden</h2>
-          <p class="sub">Alleen <b>audio</b> — sleep hierheen of kies een bestand (wav, mp3, m4a, ogg, webm, flac …).
-            <span class="muted">Geen Word/PDF/tekst; een transcript of aantekeningen upload je via de tekst-optie.</span></p>
-          <label class="field"><input type="file" id="file-input" accept="audio/*,.wav,.mp3,.m4a,.ogg,.webm,.flac" /></label>
-          <p class="dz-hint muted small" id="dz-hint" hidden>Laat het bestand hier los</p>
+          <h2><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4M8 8l4-4 4 4"/><path d="M4 15v3a2 2 0 002 2h12a2 2 0 002-2v-3"/></svg></span> Uploaden</h2>
 
-          <label class="switch">
-            <input type="checkbox" id="opt-upload" checked />
-            <span class="track"></span>
-            <span class="txt"><b>Audio optimaliseren voor transcriptie</b><small>Niveau-normalisatie + hoogdoorlaat (aanbevolen)</small></span>
-          </label>
+          <div class="seg" role="radiogroup" id="upload-kind" style="margin-bottom:12px">
+            <label class="seg-opt"><input type="radio" name="up-kind" value="audio" checked /><span>Audio-opname</span></label>
+            <label class="seg-opt"><input type="radio" name="up-kind" value="text" /><span>Transcript of aantekeningen</span></label>
+          </div>
 
-          <button id="upload-btn" class="btn primary block lg">Uploaden &amp; transcriberen</button>
+          <!-- Audio-tak -->
+          <div id="up-audio">
+            <p class="sub">Alleen <b>audio</b> — sleep hierheen of kies een bestand (wav, mp3, m4a, ogg, webm, flac …).</p>
+            <label class="field"><input type="file" id="file-input" accept="audio/*,.wav,.mp3,.m4a,.ogg,.webm,.flac" /></label>
+            <p class="dz-hint muted small" id="dz-hint" hidden>Laat het bestand hier los</p>
+            <label class="switch">
+              <input type="checkbox" id="opt-upload" checked />
+              <span class="track"></span>
+              <span class="txt"><b>Audio optimaliseren voor transcriptie</b><small>Niveau-normalisatie + hoogdoorlaat (aanbevolen)</small></span>
+            </label>
+          </div>
+
+          <!-- Tekst-tak: transcript of aantekeningen (geen opname toegestaan? plak/upload tekst). -->
+          <div id="up-text" hidden>
+            <p class="sub">Plak of upload <b>tekst</b> (.txt, .md, Word/.docx, .rtf, .odt). Handig als opnemen niet mag,
+              maar je wél aantekeningen hebt — of als je al een transcript hebt.</p>
+            <div class="seg" role="radiogroup" id="text-kind" style="margin-bottom:10px">
+              <label class="seg-opt"><input type="radio" name="txt-kind" value="notes" checked /><span>Ruwe aantekeningen</span></label>
+              <label class="seg-opt"><input type="radio" name="txt-kind" value="transcript" /><span>Woordelijk transcript</span></label>
+            </div>
+            <label class="field"><input type="file" id="text-file" accept=".txt,.md,.markdown,.docx,.rtf,.odt,.doc,.html,.htm" /></label>
+            <textarea id="text-input" rows="6" placeholder="…of plak hier je aantekeningen / transcript"></textarea>
+          </div>
+
+          <button id="upload-btn" class="btn primary block lg">Uploaden &amp; verwerken</button>
           <progress id="upload-progress" value="0" max="100" hidden style="margin-top:12px"></progress>
         </div>
 

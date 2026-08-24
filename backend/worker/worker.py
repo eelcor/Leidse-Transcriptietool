@@ -232,6 +232,9 @@ async def generate_report(ctx: dict, report_id: str) -> str:
             r.updated_at = _now()
             transcript = sess.transcript
             kinds, custom, context = r.kinds, r.custom_prompt, r.context
+            # Bronsoort bepaalt de prompt-framing: 'notes' -> aantekeningen-modus (structureren,
+            # niets verzinnen). Diarisatie heeft voorrang (dan is de bron sowieso een opname).
+            source_kind = sess.source or "audio"
             # Is er een afgeronde diarisatie met gelabelde segments? Gebruik dan het
             # spreker-geprefixte transcript, zodat het verslag sprekers kan toeschrijven.
             diarized = False
@@ -250,7 +253,7 @@ async def generate_report(ctx: dict, report_id: str) -> str:
 
         report_started = _now()
         try:
-            messages = build_messages(transcript, kinds, custom, context, diarized=diarized)
+            messages = build_messages(transcript, kinds, custom, context, diarized=diarized, source_kind=source_kind)
             content = await llm.generate(messages)
         except Exception as exc:
             log.exception("Verslag genereren mislukt voor %s", report_id[:8])
