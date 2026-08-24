@@ -91,6 +91,10 @@ class PyannoteDiarizeBackend(DiarizeBackend):
         if self._pipeline is not None:
             return
         import torch
+        # We voeren de golfvorm zelf in (stdlib wave), dus torchcodec is niet nodig; onderdruk de
+        # luidruchtige "torchcodec is not installed correctly"-waarschuwing die pyannote 4 bij import geeft.
+        import warnings
+        warnings.filterwarnings("ignore", message=".*torchcodec.*")
         from pyannote.audio import Pipeline
 
         _patch_torch_load()
