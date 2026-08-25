@@ -43,10 +43,13 @@ class OpenAISTTBackend(STTBackend):
                 data=data, files=files, headers=headers, timeout=self._timeout,
             )
 
-    def transcribe(self, wav_path: str, language: str, word_timestamps: bool) -> TranscriptResult:
+    def transcribe(self, wav_path: str, language: str, word_timestamps: bool,
+                   hotwords: str | None = None) -> TranscriptResult:
         base = {"model": self._model}
         if language:
             base["language"] = language
+        if hotwords:
+            base["prompt"] = hotwords   # OpenAI-compatibele biasing (woordenlijst/jargon)
 
         attempts = []
         if word_timestamps:

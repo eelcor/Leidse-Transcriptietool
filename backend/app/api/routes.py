@@ -15,7 +15,7 @@ import subprocess
 import tempfile
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, Response, UploadFile
 from fastapi.responses import FileResponse, PlainTextResponse, StreamingResponse
 from starlette.background import BackgroundTask
 from sqlalchemy import func, select
@@ -26,6 +26,7 @@ from .. import prompts, queue, stats, storage
 from ..config import get_settings
 from ..db import get_db
 from ..models import Diarization, DiarizationStatus, Report, ReportStatus, Session, SessionStatus
+from ..workdays import compute_expires_at
 from ..schemas import (
     ConvertRequest,
     CreateReportRequest,
@@ -104,22 +105,56 @@ def _maybe_create_diarization(
     ))
 
 
+def _fold_template(template: str | None, custom: str | None, context: str | None) -> tuple[str | None, str | None]:
+    """Sjabloon met vragen -> 'beantwoord de vragen'-modus. Zet de vragenlijst-instructie als
+    custom_prompt en prepend de vragen als DATA-blok in context (injectie-veilig, net als de
+    sprekernamen). Geen sjabloon -> ongewijzigd. Migratie-vrij: alles landt in bestaande velden."""
+    if not (template and template.strip()):
+        return custom, context
+    q_block = ("=== BEGIN VRAGEN (sjabloon, aangeleverd door de gebruiker) ===\n"
+               + template.strip() + "\n=== EINDE VRAGEN ===")
+    new_context = (q_block + "\n\n" + context).strip() if context else q_block
+    return prompts.template_task(), new_context
+
+
+def _fold_glossary(glossary: str | None, context: str | None) -> str | None:
+    """Woordenlijst/jargon als TERMINOLOGIE-DATA-blok vóór in de context (voor de LLM-spelling)."""
+    block = prompts.glossary_block(glossary)
+    if not block:
+        return context
+    return (block + "\n\n" + context).strip() if context else block
+
+
 def _clean_report_config(report: dict | None) -> dict | None:
     """Valideer/normaliseer een verslag-config voor auto-generatie na transcriptie.
-    Geeft een schone dict terug, of None als er geen (geldig) verslag gevraagd is."""
+    Geeft een schone dict terug, of None als er geen (geldig) verslag/glossary gevraagd is.
+
+    Glossary landt op TWEE plekken (migratie-vrij): ingevouwen in `context` (terminologie voor de
+    LLM) én als losse `glossary`-sleutel (rauwe termen, die de STT-worker als hotwords gebruikt)."""
     if not report or not isinstance(report, dict):
         return None
     kinds = report.get("kinds") or None
     custom = (report.get("custom_prompt") or "").strip() or None
     context = (report.get("context") or "").strip() or None
+    template = (report.get("template") or "").strip() or None
+    glossary = (report.get("glossary") or "").strip() or None
     if kinds:
         valid = set(prompts.SECTIONS.keys())
         kinds = [k for k in kinds if k in valid]
         if not kinds:
             kinds = None
-    if not kinds and not custom:
+    # Sjabloon vouwt in custom_prompt/context en vervangt het gewone verslag (kinds vervallen dan).
+    if template:
+        custom, context = _fold_template(template, custom, context)
+        kinds = None
+    if glossary:
+        context = _fold_glossary(glossary, context)
+    if not kinds and not custom and not glossary:
         return None
-    return {"kinds": kinds, "custom_prompt": custom, "context": context}
+    cfg: dict = {"kinds": kinds, "custom_prompt": custom, "context": context}
+    if glossary:
+        cfg["glossary"] = glossary   # rauw, los van de context-fold -> voor STT-hotwords
+    return cfg
 
 
 async def _get_session_or_404(db: AsyncSession, session_id: str, with_reports: bool = False) -> Session:
@@ -345,6 +380,131 @@ async def upload_file(
 
     await queue.enqueue_transcription(obj.id)
     return CreateSessionResponse(id=obj.id, status=obj.status)
+
+
+# Formaten die we via pandoc (al aanwezig voor de Word-export) naar tekst kunnen lezen.
+_PANDOC_TEXT_EXT = {"docx", "odt", "rtf", "doc", "html", "htm", "epub"}
+
+
+async def _extract_text_from_upload(filename: str | None, raw: bytes) -> str:
+    """Lees een geüpload document naar platte tekst/markdown. .txt/.md (en onbekend) direct als
+    tekst; .docx/.rtf/.odt/... via pandoc. Geen nieuwe dependency (pandoc draait al)."""
+    ext = ""
+    if filename and "." in filename:
+        ext = filename.rsplit(".", 1)[-1].lower()
+    if ext in _PANDOC_TEXT_EXT:
+        fd, in_path = tempfile.mkstemp(suffix="." + ext)
+        try:
+            with os.fdopen(fd, "wb") as f:
+                f.write(raw)
+
+            def _convert() -> subprocess.CompletedProcess:
+                return subprocess.run(
+                    ["pandoc", in_path, "-t", "markdown-raw_html", "--wrap=none"],
+                    capture_output=True, text=True,
+                )
+
+            proc = await asyncio.to_thread(_convert)
+        finally:
+            try:
+                os.remove(in_path)
+            except OSError:
+                pass
+        if proc.returncode != 0:
+            raise HTTPException(status_code=422, detail="Kon dit documentbestand niet lezen.")
+        return proc.stdout.strip()
+    # Platte tekst/markdown of onbekend: tolerant decoderen.
+    for enc in ("utf-8", "utf-8-sig", "latin-1"):
+        try:
+            return raw.decode(enc).strip()
+        except UnicodeDecodeError:
+            continue
+    return raw.decode("utf-8", errors="replace").strip()
+
+
+@router.post("/sessions/text", response_model=CreateSessionResponse)
+async def create_text_session(
+    file: UploadFile | None = File(default=None),
+    text: str | None = Form(default=None),
+    language: str | None = Form(default=None),
+    report: str | None = Form(default=None),
+    source_kind: str = Form(default="notes"),
+    db: AsyncSession = Depends(get_db),
+) -> CreateSessionResponse:
+    """Maak een sessie van AANGELEVERDE TEKST (aantekeningen of een bestaand transcript) — zonder
+    audio/STT. De tekst wordt de 'bron' en er wordt meteen een verslag ingepland. Bron: een geüpload
+    bestand (.txt/.md/.docx/.rtf/.odt) óf geplakte tekst. `source_kind` stuurt de prompt-framing:
+    'notes' = aantekeningen (structureren, niets verzinnen), 'transcript' = woordelijk transcript."""
+    s = get_settings()
+    src = source_kind if source_kind in ("notes", "transcript") else "notes"
+
+    # Brontekst: geüpload bestand heeft voorrang, anders het tekstveld.
+    body_text = ""
+    if file is not None:
+        raw = await file.read()
+        if len(raw) > s.max_upload_bytes:
+            raise HTTPException(status_code=413, detail="Maximale bestandsgrootte overschreden.")
+        body_text = await _extract_text_from_upload(file.filename, raw)
+    elif text:
+        body_text = text
+    body_text = (body_text or "").strip()
+    if not body_text:
+        raise HTTPException(status_code=422, detail="Geen tekst gevonden om te verwerken.")
+    if len(body_text) > 1_000_000:  # ruime veiligheidsgrens (context is 256K tokens)
+        body_text = body_text[:1_000_000]
+
+    auto_report = None
+    if report:
+        try:
+            auto_report = _clean_report_config(json.loads(report))
+        except (ValueError, TypeError):
+            auto_report = None
+    if auto_report is None:  # tekst -> verslag is het hele doel; standaard een volledig verslag
+        auto_report = {"kinds": ["volledig"], "custom_prompt": None, "context": None}
+
+    now = _now()
+    obj = Session(
+        id=new_token(),
+        status=SessionStatus.TRANSCRIBED,   # geen STT: de aangeleverde tekst ís de bron
+        language=language or s.default_language,
+        optimize_audio=False,
+        auto_report=auto_report,
+        source=src,                         # 'notes' | 'transcript' -> stuurt prompt-framing
+        transcript=body_text,
+        created_at=now,
+        processing_started_at=now,
+        processing_finished_at=now,
+        expires_at=compute_expires_at(now, s.retention_workdays),
+        updated_at=now,
+    )
+    db.add(obj)
+    auto_report_id = new_token()
+    db.add(Report(
+        id=auto_report_id, session_id=obj.id,
+        kinds=auto_report.get("kinds"), custom_prompt=auto_report.get("custom_prompt"),
+        context=auto_report.get("context"), status=ReportStatus.QUEUED,
+        created_at=now, updated_at=now,
+    ))
+    await stats.record_event(
+        db, "transcribed", source=src, language=obj.language,
+        words=len(body_text.split()), report_mode=stats.report_mode(auto_report),
+    )
+    await db.commit()
+    await queue.enqueue_report(auto_report_id)
+    return CreateSessionResponse(id=obj.id, status=obj.status)
+
+
+@router.post("/extract-text")
+async def extract_text(file: UploadFile = File(...)) -> dict:
+    """Stateless: lees een geüpload tekst-/documentbestand (.txt/.md/.docx/.rtf/.odt) naar platte
+    tekst. Voor het invullen van een vragen-sjabloon in de browser; niets opgeslagen."""
+    raw = await file.read()
+    if len(raw) > get_settings().max_upload_bytes:
+        raise HTTPException(status_code=413, detail="Bestand te groot.")
+    text = await _extract_text_from_upload(file.filename, raw)
+    if not text.strip():
+        raise HTTPException(status_code=422, detail="Geen tekst gevonden in het bestand.")
+    return {"text": text}
 
 
 # --------------------------------------------------------------------------
@@ -576,8 +736,9 @@ async def create_report(
     obj = await _get_session_or_404(db, session_id)
     if not obj.transcript:
         raise HTTPException(status_code=409, detail="Transcript nog niet beschikbaar.")
-    if not req.kinds and not req.custom_prompt:
-        raise HTTPException(status_code=422, detail="Geef 'kinds' of 'custom_prompt' op.")
+    template = (req.template or "").strip() or None
+    if not req.kinds and not req.custom_prompt and not template:
+        raise HTTPException(status_code=422, detail="Geef 'kinds', 'custom_prompt' of 'template' op.")
 
     valid = set(prompts.SECTIONS.keys())
     if req.kinds and not set(req.kinds).issubset(valid):
@@ -591,12 +752,22 @@ async def create_report(
         if names_block:
             context = (names_block + "\n\n" + (context or "")).strip()
 
+    # Sjabloon met vragen -> vervangt het verslag (kinds vervallen); vragen als DATA-blok in context.
+    kinds = req.kinds
+    custom_prompt = req.custom_prompt
+    if template:
+        custom_prompt, context = _fold_template(template, custom_prompt, context)
+        kinds = None
+    # Woordenlijst/jargon -> terminologie-DATA-blok in context (juiste spelling in het verslag).
+    if (req.glossary or "").strip():
+        context = _fold_glossary(req.glossary, context)
+
     now = _now()
     report = Report(
         id=new_token(),
         session_id=session_id,
-        kinds=req.kinds,
-        custom_prompt=req.custom_prompt,
+        kinds=kinds,
+        custom_prompt=custom_prompt,
         context=context,
         status=ReportStatus.QUEUED,
         created_at=now,

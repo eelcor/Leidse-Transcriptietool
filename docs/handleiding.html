@@ -132,14 +132,31 @@
   </section>
 
   <section id="uploaden">
-    <h2><span class="n">2</span> Bestand uploaden</h2>
+    <h2><span class="n">2</span> Uploaden — audio of tekst</h2>
+    <p>Bovenaan de upload-kaart kies je <b>wat</b> je aanlevert: een <b>audio-opname</b> of
+      <b>tekst</b> (een transcript of je aantekeningen).</p>
+
+    <h3>Audio-opname</h3>
     <ol>
-      <li><b>Sleep</b> een audiobestand op de upload-kaart, of klik om er een te kiezen
-        (wav, mp3, m4a, ogg, webm of flac).</li>
+      <li><b>Sleep</b> een <b>audiobestand</b> op de kaart, of klik om er een te kiezen
+        (wav, mp3, m4a, ogg, webm of flac). Alléén audio — een Word/PDF/tekstbestand wordt
+        geweigerd (kies daarvoor “Transcript of aantekeningen”).</li>
       <li>Laat <b>Audio optimaliseren voor transcriptie</b> aan staan (aanbevolen — zie §4).</li>
-      <li>Klik op <b>Uploaden &amp; transcriberen</b>.</li>
+      <li>Klik op <b>Uploaden &amp; verwerken</b>.</li>
     </ol>
     <img class="crop" src="screenshots/upload-card.png" alt="Upload-kaart met sleep-en-neerzet" />
+
+    <h3>Transcript of aantekeningen (tekst)</h3>
+    <p>Mag je niet opnemen maar heb je wél aantekeningen? Of heb je al een transcript? Kies dan
+      <b>Transcript of aantekeningen</b>. Je maakt zonder audio direct een verslag.</p>
+    <ul>
+      <li><b>Plak</b> je tekst in het vak, of <b>upload</b> een bestand: <code>.txt</code>,
+        <code>.md</code>, <b>Word (.docx)</b>, <code>.rtf</code> of <code>.odt</code>.</li>
+      <li>Kies het soort bron: <b>Ruwe aantekeningen</b> (het model structureert en verheldert
+        wat er staat en <b>verzint niets bij</b>) of <b>Woordelijk transcript</b> (behandeld als
+        een gewoon transcript).</li>
+      <li>Kies onderaan bij <b>Verslag</b> wat je wilt (zie §6) en klik op <b>Uploaden &amp; verwerken</b>.</li>
+    </ul>
     <div class="note">De maximale bestandsgrootte staat bovenaan de pagina vermeld (standaard 200 MB),
       met een indicatie van hoeveel uur opname dat ongeveer is.</div>
   </section>
@@ -251,6 +268,21 @@
       <li>kies losse secties via de <b>chips</b> en klik op <b>Genereer gekozen secties</b>, of</li>
       <li>gebruik <b>Eigen prompt</b> voor een vrije instructie.</li>
     </ol>
+
+    <h3>Vragen uit een sjabloon beantwoorden</h3>
+    <p>Wil je in plaats van een verslag een <b>vaste set vragen</b> beantwoord hebben? Klap bij de
+      verslag-opties <b>Of: beantwoord vragen uit een sjabloon</b> uit en <b>plak</b> of <b>upload</b>
+      je vragen (één per regel; <code>.txt</code>/<code>.md</code>/Word/.docx). De tool beantwoordt dan
+      <b>elke vraag</b> op basis van het gesprek, in jouw volgorde. Staat een antwoord niet in het
+      materiaal, dan schrijft het model dat <b>expliciet</b> (“niet in het materiaal besproken”) in
+      plaats van iets te verzinnen. Op het resultaatscherm kun je dit ook achteraf doen.</p>
+
+    <h3>Woordenlijst / jargon <span class="tag">optioneel</span></h3>
+    <p>Gaan bepaalde <b>namen, vaktermen of afkortingen</b> vaak fout? Vul ze in bij
+      <b>Woordenlijst / jargon</b> (één per regel), of kies een <b>voorbeeld-preset</b> en pas 'm aan.
+      Dat helpt <b>twee keer</b>: de <b>transcriptie</b> herkent de termen beter, en het <b>verslag</b>
+      gebruikt de juiste schrijfwijze. Werkt ook <b>zonder</b> verslag (dan alleen voor de transcriptie).</p>
+
     <h3>Context &amp; agenda meegeven <span class="tag">sterk aanbevolen</span></h3>
     <p class="tip"><strong>Context is de grootste kwaliteitswinst.</strong> Een paar regels context
       maken het verschil tussen een redelijk en een echt goed verslag: correct gespelde namen, een

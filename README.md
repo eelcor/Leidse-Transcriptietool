@@ -46,6 +46,16 @@ net zo laagdrempelig is. En heb je geen dictafoon of memorecorder? Dan doe je he
   losse secties, of een eigen prompt — met **Word (.docx)/Markdown**-export. Geef een
   **agenda** mee bij de context en de onderwerpen worden daarop gematcht. De modelnamen komen
   uit de env en worden in de app getoond (`/api/config`).
+- **Bronmateriaal — audio óf tekst:** naast audio (opnemen/uploaden) kun je ook **tekst als bron**
+  aanleveren: plak of upload een **transcript** of je **aantekeningen** (`.txt`/`.md`/**Word `.docx`**/
+  `.rtf`/`.odt`, gelezen via pandoc) en de tool maakt er zonder STT een verslag van. Handig als
+  opnemen niet mag maar je wél aantekeningen hebt. In de aantekeningen-modus structureert het model
+  wat er staat en verzint niets bij.
+- **Sjabloon met vragen:** upload of plak een **lijst vragen**; in plaats van een verslag wordt
+  **elke vraag beantwoord** op basis van het gesprek, met een expliciet "niet in het materiaal
+  besproken" waar het antwoord ontbreekt.
+- **Woordenlijst / jargon (glossary):** geef namen, vaktermen en afkortingen mee (of kies een preset).
+  Die sturen zowel de **transcriptie** (betere herkenning) als het **verslag** (juiste spelling).
 - **Sprekerherkenning (optioneel, standaard uit):** met `DIARIZE_BACKEND=pyannote` krijgt het
   transcript sprekerlabels (`SPREKER_A/B/…`) en kun je in de app namen invullen en een fragment
   per spreker beluisteren. Draait als aparte, opt-in worker (torch/pyannote); modellen 3.1 of het
@@ -194,6 +204,8 @@ De tests draaien zonder Redis/GPU: SQLite + een nep-queue.
 | PUT | `/api/sessions/{id}/audio` | audio-chunk toevoegen |
 | POST | `/api/sessions/{id}/complete` | upload afronden → job |
 | POST | `/api/upload` | single-shot bestand-upload |
+| POST | `/api/sessions/text` | tekst als bron (transcript/aantekeningen) → verslag, zonder STT |
+| POST | `/api/extract-text` | stateless: document (.docx/.rtf/.odt) → platte tekst |
 | GET | `/api/sessions/{id}/status` | status pollen |
 | GET | `/api/sessions/{id}/events` | live status via SSE |
 | GET | `/api/sessions/{id}` | transcript + verslagen |

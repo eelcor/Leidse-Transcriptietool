@@ -22,10 +22,37 @@ from pathlib import Path
 _ASR_FILTER = "highpass=f=80,loudnorm=I=-16:TP=-1.5:LRA=11"
 
 
+class NoAudioError(RuntimeError):
+    """Het aangeleverde bestand bevat geen (decodeerbaar) audiospoor.
+
+    Aparte klasse zodat de worker dit als een PERMANENTE gebruikersfout kan
+    behandelen (duidelijke melding, geen retry) i.p.v. een generieke transcodeerfout."""
+
+
+def probe_has_audio(src: str | Path) -> bool:
+    """True als ffprobe minstens één audiostream in het bestand vindt. Als ffprobe
+    niet beschikbaar is, geven we True terug zodat ffmpeg alsnog mag proberen (geen
+    valse afwijzing van geldige audio)."""
+    try:
+        proc = subprocess.run(
+            ["ffprobe", "-v", "error", "-select_streams", "a",
+             "-show_entries", "stream=codec_type", "-of", "csv=p=0", str(src)],
+            capture_output=True, text=True,
+        )
+    except FileNotFoundError:
+        return True
+    return proc.returncode == 0 and "audio" in proc.stdout
+
+
 def resample_to_wav(src: str | Path, dst: str | Path, optimize: bool = True) -> Path:
     """Transcodeer naar 16kHz mono wav. Met optimize=True: ASR-veilige
-    voorbewerking (hoogdoorlaat + loudness-normalisatie)."""
+    voorbewerking (hoogdoorlaat + loudness-normalisatie).
+
+    Werpt NoAudioError als het bronbestand geen audiospoor heeft (bv. iemand uploadt
+    per ongeluk een Word/PDF), zodat de gebruiker een duidelijke melding krijgt."""
     src, dst = Path(src), Path(dst)
+    if not probe_has_audio(src):
+        raise NoAudioError("geen audiospoor gevonden in het aangeleverde bestand")
     cmd = [
         "ffmpeg",
         "-nostdin",

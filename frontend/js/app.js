@@ -170,16 +170,67 @@ function setupReportConfig() {
   };
   document.querySelectorAll('input[name="rep-mode"]').forEach((r) => r.addEventListener('change', applyRepMode));
   applyRepMode();
+
+  // Sjabloonbestand (.txt/.md/.docx/…) inlezen naar het vragen-tekstvak (docx via de server).
+  const tplFile = $('#tpl-file');
+  const tplText = $('#tpl-text');
+  if (tplFile && tplText) {
+    tplFile.addEventListener('change', async () => {
+      const f = tplFile.files[0];
+      if (!f) return;
+      try {
+        tplText.value = 'Bezig met inlezen…';
+        tplText.value = await API.extractText(f);
+        const w = $('#tpl-wrap'); if (w) w.open = true;
+      } catch (e) {
+        tplText.value = '';
+        alert('Kon het sjabloonbestand niet lezen: ' + e.message);
+      }
+    });
+  }
+
+  // Woordenlijst-presets vullen + toepassen.
+  const gpre = $('#glossary-preset');
+  const gtext = $('#glossary-text');
+  if (gpre && gtext) {
+    Object.keys(GLOSSARY_PRESETS).forEach((name) => gpre.append(el('option', { value: name }, name)));
+    gpre.addEventListener('change', () => {
+      const preset = GLOSSARY_PRESETS[gpre.value];
+      if (preset) { gtext.value = preset; const w = $('#glossary-wrap'); if (w) w.open = true; }
+    });
+  }
 }
 
 // Lees de gekozen verslag-config; geeft {kinds,custom_prompt,context} of null.
+// Ingebouwde voorbeeld-woordenlijsten (presets). Per-opname; niets server-side bewaard.
+const GLOSSARY_PRESETS = {
+  'Gemeente / bestuurlijk': ['college van B&W', 'wethouder', 'portefeuillehouder', 'raadscommissie',
+    'motie', 'amendement', 'omgevingsvisie', 'omgevingsplan', 'kadernota', 'begroting',
+    'coalitieakkoord', 'zienswijze', 'bestemmingsplan'].join('\n'),
+  'Zorg / sociaal domein': ['Wmo', 'jeugdzorg', 'GGZ', 'GGD', 'cliëntondersteuning', 'indicatiestelling',
+    'mantelzorg', 'sociaal wijkteam', 'beschermd wonen', 'PGB'].join('\n'),
+};
+
+function getGlossary() {
+  return (($('#glossary-text') || {}).value || '').trim() || null;
+}
+
 function getReportConfig() {
+  const glossary = getGlossary();
   const mode = (document.querySelector('input[name="rep-mode"]:checked') || {}).value || 'none';
-  if (mode === 'none') return null;
+  // Geen verslag, maar wél een woordenlijst? Stuur alleen de glossary mee (voor de transcriptie).
+  if (mode === 'none') return glossary ? { glossary } : null;
   const context = ($('#rep-context').value || '').trim() || null;
-  const kinds = Object.entries(repBoxes).filter(([, cb]) => cb.checked).map(([k]) => k);
-  if (!kinds.length) return null;                        // niets aangevinkt -> geen verslag
-  return { kinds, context };
+  // Sjabloon met vragen heeft voorrang: dan worden de vragen beantwoord i.p.v. een verslag.
+  const template = (($('#tpl-text') || {}).value || '').trim();
+  const cfg = template ? { template, context }
+    : (() => {
+      const kinds = Object.entries(repBoxes).filter(([, cb]) => cb.checked).map(([k]) => k);
+      return kinds.length ? { kinds, context } : null;
+    })();
+  if (!cfg) return glossary ? { glossary } : null;       // niets aangevinkt -> hooguit de glossary
+  if (glossary) cfg.glossary = glossary;
+  return cfg;
 }
 
 // Gevraagd aantal deelnemers (voor sprekerherkenning); null als leeg/onzin.
@@ -201,6 +252,26 @@ function getDiarize() {
 // -------------------------------------------------------------------------
 // Bestand uploaden
 // -------------------------------------------------------------------------
+// Bestandsextensies die ffmpeg als audio(-drager) aankan.
+const AUDIO_EXT = /\.(wav|mp3|m4a|mp4|ogg|oga|opus|webm|flac|aac|wma|aiff?|amr|mkv|mov|3gp|caf)$/i;
+// Herkent audio aan MIME of extensie; wijst duidelijk niet-audio (Word/PDF/beeld/tekst) af.
+function looksLikeAudio(file) {
+  if (!file) return false;
+  const name = (file.name || '').toLowerCase();
+  const type = (file.type || '').toLowerCase();
+  // audio/* en video/* (containers met een audiospoor) mogen — ffmpeg pakt de audio eruit.
+  if (type.startsWith('audio/') || type.startsWith('video/')) return true;
+  // Onbekend/leeg MIME: vertrouw op de extensie.
+  if (!type) return AUDIO_EXT.test(name);
+  // Bekend maar niet-audio MIME (application/pdf, .docx, image/*, text/*): alleen als de
+  // extensie tóch audio is (zeldzaam); anders afwijzen.
+  return AUDIO_EXT.test(name);
+}
+const NOT_AUDIO_MSG = 'Dit lijkt geen audiobestand. Upload een audio-opname (wav, mp3, m4a, ogg, webm, flac …). '
+  + 'Een Word/PDF/tekstbestand kan hier niet — kies bovenaan "Transcript of aantekeningen".';
+// Tekstbestanden die het tekst-endpoint kan lezen (pandoc voor docx/rtf/odt).
+const TEXT_EXT = /\.(txt|md|markdown|docx|rtf|odt|doc|html|htm)$/i;
+
 function setupUpload() {
   const input = $('#file-input');
   const btn = $('#upload-btn');
@@ -217,14 +288,53 @@ function setupUpload() {
       e.preventDefault(); over(false);
       const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
       if (!f) return;
+      if (!looksLikeAudio(f)) { alert(NOT_AUDIO_MSG); return; }  // drag-&-drop negeert accept -> zelf checken
       try { const dt = new DataTransfer(); dt.items.add(f); input.files = dt.files; }
       catch { /* oudere browser: file-input laat 'm dan zelf niet zetten */ }
     });
   }
 
+  // Audio- vs tekst-tak wisselen.
+  const upAudio = $('#up-audio');
+  const upText = $('#up-text');
+  const currentKind = () => (document.querySelector('input[name="up-kind"]:checked') || {}).value || 'audio';
+  const applyKind = () => {
+    const k = currentKind();
+    if (upAudio) upAudio.hidden = k !== 'audio';
+    if (upText) upText.hidden = k !== 'text';
+  };
+  document.querySelectorAll('input[name="up-kind"]').forEach((r) => r.addEventListener('change', applyKind));
+  applyKind();
+
+  // Tekst (aantekeningen/transcript) -> sessie zonder audio/STT.
+  async function submitText() {
+    const tfile = ($('#text-file').files || [])[0] || null;
+    const ttext = ($('#text-input').value || '').trim();
+    if (!tfile && !ttext) { alert('Plak of upload eerst tekst (aantekeningen of een transcript).'); return; }
+    if (tfile && !TEXT_EXT.test(tfile.name || '')) {
+      alert('Kies een tekstbestand (.txt, .md, Word/.docx, .rtf of .odt) — of plak de tekst in het vak.');
+      return;
+    }
+    if (tfile && tfile.size > CONFIG.max_upload_mb * 1024 * 1024) {
+      alert(`Bestand te groot (max ${CONFIG.max_upload_mb} MB).`); return;
+    }
+    const sourceKind = (document.querySelector('input[name="txt-kind"]:checked') || {}).value || 'notes';
+    btn.disabled = true;
+    try {
+      const res = await API.createTextSession(tfile, ttext, CONFIG.default_language, getReportConfig(), sourceKind);
+      openSession(res.id);
+    } catch (e) {
+      alert('Verwerken mislukt: ' + e.message);
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
   btn.addEventListener('click', async () => {
+    if (currentKind() === 'text') { await submitText(); return; }
     const file = input.files[0];
     if (!file) { alert('Kies eerst een bestand.'); return; }
+    if (!looksLikeAudio(file)) { alert(NOT_AUDIO_MSG); return; }
     const maxBytes = CONFIG.max_upload_mb * 1024 * 1024;
     if (file.size > maxBytes) { alert(`Bestand te groot (max ${CONFIG.max_upload_mb} MB).`); return; }
     const optimize = $('#opt-upload').checked;
@@ -875,12 +985,19 @@ function buildReportControls(sessionId) {
       if (!t) { alert('Typ een prompt.'); return; }
       start(null, t);
     } }, 'Voer prompt uit'),
+    el('div', { class: 'or-sep' }, 'of'),
+    el('textarea', { id: 'tpl-prompt', rows: '3', placeholder: 'Vragen uit een sjabloon (één per regel) — elke vraag wordt beantwoord op basis van het gesprek, in plaats van een verslag.' }),
+    el('button', { class: 'btn outline block', style: 'margin-top:10px', onclick: () => {
+      const t = $('#tpl-prompt').value.trim();
+      if (!t) { alert('Plak eerst een of meer vragen.'); return; }
+      start(null, null, t);
+    } }, 'Beantwoord de vragen'),
   );
 
-  async function start(kinds, custom) {
+  async function start(kinds, custom, template) {
     const context = ($('#ctx') && $('#ctx').value.trim()) || null;
     try {
-      const r = await API.createReport(sessionId, { kinds, custom_prompt: custom || null, context });
+      const r = await API.createReport(sessionId, { kinds, custom_prompt: custom || null, context, template: template || null });
       REPORTS.push(r);
       layoutReports(sessionId);
     } catch (e) { alert(e.message); }

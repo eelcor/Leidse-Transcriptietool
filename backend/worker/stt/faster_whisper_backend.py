@@ -61,13 +61,17 @@ class FasterWhisperBackend(STTBackend):
                         self._device, exc)
             self._model = WhisperModel(self._model_name, device="cpu", compute_type="int8")
 
-    def transcribe(self, wav_path: str, language: str, word_timestamps: bool) -> TranscriptResult:
+    def transcribe(self, wav_path: str, language: str, word_timestamps: bool,
+                   hotwords: str | None = None) -> TranscriptResult:
         self.load()
+        # hotwords = woordenlijst/jargon (glossary): stuurt de herkenning naar de juiste
+        # schrijfwijze van namen/termen. faster-whisper 1.1+ ondersteunt dit rechtstreeks.
         segments_iter, _info = self._model.transcribe(
             wav_path,
             language=language or None,
             word_timestamps=word_timestamps,
             vad_filter=False,  # VAD gebeurt optioneel client-side; server houdt audio intact
+            hotwords=(hotwords or None),
         )
         segments: list[Segment] = []
         texts: list[str] = []

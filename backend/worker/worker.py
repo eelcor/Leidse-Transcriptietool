@@ -60,6 +60,11 @@ async def transcribe_session(ctx: dict, session_id: str) -> str:
         raw_path = obj.audio_path
         language = obj.language
         optimize = obj.optimize_audio
+        # Woordenlijst/jargon (glossary) rijdt mee in de report-config (auto_report); gebruik 'm
+        # als STT-hotwords zodat namen/termen goed worden herkend. Ingekort tot een veilige lengte.
+        glossary = ((obj.auto_report or {}).get("glossary") or None) if obj.auto_report else None
+        if glossary:
+            glossary = glossary.strip()[:800] or None
         await db.commit()
 
     try:
@@ -73,13 +78,25 @@ async def transcribe_session(ctx: dict, session_id: str) -> str:
             _t0 = time.perf_counter()
             result = await loop.run_in_executor(
                 None,
-                lambda: backend.transcribe(str(wav), language, settings.stt_word_timestamps),
+                lambda: backend.transcribe(str(wav), language, settings.stt_word_timestamps, hotwords=glossary),
             )
             _stt_seconds = time.perf_counter() - _t0
         # Wandtijd van de STT-stap (voor het meten van de extra kost van woord-timestamps
         # en later de diarisatie). Geen transcript-inhoud; alleen een duur.
         log.info("STT klaar voor sessie %s in %.1fs (backend=%s, word_ts=%s).",
                  session_id[:8], _stt_seconds, backend.name, settings.stt_word_timestamps)
+    except audio.NoAudioError:
+        # Permanente gebruikersfout (geen audiospoor): duidelijke melding, GEEN retry.
+        log.warning("Geen audiospoor in sessie %s — waarschijnlijk een niet-audiobestand.", session_id[:8])
+        async with maker() as db:
+            obj = (await db.execute(select(Session).where(Session.id == session_id))).scalar_one_or_none()
+            if obj is not None:
+                obj.status = SessionStatus.FAILED
+                obj.error = "Geen audiospoor gevonden — is dit wel een audiobestand? (Word/PDF/tekst kan niet worden getranscribeerd.)"
+                obj.updated_at = _now()
+                await stats.record_event(db, "failed", target="transcribe")
+                await db.commit()
+        return "no-audio"  # niet re-raisen -> arq probeert het niet opnieuw
     except Exception as exc:
         log.exception("STT mislukt voor sessie %s", session_id[:8])
         async with maker() as db:
@@ -129,7 +146,9 @@ async def transcribe_session(ctx: dict, session_id: str) -> str:
 
         auto = obj.auto_report
         auto_report_id = None
-        if auto:
+        # Alleen een verslag inplannen als er echt een verslag/vragenlijst is gevraagd. Een
+        # config met ALLEEN een glossary (voor STT-hotwords) mag geen leeg verslag triggeren.
+        if auto and (auto.get("kinds") or auto.get("custom_prompt")):
             auto_report_id = new_token()
             db.add(Report(
                 id=auto_report_id,
@@ -220,6 +239,9 @@ async def generate_report(ctx: dict, report_id: str) -> str:
             r.updated_at = _now()
             transcript = sess.transcript
             kinds, custom, context = r.kinds, r.custom_prompt, r.context
+            # Bronsoort bepaalt de prompt-framing: 'notes' -> aantekeningen-modus (structureren,
+            # niets verzinnen). Diarisatie heeft voorrang (dan is de bron sowieso een opname).
+            source_kind = sess.source or "audio"
             # Is er een afgeronde diarisatie met gelabelde segments? Gebruik dan het
             # spreker-geprefixte transcript, zodat het verslag sprekers kan toeschrijven.
             diarized = False
@@ -238,7 +260,7 @@ async def generate_report(ctx: dict, report_id: str) -> str:
 
         report_started = _now()
         try:
-            messages = build_messages(transcript, kinds, custom, context, diarized=diarized)
+            messages = build_messages(transcript, kinds, custom, context, diarized=diarized, source_kind=source_kind)
             content = await llm.generate(messages)
         except Exception as exc:
             log.exception("Verslag genereren mislukt voor %s", report_id[:8])

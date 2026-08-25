@@ -48,18 +48,38 @@
       <div class="cards">
         <!-- Uploaden -->
         <div class="card dropzone" id="upload-card">
-          <h2><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4M8 8l4-4 4 4"/><path d="M4 15v3a2 2 0 002 2h12a2 2 0 002-2v-3"/></svg></span> Bestand uploaden</h2>
-          <p class="sub">Sleep hierheen of kies een bestand — wav, mp3, m4a, ogg, webm of flac.</p>
-          <label class="field"><input type="file" id="file-input" accept="audio/*,.wav,.mp3,.m4a,.ogg,.webm,.flac" /></label>
-          <p class="dz-hint muted small" id="dz-hint" hidden>Laat het bestand hier los</p>
+          <h2><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4M8 8l4-4 4 4"/><path d="M4 15v3a2 2 0 002 2h12a2 2 0 002-2v-3"/></svg></span> Uploaden</h2>
 
-          <label class="switch">
-            <input type="checkbox" id="opt-upload" checked />
-            <span class="track"></span>
-            <span class="txt"><b>Audio optimaliseren voor transcriptie</b><small>Niveau-normalisatie + hoogdoorlaat (aanbevolen)</small></span>
-          </label>
+          <div class="seg" role="radiogroup" id="upload-kind" style="margin-bottom:12px">
+            <label class="seg-opt"><input type="radio" name="up-kind" value="audio" checked /><span>Audio-opname</span></label>
+            <label class="seg-opt"><input type="radio" name="up-kind" value="text" /><span>Transcript of aantekeningen</span></label>
+          </div>
 
-          <button id="upload-btn" class="btn primary block lg">Uploaden &amp; transcriberen</button>
+          <!-- Audio-tak -->
+          <div id="up-audio">
+            <p class="sub">Alleen <b>audio</b> — sleep hierheen of kies een bestand (wav, mp3, m4a, ogg, webm, flac …).</p>
+            <label class="field"><input type="file" id="file-input" accept="audio/*,.wav,.mp3,.m4a,.ogg,.webm,.flac" /></label>
+            <p class="dz-hint muted small" id="dz-hint" hidden>Laat het bestand hier los</p>
+            <label class="switch">
+              <input type="checkbox" id="opt-upload" checked />
+              <span class="track"></span>
+              <span class="txt"><b>Audio optimaliseren voor transcriptie</b><small>Niveau-normalisatie + hoogdoorlaat (aanbevolen)</small></span>
+            </label>
+          </div>
+
+          <!-- Tekst-tak: transcript of aantekeningen (geen opname toegestaan? plak/upload tekst). -->
+          <div id="up-text" hidden>
+            <p class="sub">Plak of upload <b>tekst</b> (.txt, .md, Word/.docx, .rtf, .odt). Handig als opnemen niet mag,
+              maar je wél aantekeningen hebt — of als je al een transcript hebt.</p>
+            <div class="seg" role="radiogroup" id="text-kind" style="margin-bottom:10px">
+              <label class="seg-opt"><input type="radio" name="txt-kind" value="notes" checked /><span>Ruwe aantekeningen</span></label>
+              <label class="seg-opt"><input type="radio" name="txt-kind" value="transcript" /><span>Woordelijk transcript</span></label>
+            </div>
+            <label class="field"><input type="file" id="text-file" accept=".txt,.md,.markdown,.docx,.rtf,.odt,.doc,.html,.htm" /></label>
+            <textarea id="text-input" rows="6" placeholder="…of plak hier je aantekeningen / transcript"></textarea>
+          </div>
+
+          <button id="upload-btn" class="btn primary block lg">Uploaden &amp; verwerken</button>
           <progress id="upload-progress" value="0" max="100" hidden style="margin-top:12px"></progress>
         </div>
 
@@ -161,7 +181,29 @@
           <textarea id="rep-context" rows="3" placeholder="Context (optioneel, maar sterk aanbevolen) — onderwerp, datum, deelnemers, aanleiding, achtergrond, of dingen die goed zijn om te weten. Plak hier ook gerust de agenda (dan matchen we de onderwerpen daarop)."></textarea>
           <p class="muted small" style="margin:14px 0 6px">Onderdelen — alles aan = een volledig verslag:</p>
           <div class="chips" id="rep-chips"></div>
+
+          <details class="opts" id="tpl-wrap" style="margin-top:14px">
+            <summary>Of: beantwoord vragen uit een sjabloon</summary>
+            <p class="muted small" style="margin:8px 0">Upload of plak een lijst vragen. In plaats van een verslag wordt
+              <b>elke vraag beantwoord</b> op basis van het gesprek (of je aantekeningen). Staat een antwoord er niet in,
+              dan zegt het model dat expliciet.</p>
+            <label class="field"><input type="file" id="tpl-file" accept=".txt,.md,.markdown,.docx,.rtf,.odt,.doc,.html,.htm" /></label>
+            <textarea id="tpl-text" rows="4" placeholder="1. Wat is er besloten over onderwerp X?&#10;2. Welke acties zijn afgesproken en door wie?&#10;3. Welke risico's zijn genoemd?"></textarea>
+            <p class="muted small" id="tpl-hint" style="margin-top:6px">Zolang hier vragen staan, worden díe beantwoord in plaats van een verslag.</p>
+          </details>
         </div>
+        <!-- Woordenlijst/jargon: stuurt zowel de transcriptie (herkenning) als het verslag (spelling).
+             Altijd zichtbaar (werkt ook zonder verslag), los van de wel/geen-verslag-keuze. -->
+        <details class="opts" id="glossary-wrap" style="margin-top:6px">
+          <summary>Woordenlijst / jargon (optioneel)</summary>
+          <p class="muted small" style="margin:8px 0">Namen, vaktermen en afkortingen die vaak fout gaan — helpt
+            zowel de <b>transcriptie</b> (betere herkenning) als het <b>verslag</b> (juiste spelling). Eén term per regel.</p>
+          <label class="field"><span>Voorbeeld kiezen (vult het vak, pas gerust aan)</span>
+            <select id="glossary-preset"><option value="">— geen —</option></select>
+          </label>
+          <textarea id="glossary-text" rows="4" placeholder="Bijv.:&#10;Leidse Ring Noord&#10;omgevingsvisie&#10;GGD Hollands Midden&#10;wethouder Van der Meer"></textarea>
+        </details>
+
         <!-- Geavanceerde opties: sprekersidentificatie (alleen als de server diarisatie aan heeft).
              Staat los van de wel/geen-verslag-keuze — diarisatie werkt ook zonder verslag. -->
         <details class="opts adv-speakers" id="adv-speakers" hidden>

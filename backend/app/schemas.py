@@ -81,6 +81,11 @@ class CreateReportRequest(BaseModel):
     kinds: list[str] | None = None
     custom_prompt: str | None = None
     context: str | None = None
+    # Sjabloon met vragen: als gezet, wordt in plaats van een verslag elke vraag beantwoord
+    # o.b.v. het bronmateriaal. Vervangt kinds; de vragen gaan als DATA in de context.
+    template: str | None = None
+    # Woordenlijst/jargon: terminologie voor de juiste spelling in het verslag (DATA-blok in context).
+    glossary: str | None = None
     # Alleen bij SPEAKER_NAMES_MODE=direct: koppeling label->naam (bv. {"SPREKER_A": "Jan"}).
     # In placeholder-modus worden deze GENEGEERD zodat namen niet in de database belanden.
     speaker_names: dict[str, str] | None = None

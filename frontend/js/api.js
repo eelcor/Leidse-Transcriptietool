@@ -56,6 +56,26 @@ export const API = {
     await this.complete(id);
     return { id };
   },
+  // Stateless: lees een geüpload tekst-/documentbestand (.docx e.d.) naar platte tekst.
+  async extractText(file) {
+    const form = new FormData();
+    form.append('file', file);
+    const r = await fetch(url('api/extract-text'), { method: 'POST', body: form });
+    if (!r.ok) throw new Error('Kon het bestand niet lezen (' + r.status + ')');
+    return (await r.json()).text || '';
+  },
+  // Tekst als bron (aantekeningen of bestaand transcript) -> sessie zonder audio/STT, met verslag.
+  async createTextSession(file, text, language, report, sourceKind) {
+    const form = new FormData();
+    if (file) form.append('file', file);
+    if (text) form.append('text', text);
+    if (language) form.append('language', language);
+    if (report) form.append('report', JSON.stringify(report));
+    form.append('source_kind', sourceKind || 'notes');
+    const r = await fetch(url('api/sessions/text'), { method: 'POST', body: form });
+    if (!r.ok) throw new Error('Kon de tekst niet verwerken (' + r.status + ')');
+    return r.json();
+  },
   async complete(sessionId) {
     const r = await fetch(url(`api/sessions/${sessionId}/complete`), { method: 'POST' });
     if (!r.ok) throw new Error('Afronden mislukt');

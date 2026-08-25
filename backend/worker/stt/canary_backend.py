@@ -107,7 +107,9 @@ class CanaryBackend(STTBackend):
             model_name=self._model_name, override_config_path=override, map_location="cpu"
         )
 
-    def transcribe(self, wav_path: str, language: str, word_timestamps: bool) -> TranscriptResult:
+    def transcribe(self, wav_path: str, language: str, word_timestamps: bool,
+                   hotwords: str | None = None) -> TranscriptResult:
+        # hotwords/biasing: Canary (NeMo) heeft hier geen parameter voor -> genegeerd.
         self.load()
         # Timestamps alleen mogelijk als het interne timestamps-model geladen is.
         want_ts = word_timestamps and self._load_timestamps_model
