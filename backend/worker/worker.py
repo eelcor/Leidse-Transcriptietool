@@ -64,7 +64,10 @@ async def transcribe_session(ctx: dict, session_id: str) -> str:
         # als STT-hotwords zodat namen/termen goed worden herkend. Ingekort tot een veilige lengte.
         glossary = ((obj.auto_report or {}).get("glossary") or None) if obj.auto_report else None
         if glossary:
-            glossary = glossary.strip()[:800] or None
+            # STT-hotwords moeten KORT: Whisper's decoder-venster is ~448 tokens; een lange lijst
+            # vult dat op en laat geen ruimte voor output ("maximum decoding length must be > 0").
+            # Kort agressief af (het volledige glossary gaat wél naar het verslag/LLM via de context).
+            glossary = glossary.strip()[:200] or None
         await db.commit()
 
     try:

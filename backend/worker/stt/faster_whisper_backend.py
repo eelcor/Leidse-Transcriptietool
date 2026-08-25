@@ -64,29 +64,40 @@ class FasterWhisperBackend(STTBackend):
     def transcribe(self, wav_path: str, language: str, word_timestamps: bool,
                    hotwords: str | None = None, on_segment=None) -> TranscriptResult:
         self.load()
-        # hotwords = woordenlijst/jargon (glossary): stuurt de herkenning naar de juiste
-        # schrijfwijze van namen/termen. faster-whisper 1.1+ ondersteunt dit rechtstreeks.
-        segments_iter, _info = self._model.transcribe(
-            wav_path,
-            language=language or None,
-            word_timestamps=word_timestamps,
-            vad_filter=False,  # VAD gebeurt optioneel client-side; server houdt audio intact
-            hotwords=(hotwords or None),
-        )
-        segments: list[Segment] = []
-        texts: list[str] = []
-        for seg in segments_iter:
-            text = seg.text.strip()
-            segments.append(Segment(
-                start=seg.start, end=seg.end, text=text,
-                words=_normalize_words(getattr(seg, "words", None)),
-            ))
-            texts.append(text)
-            # Voortgang: faster-whisper levert segmenten incrementeel op; meld de laatste
-            # eind-timestamp zodat de worker de voortgang (t / audioduur) kan bijwerken.
-            if on_segment is not None:
-                try:
-                    on_segment(float(seg.end))
-                except Exception:
-                    pass
-        return TranscriptResult(text=" ".join(texts).strip(), segments=segments)
+
+        def _run(hw: str | None) -> TranscriptResult:
+            # hotwords = woordenlijst/jargon (glossary): stuurt de herkenning naar de juiste
+            # schrijfwijze van namen/termen. faster-whisper 1.1+ ondersteunt dit rechtstreeks.
+            segments_iter, _info = self._model.transcribe(
+                wav_path,
+                language=language or None,
+                word_timestamps=word_timestamps,
+                vad_filter=False,  # VAD gebeurt optioneel client-side; server houdt audio intact
+                hotwords=(hw or None),
+            )
+            segments: list[Segment] = []
+            texts: list[str] = []
+            for seg in segments_iter:  # let op: decoding gebeurt LAZY tijdens dit itereren
+                text = seg.text.strip()
+                segments.append(Segment(
+                    start=seg.start, end=seg.end, text=text,
+                    words=_normalize_words(getattr(seg, "words", None)),
+                ))
+                texts.append(text)
+                # Voortgang: meld de laatste eind-timestamp zodat de worker de voortgang bijwerkt.
+                if on_segment is not None:
+                    try:
+                        on_segment(float(seg.end))
+                    except Exception:
+                        pass
+            return TranscriptResult(text=" ".join(texts).strip(), segments=segments)
+
+        try:
+            return _run(hotwords or None)
+        except Exception as exc:
+            # Een glossary mag STT NOOIT breken (bv. te lange hotwords -> "maximum decoding length
+            # must be > 0"). Bij een fout mét hotwords: opnieuw zonder. Zonder hotwords: laten falen.
+            if hotwords:
+                log.warning("STT met hotwords mislukt (%s); opnieuw zonder hotwords.", exc)
+                return _run(None)
+            raise
