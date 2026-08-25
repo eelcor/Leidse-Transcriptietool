@@ -62,6 +62,16 @@ services:
         # GPU-libs voor faster-whisper/CTranslate2 (cuBLAS/cuDNN). Default AAN;
         # zet STT_GPU=0 voor een CPU-only image.
         STT_GPU: "${STT_GPU:-1}"
+        # CUDA-versie van de STT-libs: default = CUDA 12.4 (dev: Tesla V100/sm_70). Voor een
+        # nieuwe GPU (prod: Blackwell RTX PRO 6000/sm_120) zet je in .env de cu128-specs, bv.:
+        #   STT_CUBLAS_SPEC=nvidia-cublas-cu12>=12.8,<12.9
+        #   STT_CUDNN_SPEC=nvidia-cudnn-cu12>=9.7
+        #   STT_CUDA_RUNTIME_SPEC=nvidia-cuda-runtime-cu12>=12.8,<12.9
+        # Daarna `docker compose build worker`. Zie deploy/DEPLOY.md.
+        CUBLAS_SPEC: "${STT_CUBLAS_SPEC:-nvidia-cublas-cu12==12.4.5.8}"
+        CUDNN_SPEC: "${STT_CUDNN_SPEC:-nvidia-cudnn-cu12==9.1.0.70}"
+        CUDA_RUNTIME_SPEC: "${STT_CUDA_RUNTIME_SPEC:-nvidia-cuda-runtime-cu12==12.4.127}"
+        CTRANSLATE2_SPEC: "${STT_CTRANSLATE2_SPEC:-}"
         # Canary/NeMo is zwaar en losgekoppeld van de standaard-build: default UIT.
         # Zet INSTALL_NEMO=1 alleen als je STT_BACKEND=canary wilt draaien.
         # TORCH_VARIANT: "default" (nieuwe GPU's) of "cu124" (Tesla V100/Volta).

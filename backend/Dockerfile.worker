@@ -18,6 +18,18 @@ ARG INSTALL_NEMO=0
 # torch-build voor NeMo: "default" (nieuwe GPU's) of "cu124" (Tesla V100/Volta).
 ARG TORCH_VARIANT=default
 
+# --- CUDA-libs die CTranslate2 (faster-whisper) laadt: cuBLAS + cuDNN + CUDA-runtime ---
+# Default = CUDA 12.4 (getest op Tesla V100/sm_70, en op Ada/Ampere). NIEUWE GPU's zoals de
+# Blackwell RTX PRO 6000 (sm_120) hebben CUDA 12.8+ nodig — cuBLAS/cuDNN 12.4 hebben geen
+# Blackwell-kernels, waardoor faster-whisper stil naar CPU terugvalt (traag). Overschrijf dan
+# deze specs naar cu128 (zie docker-compose/DEPLOY.md). Zo bouw je per omgeving de juiste CUDA.
+ARG CUBLAS_SPEC=nvidia-cublas-cu12==12.4.5.8
+ARG CUDNN_SPEC=nvidia-cudnn-cu12==9.1.0.70
+ARG CUDA_RUNTIME_SPEC=nvidia-cuda-runtime-cu12==12.4.127
+# Optioneel: forceer een specifieke CTranslate2 (bv. een nieuwere build voor Blackwell). Leeg =
+# laat requirements-worker.txt/faster-whisper de versie bepalen.
+ARG CTRANSLATE2_SPEC=
+
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1
@@ -35,15 +47,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg \
 # combinatie (cuDNN 9, CUDA 12.4).
 RUN if [ "$STT_GPU" = "1" ]; then \
         pip install --no-cache-dir --timeout 600 --retries 10 \
-            nvidia-cublas-cu12==12.4.5.8 \
-            nvidia-cudnn-cu12==9.1.0.70 \
-            nvidia-cuda-runtime-cu12==12.4.127 ; \
+            "$CUBLAS_SPEC" \
+            "$CUDNN_SPEC" \
+            "$CUDA_RUNTIME_SPEC" ; \
     fi
 
 # App-requirements (basis + faster-whisper). Na de GPU-libs zodat een wijziging hier
 # de cuDNN-layer niet invalideert.
 COPY requirements.txt requirements-worker.txt ./
 RUN pip install --no-cache-dir -r requirements-worker.txt
+
+# Optioneel een specifieke CTranslate2 forceren (na requirements, zodat het overschrijft).
+RUN if [ -n "$CTRANSLATE2_SPEC" ]; then \
+        pip install --no-cache-dir --timeout 600 --retries 10 "$CTRANSLATE2_SPEC" ; \
+    fi
 
 # --- Optioneel: Canary via NeMo (opt-in, losgekoppeld van de default-build) ---
 # Stap 1: torch volgens TORCH_VARIANT (aparte layer -> cache-vriendelijk).
