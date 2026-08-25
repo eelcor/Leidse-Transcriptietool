@@ -218,6 +218,23 @@ Aandachtspunten:
 - **VRAM:** 4.0.x had een gemelde piek-regressie; in de praktijk paste ~50 min audio binnen ~2–3 GB
   op de toegewezen kaart. Meet met `nvidia-smi` bij lange opnames.
 
+## Woordenlijsten (glossary's) — eigen domeinlijsten
+
+De app toont onder *Verslag → Woordenlijst / jargon* keuzelijsten die zowel de **transcriptie**
+(betere herkenning) als het **verslag** (juiste spelling) sturen. Deze lijsten zijn een
+**plugin-map**, geen code:
+
+- Elke `.txt`/`.md` in **`./glossaries/`** is één lijst (bind-gemount als `/glossaries`, read-only).
+- **Eén term per regel;** `#`-regels zijn commentaar; een leidend volgnummer (`10-`) bepaalt de
+  volgorde; de naam komt uit de bestandsnaam of een eerste regel `# naam: …`. Zie
+  [`glossaries/_README.md`](../glossaries/_README.md).
+- **Geen herstart nodig** — de app leest de map live via `GET /api/glossaries`.
+
+Zo zet elke gemeente/organisatie **eigen** lijsten neer (bijv. termen uit de eigen beleidswiki:
+juist gespelde eigennamen, projectnamen en afkortingen leveren de meeste winst). De meegeleverde
+lijsten zijn startpunten om te vervangen/aan te vullen. Wil je een andere map gebruiken, zet dan
+`GLOSSARY_DIR` in `.env` en mount die map naar dat pad.
+
 ## Handmatige installatie
 
 ```bash

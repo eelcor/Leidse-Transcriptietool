@@ -189,27 +189,46 @@ function setupReportConfig() {
     });
   }
 
-  // Woordenlijst-presets vullen + toepassen.
+  // Woordenlijsten uit de plugin-map (GET /api/glossaries) in de dropdown vullen.
   const gpre = $('#glossary-preset');
   const gtext = $('#glossary-text');
   if (gpre && gtext) {
-    Object.keys(GLOSSARY_PRESETS).forEach((name) => gpre.append(el('option', { value: name }, name)));
+    API.glossaries().then((list) => {
+      GLOSSARIES = {}; GLOSSARY_ALWAYS = [];
+      (list || []).forEach(({ name, terms, always }) => {
+        GLOSSARIES[name] = { terms, always: !!always };
+        if (always) GLOSSARY_ALWAYS.push(name);
+        gpre.append(el('option', { value: name }, always ? `${name} (altijd)` : name));
+      });
+    }).catch(() => { /* geen lijsten -> alleen handmatig plakken */ });
     gpre.addEventListener('change', () => {
-      const preset = GLOSSARY_PRESETS[gpre.value];
-      if (preset) { gtext.value = preset; const w = $('#glossary-wrap'); if (w) w.open = true; }
+      if (!gpre.value) { gtext.value = ''; return; }          // "— geen —"
+      const cur = GLOSSARIES[gpre.value];
+      if (!cur) return;
+      // Domeinlijst: automatisch de 'altijd'-lijsten (algemene eigennamen) ervoor plakken.
+      const parts = cur.always
+        ? [cur.terms]
+        : [...GLOSSARY_ALWAYS.map((n) => GLOSSARIES[n].terms), cur.terms];
+      gtext.value = dedupeLines(parts.join('\n'));
+      const w = $('#glossary-wrap'); if (w) w.open = true;
     });
   }
 }
 
-// Lees de gekozen verslag-config; geeft {kinds,custom_prompt,context} of null.
-// Ingebouwde voorbeeld-woordenlijsten (presets). Per-opname; niets server-side bewaard.
-const GLOSSARY_PRESETS = {
-  'Gemeente / bestuurlijk': ['college van B&W', 'wethouder', 'portefeuillehouder', 'raadscommissie',
-    'motie', 'amendement', 'omgevingsvisie', 'omgevingsplan', 'kadernota', 'begroting',
-    'coalitieakkoord', 'zienswijze', 'bestemmingsplan'].join('\n'),
-  'Zorg / sociaal domein': ['Wmo', 'jeugdzorg', 'GGZ', 'GGD', 'cliëntondersteuning', 'indicatiestelling',
-    'mantelzorg', 'sociaal wijkteam', 'beschermd wonen', 'PGB'].join('\n'),
-};
+// Ontdubbel regels (hoofdletterongevoelig, volgorde behouden) — voor het combineren van lijsten.
+function dedupeLines(s) {
+  const seen = new Set(); const out = [];
+  (s || '').split('\n').forEach((line) => {
+    const t = line.trim(); if (!t) return;
+    const k = t.toLowerCase();
+    if (!seen.has(k)) { seen.add(k); out.push(t); }
+  });
+  return out.join('\n');
+}
+
+// Woordenlijsten uit de server-map (naam -> {terms, always}); geladen in setupReportConfig.
+let GLOSSARIES = {};
+let GLOSSARY_ALWAYS = [];
 
 function getGlossary() {
   return (($('#glossary-text') || {}).value || '').trim() || null;
@@ -633,11 +652,15 @@ async function openSession(sessionId) {
       t.textContent = st.queue_position
         ? `Transcriptie is nummer ${st.queue_position} in de wachtrij`
         : 'Transcriptie staat in de wachtrij';
+      setSttProgress(null);
       showWait();
     } else if (st.status === 'transcribing') {                 // fase 2
-      t.textContent = 'Transcriptie wordt gemaakt…';
+      const pct = (typeof st.progress === 'number') ? Math.round(st.progress * 100) : null;
+      t.textContent = pct !== null ? `Transcriptie wordt gemaakt… ${pct}%` : 'Transcriptie wordt gemaakt…';
+      setSttProgress(pct);
       showWait();
     } else if (st.status === 'transcribed' || st.status === 'failed') {
+      setSttProgress(null);
       const h = $('#wait-hint'); if (h) h.textContent = '';
       // Toon het resultaat pas als een eventueel (vooraf gevraagd) verslag óók klaar is,
       // zodat de gebruiker niet een 'klaar'-scherm ziet terwijl het verslag nog draait.
@@ -684,6 +707,19 @@ async function finishWhenReady(sessionId) {
     }
   };
   check();
+}
+
+// Toon/actualiseer de transcriptie-voortgangsbalk in de statebar. pct=null verwijdert 'm.
+function setSttProgress(pct) {
+  let bar = document.getElementById('stt-progress');
+  if (pct === null || pct === undefined || isNaN(pct)) { if (bar) bar.remove(); return; }
+  if (!bar) {
+    const anchor = document.getElementById('status-text');
+    if (!anchor || !anchor.parentNode) return;
+    bar = el('progress', { id: 'stt-progress', max: '100', style: 'width:100%;margin-top:8px;display:block' });
+    anchor.parentNode.appendChild(bar);
+  }
+  bar.value = Math.max(0, Math.min(100, pct));
 }
 
 async function pollStatus(sessionId, render) {

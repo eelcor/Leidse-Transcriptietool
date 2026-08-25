@@ -68,6 +68,11 @@ class Settings(BaseSettings):
     # Pad naar PROMPTS.md (letterlijke prompt-teksten, single source of truth).
     prompts_file: str = "/app/PROMPTS.md"
 
+    # Map met woordenlijst/jargon-bestanden (plugin-structuur). Eén bestand per glossary
+    # (.txt/.md); elke gemeente/organisatie kan er eigen bestanden neerzetten (bind-mount).
+    # De frontend vult het glossary-keuzemenu hieruit via GET /api/glossaries.
+    glossary_dir: str = "/glossaries"
+
     # --- Beveiliging ---
     # Swagger-UI en OpenAPI-schema standaard UIT in productie (kleiner aanvalsoppervlak;
     # het schema somt anders alle endpoints op). Zet EXPOSE_API_DOCS=true voor lokaal debuggen.

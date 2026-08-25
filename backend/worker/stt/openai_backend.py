@@ -44,7 +44,8 @@ class OpenAISTTBackend(STTBackend):
             )
 
     def transcribe(self, wav_path: str, language: str, word_timestamps: bool,
-                   hotwords: str | None = None) -> TranscriptResult:
+                   hotwords: str | None = None, on_segment=None) -> TranscriptResult:
+        # on_segment (voortgang) niet ondersteund: dit endpoint levert het resultaat in één keer.
         base = {"model": self._model}
         if language:
             base["language"] = language

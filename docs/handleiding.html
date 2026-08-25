@@ -95,6 +95,7 @@
       <a href="#verslag">Verslag &amp; export</a>
       <a href="#code">Code &amp; later ophalen</a>
       <a href="#stats">Statistieken</a>
+      <a href="#geavanceerd">Geavanceerd</a>
     </nav>
   </header>
 
@@ -279,7 +280,7 @@
 
     <h3>Woordenlijst / jargon <span class="tag">optioneel</span></h3>
     <p>Gaan bepaalde <b>namen, vaktermen of afkortingen</b> vaak fout? Vul ze in bij
-      <b>Woordenlijst / jargon</b> (één per regel), of kies een <b>voorbeeld-preset</b> en pas 'm aan.
+      <b>Woordenlijst / jargon</b> (één per regel), of kies een <b>lijst uit het menu</b> en pas 'm aan.
       Dat helpt <b>twee keer</b>: de <b>transcriptie</b> herkent de termen beter, en het <b>verslag</b>
       gebruikt de juiste schrijfwijze. Werkt ook <b>zonder</b> verslag (dan alleen voor de transcriptie).</p>
 
@@ -346,6 +347,50 @@
       anoniem</b> dashboard: aantallen, tijden, upload-vs-opname, verslagkeuzes, verwerkingstijd en
       tevredenheid. Geen persoonsgegevens, geen namen, geen inhoud — alleen geaggregeerde cijfers.</p>
     <figure><img class="shot" src="screenshots/dashboard.png" alt="Statistiekdashboard" /><figcaption>Het anonieme statistiekdashboard.</figcaption></figure>
+  </section>
+
+  <section id="geavanceerd">
+    <h2><span class="n">+</span> Geavanceerde functies</h2>
+    <p>Handig als je meer wilt dan "opname erin, verslag eruit". Deze opties staan verspreid op het
+      start- en resultaatscherm; hieronder alles op een rij. Klik om uit te klappen.</p>
+
+    <details class="opts">
+      <summary>Transcript of aantekeningen uploaden (zonder opnemen)</summary>
+      <p>Mag je een gesprek niet opnemen, maar heb je wél aantekeningen? Of heb je al een transcript?
+        Kies bovenaan de upload-kaart <b>Transcript of aantekeningen</b> en <b>plak</b> of <b>upload</b>
+        je tekst (<code>.txt</code>, <code>.md</code>, Word <code>.docx</code>, <code>.rtf</code>,
+        <code>.odt</code>). Er wordt zonder transcriptie direct een verslag gemaakt. Kies het soort
+        bron: <b>ruwe aantekeningen</b> (het model structureert en verzint niets bij) of
+        <b>woordelijk transcript</b>.</p>
+    </details>
+
+    <details class="opts">
+      <summary>Vragen uit een sjabloon beantwoorden</summary>
+      <p>In plaats van een verslag kun je een <b>vaste lijst vragen</b> laten beantwoorden. Klap bij
+        de verslag-opties <b>Of: beantwoord vragen uit een sjabloon</b> uit en plak of upload je vragen
+        (één per regel; ook Word/.docx). Elke vraag wordt beantwoord op basis van het gesprek, in jouw
+        volgorde; staat een antwoord niet in het materiaal, dan schrijft het model dat expliciet
+        (“niet in het materiaal besproken”). Kan ook achteraf op het resultaatscherm.</p>
+    </details>
+
+    <details class="opts">
+      <summary>Woordenlijst / jargon (glossary)</summary>
+      <p>Gaan bepaalde <b>namen, vaktermen of afkortingen</b> vaak fout? Kies bij <b>Woordenlijst /
+        jargon</b> een lijst uit het menu, of plak je eigen termen (één per regel). Dat helpt
+        <b>twee keer</b>: de <b>transcriptie</b> herkent de termen beter en het <b>verslag</b> gebruikt
+        de juiste spelling. De keuzelijsten komen uit een map op de server (<code>glossaries/</code>) —
+        je beheerder kan er per organisatie/domein <b>eigen lijsten</b> in zetten (zie de
+        deploy-handleiding). Werkt ook zonder verslag (dan alleen voor de transcriptie).</p>
+    </details>
+
+    <details class="opts">
+      <summary>Sprekersidentificatie (indien ingeschakeld)</summary>
+      <p>Staat sprekersherkenning aan, dan kun je die per opname aanzetten onder <b>Geavanceerde
+        opties</b> (bij het verslag). De opname wordt dan automatisch in sprekers verdeeld
+        (SPREKER&nbsp;A/B/…); op het resultaatscherm luister je per spreker een fragment en vul je
+        namen in (die blijven lokaal). Klopt de indeling niet, gebruik dan <b>Opnieuw indelen</b>,
+        eventueel met een opgegeven aantal deelnemers.</p>
+    </details>
   </section>
 
   <footer>Vertrouwelijk transcriberen · handleiding</footer>
