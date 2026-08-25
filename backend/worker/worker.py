@@ -42,6 +42,35 @@ def _now() -> datetime:
 # --------------------------------------------------------------------------
 # STT-job
 # --------------------------------------------------------------------------
+def _select_hotwords(glossary: str | None, limit: int = 200) -> str | None:
+    """Kies uit de (mogelijk lange) glossary de meest 'verhaspelbare' termen voor Whisper-hotwords,
+    tot ~limit tekens. Eigennamen en afkortingen (hoofdletters, meerwoordig) komen VOORAAN; generiek
+    kleingeschreven jargon achteraan (dat verstaat Whisper meestal wel, en de LLM corrigeert de
+    spelling in het verslag). Het VOLLEDIGE glossary gaat los naar het verslag/LLM via de context.
+
+    Kort houden is essentieel: Whisper's decoder-venster is ~448 tokens; een te lange hotword-lijst
+    laat geen ruimte voor output (zie de fallback in de faster-whisper-backend)."""
+    if not (glossary and glossary.strip()):
+        return None
+    terms: list[str] = []
+    seen: set[str] = set()
+    for line in glossary.splitlines():
+        t = line.strip()
+        if t and t.lower() not in seen:
+            seen.add(t.lower())
+            terms.append(t)
+    # Score: meer hoofdletters (afkortingen/eigennamen) en meerwoordig = eerder.
+    terms.sort(key=lambda t: (sum(c.isupper() for c in t), " " in t), reverse=True)
+    out: list[str] = []
+    total = 0
+    for t in terms:
+        if total + len(t) + 2 > limit:
+            continue   # te lang voor wat er nog past -> sla over, probeer kortere die nog passen
+        out.append(t)
+        total += len(t) + 2
+    return ", ".join(out) or None
+
+
 async def transcribe_session(ctx: dict, session_id: str) -> str:
     maker = get_sessionmaker()
     settings = get_settings()
@@ -62,12 +91,10 @@ async def transcribe_session(ctx: dict, session_id: str) -> str:
         optimize = obj.optimize_audio
         # Woordenlijst/jargon (glossary) rijdt mee in de report-config (auto_report); gebruik 'm
         # als STT-hotwords zodat namen/termen goed worden herkend. Ingekort tot een veilige lengte.
-        glossary = ((obj.auto_report or {}).get("glossary") or None) if obj.auto_report else None
-        if glossary:
-            # STT-hotwords moeten KORT: Whisper's decoder-venster is ~448 tokens; een lange lijst
-            # vult dat op en laat geen ruimte voor output ("maximum decoding length must be > 0").
-            # Kort agressief af (het volledige glossary gaat wél naar het verslag/LLM via de context).
-            glossary = glossary.strip()[:200] or None
+        # STT-hotwords: kies de meest-verhaspelde eigennamen/afkortingen vooraan, tot ~200 tekens
+        # (Whisper-venster). Het volledige glossary gaat los naar het verslag/LLM via de context.
+        glossary = _select_hotwords(
+            ((obj.auto_report or {}).get("glossary") or None) if obj.auto_report else None, 200)
         await db.commit()
 
     try:
