@@ -55,6 +55,11 @@ class Settings(BaseSettings):
     llm_model: str = "qwen3.6-27b"
     llm_api_key: str = "not-needed"
     llm_temperature: float = 0.2
+    # "Thinking"/reasoning UIT voor verslagen. Reasoning-modellen (Qwen3) stoppen anders een groot
+    # <think>-blok vóór het antwoord; op een lang transcript loopt dat ver over de timeout heen.
+    # We geven dit per request mee als chat_template_kwargs.enable_thinking (llama.cpp met --jinja).
+    # Zet LLM_ENABLE_THINKING=true als je het endpoint tóch wilt laten redeneren.
+    llm_enable_thinking: bool = False
     # Geen "timeout"-mislukking als het LLM-endpoint traag/bezet is: de call wacht
     # desnoods lang (max ~1 dag) tot het endpoint 'm bedient. Bij een druk gedeeld
     # endpoint komt het verslag zo alsnog door i.p.v. te falen. (Env-instelbaar.)
