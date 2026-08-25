@@ -29,6 +29,22 @@ async def test_get_glossaries_reads_dir(tmp_path, monkeypatch):
     assert g["name"] == "Testlijst"            # uit '# naam:'-regel
     assert "Omgevingswet" in g["terms"] and "BOPA" in g["terms"]
     assert "commentaar" not in g["terms"]      # #-regels genegeerd
+    assert g["always"] is False                # 10-... zonder '# altijd' -> geen basislijst
+
+
+@pytest.mark.asyncio
+async def test_get_glossaries_always_flag(tmp_path, monkeypatch):
+    (tmp_path / "00-algemeen.txt").write_text("Leiden\nLUMC\n", encoding="utf-8")       # 00- -> altijd
+    (tmp_path / "50-thema.txt").write_text("# altijd\nAPV\n", encoding="utf-8")         # header -> altijd
+    (tmp_path / "60-los.txt").write_text("motie\n", encoding="utf-8")
+    monkeypatch.setenv("GLOSSARY_DIR", str(tmp_path))
+    get_settings.cache_clear()
+    try:
+        res = {g["name"]: g["always"] for g in await get_glossaries()}
+    finally:
+        monkeypatch.delenv("GLOSSARY_DIR", raising=False)
+        get_settings.cache_clear()
+    assert res["Algemeen"] is True and res["Thema"] is True and res["Los"] is False
 
 
 @pytest.mark.asyncio

@@ -71,15 +71,49 @@ async def transcribe_session(ctx: dict, session_id: str) -> str:
         wav = storage.wav_path(session_id)
         audio.resample_to_wav(raw_path, wav, optimize=optimize)
 
+        # Audioduur uit de 16kHz mono 16-bit wav (32000 bytes/sec) — voor de voortgangsbalk.
+        try:
+            duration = max(0.001, (os.path.getsize(wav) - 44) / 32000.0)
+        except OSError:
+            duration = None
+        redis = ctx.get("redis")
+        _prog = {"end": 0.0}                      # gezet vanuit de executor-thread (per segment)
+        _pkey = f"stt:progress:{session_id}"
+
+        async def _progress_writer():
+            # Schrijf de voortgang (laatste segment-eind / duur) periodiek naar Redis, zodat
+            # de status/SSE 'm kan tonen. faster-whisper levert segmenten incrementeel op.
+            if not (redis is not None and duration):
+                return
+            try:
+                while True:
+                    await asyncio.sleep(1.5)
+                    frac = min(0.99, max(0.0, _prog["end"] / duration))
+                    await redis.set(_pkey, f"{frac:.3f}", ex=3600)
+            except asyncio.CancelledError:
+                pass
+
         backend = get_backend()
         sem: asyncio.Semaphore = ctx["stt_semaphore"]
         loop = asyncio.get_running_loop()
         async with sem:  # begrens gelijktijdige STT-jobs (VRAM-bescherming)
             _t0 = time.perf_counter()
-            result = await loop.run_in_executor(
-                None,
-                lambda: backend.transcribe(str(wav), language, settings.stt_word_timestamps, hotwords=glossary),
-            )
+            _writer = asyncio.create_task(_progress_writer())
+            try:
+                result = await loop.run_in_executor(
+                    None,
+                    lambda: backend.transcribe(
+                        str(wav), language, settings.stt_word_timestamps,
+                        hotwords=glossary, on_segment=lambda e: _prog.__setitem__("end", e),
+                    ),
+                )
+            finally:
+                _writer.cancel()
+                if redis is not None:
+                    try:
+                        await redis.delete(_pkey)
+                    except Exception:
+                        pass
             _stt_seconds = time.perf_counter() - _t0
         # Wandtijd van de STT-stap (voor het meten van de extra kost van woord-timestamps
         # en later de diarisatie). Geen transcript-inhoud; alleen een duur.

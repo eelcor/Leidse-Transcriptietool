@@ -28,6 +28,8 @@ class SessionStatusOut(BaseModel):
     has_transcript: bool = False
     # Positie in de transcriptie-wachtrij (1 = eerstvolgende); alleen als status=queued.
     queue_position: int | None = None
+    # Voortgang van de transcriptie (0..1); alleen tijdens status=transcribing (faster-whisper).
+    progress: float | None = None
 
 
 class ReportOut(BaseModel):

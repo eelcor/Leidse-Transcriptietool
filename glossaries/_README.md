@@ -19,6 +19,9 @@ via `GLOSSARY_DIR` in `.env` zonder de repo te wijzigen.
   streepjes worden spaties), of expliciet via een eerste regel `# naam: Mijn lijst`.
 - Bestanden die met `_` of `.` beginnen (zoals deze README) worden overgeslagen.
 - Een leidend volgnummer (`10-`, `20-`) bepaalt de **volgorde** in het menu.
+- **Altijd meenemen:** een bestandsnaam die met `00` begint (of een regel `# altijd` in het
+  bestand) markeert een **basislijst** (bijv. algemene eigennamen). Die wordt **automatisch
+  gecombineerd** met de gekozen domeinlijst, zodat je altijd de kernnamen erbij hebt.
 
 ## Voorbeeld
 ```

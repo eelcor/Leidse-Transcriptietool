@@ -232,6 +232,9 @@ async def get_glossaries() -> list[dict]:
         except OSError:
             continue
         name = _glossary_name_from_filename(fn)
+        # "always": deze lijst wordt altijd meegenomen (bv. algemene eigennamen) en gecombineerd
+        # met een gekozen domeinlijst. Markeer met bestandsnaam '00…' of een '# altijd'-regel.
+        always = fn.startswith("00")
         terms: list[str] = []
         for line in raw.splitlines():
             s = line.strip()
@@ -241,11 +244,14 @@ async def get_glossaries() -> list[dict]:
             if m:
                 name = m.group(1).strip()
                 continue
+            if re.match(r"#\s*(altijd|always)\b", s, re.IGNORECASE):
+                always = True
+                continue
             if s.startswith("#"):
                 continue
             terms.append(s)
         if terms:
-            out.append({"name": name, "terms": "\n".join(terms)})
+            out.append({"name": name, "terms": "\n".join(terms), "always": always})
     return out
 
 
@@ -588,7 +594,8 @@ async def _report_queue_position(db: AsyncSession, r: Report) -> int | None:
     return int(n)
 
 
-def _status_out(obj: Session, queue_position: int | None = None) -> SessionStatusOut:
+def _status_out(obj: Session, queue_position: int | None = None,
+                progress: float | None = None) -> SessionStatusOut:
     return SessionStatusOut(
         id=obj.id,
         status=obj.status,
@@ -599,13 +606,30 @@ def _status_out(obj: Session, queue_position: int | None = None) -> SessionStatu
         expires_at=obj.expires_at,
         has_transcript=bool(obj.transcript),
         queue_position=queue_position,
+        progress=progress,
     )
+
+
+async def _read_progress(session_id: str) -> float | None:
+    """Transcriptie-voortgang (0..1) die de STT-worker in Redis schrijft. None als er niets staat."""
+    try:
+        pool = await queue.get_pool()
+        v = await pool.get(f"stt:progress:{session_id}")
+    except Exception:
+        return None
+    if v is None:
+        return None
+    try:
+        return float(v.decode() if isinstance(v, (bytes, bytearray)) else v)
+    except (ValueError, AttributeError):
+        return None
 
 
 @router.get("/sessions/{session_id}/status", response_model=SessionStatusOut)
 async def get_status(session_id: str, db: AsyncSession = Depends(get_db)) -> SessionStatusOut:
     obj = await _get_session_or_404(db, session_id)
-    return _status_out(obj, await _session_queue_position(db, obj))
+    progress = await _read_progress(session_id) if obj.status == SessionStatus.TRANSCRIBING else None
+    return _status_out(obj, await _session_queue_position(db, obj), progress)
 
 
 def _diarization_out(diar: Diarization) -> DiarizationOut:
@@ -713,7 +737,8 @@ async def session_events(session_id: str, request: Request, db: AsyncSession = D
                 break
             async with maker() as s:
                 pos = await _session_queue_position(s, obj)
-            payload = json.dumps(_status_out(obj, pos).model_dump(mode="json"))
+            prog = await _read_progress(session_id) if obj.status == SessionStatus.TRANSCRIBING else None
+            payload = json.dumps(_status_out(obj, pos, prog).model_dump(mode="json"))
             if payload != last:
                 yield f"data: {payload}\n\n"
                 last = payload
