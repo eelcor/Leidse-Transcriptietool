@@ -1,0 +1,126 @@
+# naam: Algemeen — Leiden & regio (altijd handig)
+# Gesproken eigennamen die STT vaak verhaspelt: gemeenten, wijken, locaties, organisaties, personen.
+# Kort gehouden — bedoeld voor herkenning in gesprekken, niet als volledige beleidsindex.
+
+# Gemeente & regio
+Leiden
+Leidse regio
+Holland Rijnland
+Servicepunt71
+Economie071
+Leiderdorp
+Oegstgeest
+Voorschoten
+Zoeterwoude
+Katwijk
+Alphen aan den Rijn
+Kaag en Braassem
+Noordwijk
+Teylingen
+provincie Zuid-Holland
+Hollands Midden
+
+# Wijken & buurten
+Binnenstad
+Stationsgebied
+Leiden-Noord
+De Kooi
+Groenoord
+Merenwijk
+Slaaghwijk
+Nieuw Leyden
+Zeeheldenbuurt
+Professorenwijk
+Burgemeesterswijk
+Tuinstadwijk
+Vreewijk
+Roomburg
+Meerburg
+Waardeiland
+Stevenshof
+Haagwegkwartier
+Transvaalwijk
+Vondelkwartier
+Morskwartier
+De Mors
+Houtkwartier
+Prinsessenbuurt
+De Hoven
+
+# Locaties & projecten (vaak genoemd)
+Breestraat
+Haarlemmerstraat
+Rapenburg
+Beestenmarkt
+Lammermarkt
+Garenmarkt
+Nieuwe Rijn
+Oude Rijn
+Kooiplein
+Stationsplein
+Leidse Ring Noord
+Pieterskerk
+Hooglandse Kerk
+Burcht
+Singelpark
+Leidse Hout
+Park Matilo
+Park Cronesteyn
+Energiepark
+Nieuwe Energie
+Kaasmarkt
+Leidse Schans
+Leiden Bio Science Park, LBSP
+
+# Instellingen & organisaties
+Universiteit Leiden
+LUMC
+Hogeschool Leiden
+mboRijnland
+Naturalis
+Rijksmuseum van Oudheden
+Museum De Lakenhal
+Erfgoed Leiden en Omstreken, ELO
+Alrijne Ziekenhuis
+GGD Hollands Midden
+Hecht
+Libertas Leiden
+Incluzio
+De Binnenvest
+Rivierduinen
+Cardea
+DZB Leiden, De Zijl Bedrijven
+Stadsbank
+Voedselbank Leiden
+Zorg en Zekerheid
+Dunea
+Liander
+Woningstichting Ons Doel
+De Sleutels
+Portaal
+Omgevingsdienst West-Holland, ODWH
+Veiligheidsregio Hollands Midden, VRHM
+Politie Hollands Midden
+Hoogheemraadschap van Rijnland
+Sociaal Wijkteam, SWT
+Jeugd- en Gezinsteam, JGT
+Veilig Thuis
+Zorg- en Veiligheidshuis
+
+# Bestuur & personen
+Henri Lenferink
+Ashley North
+Fleur Spijker
+Julius Terpstra
+Abdelhaq Jermoumi
+Yvonne van Delft
+Wietske Veltman
+Paul Laudy
+college van B&W
+gemeenteraad
+wethouder
+portefeuillehouder
+raadscommissie
+motie
+amendement
+portefeuillehoudersoverleg, PHO

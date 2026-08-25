@@ -1,0 +1,39 @@
+# naam: Mobiliteit & openbare ruimte
+
+autoluwe binnenstad
+zero-emissiezone
+stadslogistiek
+venstertijden
+parkeervergunning
+parkeerzone
+parkeernorm
+fietsparkeernorm
+fietsenstalling
+deelmobiliteit
+deelscooter
+deelauto
+GOW30, gebiedsontsluitingsweg 30
+wegencategorisering
+verkeersbesluit
+verkeersveiligheid
+bewegwijzering
+openbare verlichting
+kapvergunning
+houtopstand
+boombeheer
+integraal beheer openbare ruimte, IBOR
+Handboek Kwaliteit Openbare Ruimte, HKOR
+wegsleepregeling
+standplaatsvergunning
+ligplaatsvergunning
+weesfietsen
+HOV, hoogwaardig openbaar vervoer
+Gemeentelijk Verkeers- en Vervoersplan, GVVP
+# Eigennamen / projecten
+Leidse Ring Noord
+RijnlandRoute
+Singelpark
+parkeergarage Morspoort
+Lammenschansweg
+Plesmanlaan
+Willem de Zwijgerlaan

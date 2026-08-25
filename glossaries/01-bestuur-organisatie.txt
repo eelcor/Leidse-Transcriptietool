@@ -1,0 +1,38 @@
+# naam: Bestuur, organisatie & dienstverlening
+# Afkortingen en jargon die in bestuurlijke gesprekken vallen (geen documenttitels).
+
+Algemene wet bestuursrecht, Awb
+Algemene Plaatselijke Verordening, APV
+Wet open overheid, Woo
+AVG
+Wet Bibob
+gemeenschappelijke regeling
+verbonden partij
+zienswijze
+kadernota
+programmabegroting
+jaarstukken
+bestuursrapportage
+weerstandsvermogen
+aanbesteding
+meervoudig onderhands
+Europese aanbesteding
+TenderNed
+social return, SROI
+mandaatbesluit
+delegatiebesluit
+algemeen bestuur
+dagelijks bestuur
+rekenkamercommissie
+Besluit Begroting en Verantwoording, BBV
+Baseline Informatiebeveiliging Overheid, BIO
+Basisregistratie Personen, BRP
+Wet gemeenschappelijke regelingen, Wgr
+Algemene Subsidieverordening, ASV
+subsidieregeling
+# Organisaties / eigennamen
+VNG
+G40
+Belastingsamenwerking Gouwe-Rijnland, BSGR
+Rijksvastgoedbedrijf
+Serviceorganisatie Zorg Holland Rijnland, SOZ
