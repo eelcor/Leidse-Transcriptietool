@@ -61,6 +61,48 @@ keuze geeft `CUDA error: no kernel image available` (arch niet ondersteund).
 
 Voor **prod (RTX Pro 6000)** is `TORCH_VARIANT=default` correct.
 
+> **Let op:** `TORCH_VARIANT` geldt alleen voor de **optionele** Canary/NeMo-backend (torch).
+> De **default STT-backend (faster-whisper)** gebruikt geen torch maar cuBLAS/cuDNN — zie hieronder.
+
+## STT (faster-whisper) op een nieuwe GPU — CUDA-libs (Blackwell)
+
+De **default STT-backend (faster-whisper/CTranslate2)** laadt **cuBLAS + cuDNN** uit pip. Die staan
+standaard op **CUDA 12.4** — getest op de dev-**V100** (sm_70) en op Ada/Ampere/Hopper. De **RTX PRO
+6000 (Blackwell / sm_120)** heeft echter **CUDA 12.8+** nodig; cuBLAS/cuDNN 12.4 hebben geen
+Blackwell-kernels, waardoor faster-whisper **stil terugvalt op CPU** (traag — de transcriptie voelt
+dan zelfs trager dan op een V100). Herkenbaar aan:
+
+```bash
+docker compose logs worker | grep -i "val terug op CPU"
+```
+
+**Fix — bouw de worker met cu128-libs.** Zet in `.env`:
+
+```
+STT_CUBLAS_SPEC=nvidia-cublas-cu12>=12.8,<12.9
+STT_CUDNN_SPEC=nvidia-cudnn-cu12>=9.7
+STT_CUDA_RUNTIME_SPEC=nvidia-cuda-runtime-cu12>=12.8,<12.9
+# alleen nodig als CTranslate2 zelf niet Blackwell-klaar blijkt: forceer een passende build
+# STT_CTRANSLATE2_SPEC=ctranslate2==4.8.1
+```
+
+Daarna herbouwen en herstarten:
+
+```bash
+docker compose build worker && docker compose up -d worker
+```
+
+**Dev (V100) laat je deze vars leeg** → dan blijft cu124 (die de V100/sm_70 wél ondersteunt; cu128/13
+zou Volta laten vallen). Zo bouw je met dezelfde Dockerfile per omgeving de juiste CUDA-versie.
+
+Controleer na de rebuild dat STT écht op de GPU draait:
+
+```bash
+docker compose exec worker python -c "import ctranslate2 as c; print('CUDA devices:', c.get_cuda_device_count())"
+# en tijdens een transcriptie: staat er een worker-python-proces op de RTX in `nvidia-smi`?
+# In de log hoort GÉÉN "val terug op CPU" meer te staan.
+```
+
 ## GPU-geheugen (headroom) — belangrijk bij gedeelde kaarten
 
 Er zijn TWEE VRAM-pieken, en de tweede is de lastigste:

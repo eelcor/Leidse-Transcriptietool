@@ -40,6 +40,7 @@ docker info >/dev/null 2>&1 || die "kan geen verbinding maken met de docker-daem
 # --- 2) GPU detecteren ------------------------------------------------------
 c "==> GPU detecteren"
 GPU_MODE=cpu; DETECTED_TORCH=default; DETECTED_DEVICE="nvidia.com/gpu=all"
+DETECTED_STT_CUBLAS=""; DETECTED_STT_CUDNN=""; DETECTED_STT_RUNTIME=""
 if command -v nvidia-smi >/dev/null 2>&1 && nvidia-smi -L >/dev/null 2>&1; then
   nvidia-smi -L | sed 's/^/   /'
   cap=$(nvidia-smi --query-gpu=compute_cap --format=csv,noheader 2>/dev/null | head -1 | tr -d ' ')
@@ -48,6 +49,16 @@ if command -v nvidia-smi >/dev/null 2>&1 && nvidia-smi -L >/dev/null 2>&1; then
     "")      warn "   compute capability onbekend; TORCH_VARIANT=default aangehouden." ;;
     *)       c "   compute capability $cap -> TORCH_VARIANT=default." ;;
   esac
+  # faster-whisper (CTranslate2) CUDA-libs: sm_100+ (Blackwell e.d., compute cap >= 10) heeft
+  # CUDA 12.8+ nodig; de default cu124 dekt tot sm_90 (Hopper). Op oudere kaarten leeg laten
+  # (= cu124 in de compose). Zonder dit valt faster-whisper op Blackwell stil terug op CPU.
+  capmaj=${cap%%.*}
+  if [ -n "$capmaj" ] && [ "$capmaj" -ge 10 ] 2>/dev/null; then
+    DETECTED_STT_CUBLAS="nvidia-cublas-cu12>=12.8,<12.9"
+    DETECTED_STT_CUDNN="nvidia-cudnn-cu12>=9.7"
+    DETECTED_STT_RUNTIME="nvidia-cuda-runtime-cu12>=12.8,<12.9"
+    c "   compute $cap (Blackwell/nieuwer): faster-whisper CUDA-libs op 12.8+ gezet."
+  fi
   # Container-GPU-toegang: CDI of nvidia-runtime?
   if docker info 2>/dev/null | grep -q 'nvidia.com/gpu'; then
     GPU_MODE=cdi; c "   GPU-in-container via CDI beschikbaar."
@@ -120,6 +131,10 @@ cat > .env <<EOF
 # Gegenereerd door deploy/install.sh
 INSTALL_NEMO=${INSTALL_NEMO}
 TORCH_VARIANT=${TORCH_VARIANT}
+# faster-whisper CUDA-libs: leeg = CUDA 12.4 (V100/Ada/Ampere/Hopper); gevuld = 12.8+ (Blackwell).
+STT_CUBLAS_SPEC=${DETECTED_STT_CUBLAS}
+STT_CUDNN_SPEC=${DETECTED_STT_CUDNN}
+STT_CUDA_RUNTIME_SPEC=${DETECTED_STT_RUNTIME}
 WORKER_GPU_DEVICE=${WORKER_GPU_DEVICE}
 SITE_ADDRESS=${SITE_ADDRESS}
 CADDY_TLS=${CADDY_TLS}
