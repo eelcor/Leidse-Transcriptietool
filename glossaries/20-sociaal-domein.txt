@@ -1,0 +1,59 @@
+# naam: Sociaal domein
+# Starterlijst — vul aan met lokale voorzieningen en partnerorganisaties.
+
+# Wetten
+Wmo
+Wet maatschappelijke ondersteuning
+Jeugdwet
+Participatiewet
+Wet gemeentelijke schuldhulpverlening
+Wvggz
+Wet verplichte ggz
+Wgs
+
+# Jeugd
+jeugdhulp
+jeugdbescherming
+jeugdreclassering
+gecertificeerde instelling
+Veilig Thuis
+Raad voor de Kinderbescherming
+gezinsvoogd
+pleegzorg
+
+# Zorg & ondersteuning
+maatwerkvoorziening
+algemene voorziening
+indicatiestelling
+cliëntondersteuning
+mantelzorg
+respijtzorg
+dagbesteding
+beschermd wonen
+maatschappelijke opvang
+huishoudelijke ondersteuning
+hulpmiddelen
+pgb
+persoonsgebonden budget
+eigen bijdrage
+CAK
+
+# Werk & inkomen
+bijstandsuitkering
+re-integratie
+sociale werkvoorziening
+loonkostensubsidie
+beschut werk
+armoedebeleid
+schuldhulpverlening
+bijzondere bijstand
+kwijtschelding
+
+# GGZ & gezondheid
+GGD
+GGZ
+verslavingszorg
+maatschappelijk werk
+sociaal wijkteam
+jeugdgezondheidszorg
+consultatiebureau

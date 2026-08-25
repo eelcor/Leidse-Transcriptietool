@@ -1,0 +1,59 @@
+# naam: Bestuur & raad
+# Starterlijst — vul aan met namen van commissies, wethouders en portefeuilles.
+
+# Organen
+gemeenteraad
+college van burgemeester en wethouders
+college van B&W
+burgemeester
+wethouder
+portefeuillehouder
+gemeentesecretaris
+griffier
+griffie
+raadscommissie
+presidium
+fractie
+raadslid
+commissielid
+rekenkamer
+rekenkamercommissie
+ombudsman
+
+# Besluitvorming
+raadsvoorstel
+raadsbesluit
+collegebesluit
+motie
+motie van afkeuring
+motie vreemd aan de orde van de dag
+amendement
+initiatiefvoorstel
+schriftelijke vragen
+technische vragen
+hamerstuk
+bespreekstuk
+stemming
+hoofdelijke stemming
+aangehouden
+aangenomen
+verworpen
+
+# Documenten & cyclus
+coalitieakkoord
+collegeprogramma
+raadsagenda
+lange termijn agenda
+LTA
+bestuursakkoord
+mandaat
+delegatie
+
+# Regionaal
+gemeenschappelijke regeling
+Holland Rijnland
+regio
+veiligheidsregio
+omgevingsdienst
+VNG
+provincie Zuid-Holland

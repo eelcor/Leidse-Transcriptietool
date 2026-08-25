@@ -11,6 +11,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import re
 import subprocess
 import tempfile
 from datetime import datetime, timezone
@@ -200,6 +201,52 @@ async def get_config() -> dict:
         "diarize_enabled": s.diarize_backend != "none",
         "speaker_names_mode": s.speaker_names_mode,
     }
+
+
+def _glossary_name_from_filename(fn: str) -> str:
+    base = fn.rsplit(".", 1)[0]
+    base = re.sub(r"^\d+[-_]", "", base)   # leidend volgnummer (bv. '01-') weghalen
+    return base.replace("-", " ").replace("_", " ").strip().capitalize()
+
+
+@router.get("/glossaries")
+async def get_glossaries() -> list[dict]:
+    """Beschikbare woordenlijsten uit de glossary-map (plugin-structuur). Eén bestand per
+    glossary (.txt/.md): bestandsnaam = naam (of eerste regel '# naam: ...'), inhoud = termen
+    (lege regels en '#'-commentaar worden genegeerd). Zo kan elke organisatie eigen lijsten
+    neerzetten zonder codewijziging (bind-mount de map)."""
+    d = get_settings().glossary_dir
+    out: list[dict] = []
+    try:
+        names = sorted(os.listdir(d))
+    except OSError:
+        return out
+    for fn in names:
+        if fn.startswith((".", "_")):   # _README.md e.d. overslaan
+            continue
+        if not fn.lower().endswith((".txt", ".md")):
+            continue
+        try:
+            with open(os.path.join(d, fn), encoding="utf-8") as f:
+                raw = f.read()
+        except OSError:
+            continue
+        name = _glossary_name_from_filename(fn)
+        terms: list[str] = []
+        for line in raw.splitlines():
+            s = line.strip()
+            if not s:
+                continue
+            m = re.match(r"#\s*naam:\s*(.+)$", s, re.IGNORECASE)
+            if m:
+                name = m.group(1).strip()
+                continue
+            if s.startswith("#"):
+                continue
+            terms.append(s)
+        if terms:
+            out.append({"name": name, "terms": "\n".join(terms)})
+    return out
 
 
 @router.get("/prompts")

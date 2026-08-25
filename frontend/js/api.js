@@ -9,6 +9,9 @@ export const API = {
   async prompts() {
     return (await fetch(url('api/prompts'))).json();
   },
+  async glossaries() {
+    try { return await (await fetch(url('api/glossaries'))).json(); } catch { return []; }
+  },
   async createSession(language, optimize, report, participants, diarize) {
     const r = await fetch(url('api/sessions'), {
       method: 'POST',

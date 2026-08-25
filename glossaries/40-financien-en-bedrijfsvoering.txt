@@ -1,0 +1,57 @@
+# naam: Financiën & bedrijfsvoering
+# Starterlijst.
+
+# P&C-cyclus
+kadernota
+voorjaarsnota
+programmabegroting
+begroting
+najaarsnota
+bestuursrapportage
+burap
+jaarrekening
+jaarstukken
+meerjarenraming
+P&C-cyclus
+planning en control
+
+# Financiële begrippen
+baten en lasten
+structureel
+incidenteel
+reserves
+voorzieningen
+weerstandsvermogen
+weerstandscapaciteit
+risicoreserve
+algemene reserve
+onvoorzien
+begrotingswijziging
+kredietaanvraag
+investeringskrediet
+kapitaallasten
+afschrijving
+BBV
+Besluit begroting en verantwoording
+
+# Inkomsten
+gemeentefonds
+algemene uitkering
+specifieke uitkering
+SPUK
+OZB
+onroerendezaakbelasting
+leges
+toeristenbelasting
+precariobelasting
+rioolheffing
+afvalstoffenheffing
+
+# Inkoop & control
+aanbesteding
+inkoopvoorwaarden
+accountantsverklaring
+rechtmatigheid
+doelmatigheid
+subsidieverordening
+subsidiebeschikking

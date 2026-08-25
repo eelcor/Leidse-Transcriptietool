@@ -189,27 +189,26 @@ function setupReportConfig() {
     });
   }
 
-  // Woordenlijst-presets vullen + toepassen.
+  // Woordenlijsten uit de plugin-map (GET /api/glossaries) in de dropdown vullen.
   const gpre = $('#glossary-preset');
   const gtext = $('#glossary-text');
   if (gpre && gtext) {
-    Object.keys(GLOSSARY_PRESETS).forEach((name) => gpre.append(el('option', { value: name }, name)));
+    API.glossaries().then((list) => {
+      GLOSSARIES = {};
+      (list || []).forEach(({ name, terms }) => {
+        GLOSSARIES[name] = terms;
+        gpre.append(el('option', { value: name }, name));
+      });
+    }).catch(() => { /* geen lijsten -> alleen handmatig plakken */ });
     gpre.addEventListener('change', () => {
-      const preset = GLOSSARY_PRESETS[gpre.value];
-      if (preset) { gtext.value = preset; const w = $('#glossary-wrap'); if (w) w.open = true; }
+      const terms = GLOSSARIES[gpre.value];
+      if (terms) { gtext.value = terms; const w = $('#glossary-wrap'); if (w) w.open = true; }
     });
   }
 }
 
-// Lees de gekozen verslag-config; geeft {kinds,custom_prompt,context} of null.
-// Ingebouwde voorbeeld-woordenlijsten (presets). Per-opname; niets server-side bewaard.
-const GLOSSARY_PRESETS = {
-  'Gemeente / bestuurlijk': ['college van B&W', 'wethouder', 'portefeuillehouder', 'raadscommissie',
-    'motie', 'amendement', 'omgevingsvisie', 'omgevingsplan', 'kadernota', 'begroting',
-    'coalitieakkoord', 'zienswijze', 'bestemmingsplan'].join('\n'),
-  'Zorg / sociaal domein': ['Wmo', 'jeugdzorg', 'GGZ', 'GGD', 'cliëntondersteuning', 'indicatiestelling',
-    'mantelzorg', 'sociaal wijkteam', 'beschermd wonen', 'PGB'].join('\n'),
-};
+// Woordenlijsten uit de server-map (naam -> termen), geladen in setupReportConfig.
+let GLOSSARIES = {};
 
 function getGlossary() {
   return (($('#glossary-text') || {}).value || '').trim() || null;

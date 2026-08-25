@@ -52,6 +52,9 @@ services:
     volumes:
       - audiodata:/data
       - ./PROMPTS.md:/app/PROMPTS.md:ro
+      # Woordenlijsten (plugin-structuur): één bestand per glossary. Elke organisatie kan hier
+      # eigen .txt/.md-bestanden neerzetten; de app leest ze via GET /api/glossaries. Alleen-lezen.
+      - ./glossaries:/glossaries:ro
     restart: unless-stopped
 
   worker:

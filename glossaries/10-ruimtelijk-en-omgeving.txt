@@ -1,0 +1,62 @@
+# naam: Ruimtelijk & omgeving
+# Starterlijst — vul aan met eigen projectnamen en gebieden.
+
+# Omgevingswet
+Omgevingswet
+omgevingsvisie
+omgevingsplan
+omgevingsvergunning
+omgevingsdienst
+BOPA
+buitenplanse omgevingsplanactiviteit
+vergunningvrij bouwen
+DSO
+Digitaal Stelsel Omgevingswet
+
+# Ruimtelijke ordening (oud/nieuw)
+bestemmingsplan
+structuurvisie
+ruimtelijke ordening
+gebiedsontwikkeling
+herontwikkeling
+transformatiegebied
+verdichting
+inbreiding
+uitbreidingslocatie
+grondexploitatie
+anterieure overeenkomst
+
+# Wonen
+woningbouwopgave
+sociale huur
+middenhuur
+betaalbare koop
+woningcorporatie
+prestatieafspraken
+
+# Milieu & duurzaamheid
+stikstofdepositie
+Aerius
+warmtetransitie
+warmtenet
+aardgasvrij
+energietransitie
+klimaatadaptatie
+hittestress
+biodiversiteit
+
+# Verkeer & mobiliteit
+mobiliteitsvisie
+parkeernorm
+fietsstraat
+30-kilometerzone
+verkeersveiligheid
+
+# Procedure
+zienswijze
+inspraak
+participatie
+welstand
+monumentenzorg
+rijksmonument
+gemeentelijk monument
