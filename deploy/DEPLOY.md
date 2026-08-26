@@ -463,12 +463,17 @@ stack (`docker compose ps`) vanzelf draaien.
 
 ## Updaten
 
-Gebruik het update-script (volumes blijven behouden):
+Volledige upgrade-handleiding (incl. rollback en de twee prod-checks): [`UPGRADE.md`](UPGRADE.md).
+Gebruik het update-script (herbouwt de images — de backend-code zit erin — en behoudt de volumes):
 
 ```bash
-./deploy/update.sh                 # git pull + herbouwen + herstarten
+./deploy/update.sh                 # git pull + rebuild + recreate + verifiëren
 ./deploy/update.sh nieuwe.tgz      # of update vanuit een tar-archief
+./deploy/update.sh -y              # zonder bevestigingsvragen (CI)
 ```
+
+Het script waarschuwt bij een **Blackwell-GPU zonder cu128-STT-libs** en bouwt de **diarize**-image
+alleen mee als `DIARIZE_BACKEND=pyannote`.
 
 Nieuwe **tabellen** worden bij de start automatisch aangemaakt (via `create_all`).
 Voegt een release **kolommen** toe op bestaande tabellen, voer dan de `ALTER TABLE`
