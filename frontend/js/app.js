@@ -138,6 +138,7 @@ async function init() {
   $('#nav-new').addEventListener('click', () => { releaseRecorder(); show('home'); });
   $('#nav-retrieve').addEventListener('click', () => show('retrieve'));
 
+  setupConsent();
   setupReportConfig();
   setupUpload();
   setupRecorder();
@@ -153,6 +154,17 @@ async function init() {
 // Verslag-opties op het startscherm (auto-verslag na transcriptie)
 // -------------------------------------------------------------------------
 const repBoxes = {};
+// Consent: toon de (configureerbare) consent-tekst in de opnamekaart. Opnemen wordt geblokkeerd
+// tot de gebruiker bevestigt dat de deelnemers zijn geïnformeerd (gate in setupRecorder). Leeg -> geen stap.
+function setupConsent() {
+  const box = $('#rec-consent');
+  const txt = $('#consent-text');
+  const t = (CONFIG.consent_text || '').trim();
+  if (!box || !txt || !t) return;
+  txt.innerHTML = renderMarkdown(t);
+  box.hidden = false;
+}
+
 function setupReportConfig() {
   const chips = $('#rep-chips');
   SECTIONS.filter((s) => s.key !== 'volledig').forEach((s) => {
@@ -518,6 +530,14 @@ function setupRecorder() {
   }
 
   startBtn.addEventListener('click', async () => {
+    // Consent-gate: opnemen kan pas ná expliciete bevestiging (alleen als er een consent-tekst is).
+    const consentBox = $('#rec-consent');
+    const ack = $('#consent-ack');
+    if (consentBox && !consentBox.hidden && ack && !ack.checked) {
+      alert('Vraag eerst toestemming aan de deelnemers en vink dat aan voordat je opneemt.');
+      consentBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
     chunkErr = false;
     startBtn.disabled = true;
     try {

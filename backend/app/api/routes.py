@@ -200,7 +200,17 @@ async def get_config() -> dict:
         # Diarisatie: laat de frontend het "Sprekers"-blok tonen/verbergen (weg als 'none').
         "diarize_enabled": s.diarize_backend != "none",
         "speaker_names_mode": s.speaker_names_mode,
+        # Consent-tekst (markdown) om vóór het opnemen te tonen/voorlezen; leeg -> geen consent-stap.
+        "consent_text": _read_consent(),
     }
+
+
+def _read_consent() -> str:
+    try:
+        with open(get_settings().consent_file, encoding="utf-8") as f:
+            return f.read().strip()
+    except OSError:
+        return ""
 
 
 def _glossary_name_from_filename(fn: str) -> str:

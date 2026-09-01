@@ -55,6 +55,8 @@ services:
       # Woordenlijsten (plugin-structuur): één bestand per glossary. Elke organisatie kan hier
       # eigen .txt/.md-bestanden neerzetten; de app leest ze via GET /api/glossaries. Alleen-lezen.
       - ./glossaries:/glossaries:ro
+      # Consent-tekst die vóór het opnemen wordt getoond/voorgelezen; pas dit bestand aan naar wens.
+      - ./consent.md:/consent.md:ro
     restart: unless-stopped
 
   worker:
