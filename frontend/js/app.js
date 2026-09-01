@@ -163,6 +163,27 @@ function setupConsent() {
   if (!box || !txt || !t) return;
   txt.innerHTML = renderMarkdown(t);
   box.hidden = false;
+
+  // Na het aanvinken klapt het (lange) consent-blok in tot een slanke bevestigingsregel;
+  // uitvinken vouwt de tekst weer uit. Klik op de regel = weer wijzigen.
+  const ack = $('#consent-ack');
+  const body = $('#consent-body');
+  const label = $('#consent-ack-label');
+  const applyConsentState = () => {
+    const done = ack.checked;
+    if (body) body.hidden = done;
+    box.style.borderLeftColor = done ? 'var(--ok)' : 'var(--accent)';
+    box.style.background = done ? 'transparent' : 'var(--accent-soft)';
+    box.style.padding = done ? '9px 12px' : '12px 14px';
+    if (label) {
+      label.textContent = done
+        ? 'Toestemming bevestigd — je kunt opnemen. (klik om te wijzigen)'
+        : 'Ik heb de deelnemers hierover geïnformeerd en om toestemming gevraagd.';
+      label.style.color = done ? 'var(--ok)' : '';
+    }
+  };
+  ack.addEventListener('change', applyConsentState);
+  applyConsentState();
 }
 
 function setupReportConfig() {

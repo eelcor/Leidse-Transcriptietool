@@ -90,12 +90,14 @@
 
           <!-- Consent: tonen/voorlezen vóór het opnemen; opnemen kan pas ná expliciete bevestiging.
                Tekst komt uit /api/config (consent.md); verborgen als die leeg is. -->
-          <div id="rec-consent" hidden style="border:1px solid var(--line-strong);border-left:4px solid var(--accent);background:var(--accent-soft);padding:12px 14px;margin:2px 0 14px">
-            <p style="margin:0 0 6px;font-weight:600">Vraag eerst toestemming — lees dit voor aan de deelnemers:</p>
-            <div id="consent-text" style="font-size:13.5px;line-height:1.5"></div>
+          <div id="rec-consent" hidden style="border:1px solid var(--line-strong);border-left:4px solid var(--accent);background:var(--accent-soft);padding:12px 14px;margin:2px 0 14px;transition:padding .15s,border-color .15s,background .15s">
+            <div id="consent-body">
+              <p style="margin:0 0 6px;font-weight:600">Vraag eerst toestemming — lees dit voor aan de deelnemers:</p>
+              <div id="consent-text" style="font-size:13.5px;line-height:1.5"></div>
+            </div>
             <label class="chk" style="display:flex;gap:8px;align-items:flex-start;margin-top:10px;font-weight:600">
               <input type="checkbox" id="consent-ack" />
-              <span>Ik heb de deelnemers hierover geïnformeerd en om toestemming gevraagd.</span>
+              <span id="consent-ack-label">Ik heb de deelnemers hierover geïnformeerd en om toestemming gevraagd.</span>
             </label>
           </div>
 
