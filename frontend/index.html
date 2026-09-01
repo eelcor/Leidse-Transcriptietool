@@ -88,6 +88,17 @@
           <h2><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M6 11a6 6 0 0012 0M12 17v4M8 21h8"/></svg></span> Nu opnemen</h2>
           <p class="sub">Neem direct in de browser op.</p>
 
+          <!-- Consent: tonen/voorlezen vóór het opnemen; opnemen kan pas ná expliciete bevestiging.
+               Tekst komt uit /api/config (consent.md); verborgen als die leeg is. -->
+          <div id="rec-consent" hidden style="border:1px solid var(--line-strong);border-left:4px solid var(--accent);background:var(--accent-soft);padding:12px 14px;margin:2px 0 14px">
+            <p style="margin:0 0 6px;font-weight:600">Vraag eerst toestemming — lees dit voor aan de deelnemers:</p>
+            <div id="consent-text" style="font-size:13.5px;line-height:1.5"></div>
+            <label class="chk" style="display:flex;gap:8px;align-items:flex-start;margin-top:10px;font-weight:600">
+              <input type="checkbox" id="consent-ack" />
+              <span>Ik heb de deelnemers hierover geïnformeerd en om toestemming gevraagd.</span>
+            </label>
+          </div>
+
           <label class="field"><span>Opnamebron</span>
             <select id="rec-source">
               <option value="mic">Microfoon (jouw stem)</option>

@@ -73,6 +73,11 @@ class Settings(BaseSettings):
     # De frontend vult het glossary-keuzemenu hieruit via GET /api/glossaries.
     glossary_dir: str = "/glossaries"
 
+    # Consent-tekst (markdown) die vóór het opnemen wordt getoond en voorgelezen aan de
+    # deelnemers. Bind-mount een eigen bestand om 'm aan te passen. Leeg bestand/ontbreekt ->
+    # geen consent-stap. De frontend eist een expliciete bevestiging vóór het opnemen kan starten.
+    consent_file: str = "/consent.md"
+
     # --- Beveiliging ---
     # Swagger-UI en OpenAPI-schema standaard UIT in productie (kleiner aanvalsoppervlak;
     # het schema somt anders alle endpoints op). Zet EXPOSE_API_DOCS=true voor lokaal debuggen.
