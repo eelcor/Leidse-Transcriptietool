@@ -1257,10 +1257,25 @@ async function openEditor(sessionId, report) {
     );
   }
 
-  const cleanup = () => { try { editor.destroy(); } catch {} modal.hidden = true; modal.onclick = null; };
-  $('#editor-cancel').onclick = cleanup;
-  $('#editor-close').onclick = cleanup;
-  modal.onclick = (e) => { if (e.target === modal) cleanup(); };  // klik op de achtergrond sluit
+  // Niet-opgeslagen wijzigingen niet stilletjes weggooien bij een misklik op de achtergrond,
+  // Annuleren, Sluiten of Escape: eerst bevestigen. Baseline = de eigen serialisatie van de editor
+  // (niet report.content), zodat markdown-normalisatie niet als 'wijziging' telt.
+  const initialMd = editor.storage.markdown.getMarkdown();
+  const isDirty = () => editor.storage.markdown.getMarkdown() !== initialMd;
+  const cleanup = () => {
+    document.removeEventListener('keydown', onKey);
+    try { editor.destroy(); } catch {}
+    modal.hidden = true; modal.onclick = null;
+  };
+  const tryClose = () => {
+    if (isDirty() && !confirm('Je hebt niet-opgeslagen wijzigingen. Weggooien?')) return;
+    cleanup();
+  };
+  const onKey = (e) => { if (e.key === 'Escape') { e.preventDefault(); tryClose(); } };
+  document.addEventListener('keydown', onKey);
+  $('#editor-cancel').onclick = tryClose;
+  $('#editor-close').onclick = tryClose;
+  modal.onclick = (e) => { if (e.target === modal) tryClose(); };  // klik op de achtergrond
   $('#editor-save').onclick = async () => {
     const md = editor.storage.markdown.getMarkdown();
     statusEl.textContent = 'Opslaan…';
