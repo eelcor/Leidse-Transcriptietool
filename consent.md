@@ -4,4 +4,4 @@ Let vooral op het volgende:
 
 - **Gevoelige informatie:** Als je vertrouwelijke informatie wilt delen, verzoeken we om dit even door te geven zodat de opname tijdelijk gepauzeerd kan worden ("off the record").
 - **Notulen:** Aan de hand van de opname wordt automatisch een transcriptie gegenereerd, die we gebruiken als basis voor de notulen.
-- **Privacy:** De ruwe opnames worden automatisch verwijderd na 48 uur.
+- **Privacy:** De ruwe opnames worden automatisch verwijderd na twee werkdagen (het weekend telt niet mee).
