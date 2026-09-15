@@ -1041,21 +1041,21 @@ function buildReportControls(sessionId) {
       el('span', {},
         el('b', {}, 'Eenvoudiger taalgebruik (richting B1)'), el('br'),
         el('small', { class: 'muted' }, 'Kortere zinnen en gewonere woorden. Let op: dit is een sturing, geen garantie — het is niet gegarandeerd volledig B1, er kan nog vakjargon of een moeilijk woord in blijven staan.'))),
-    el('button', { class: 'btn primary block', style: 'margin-top:12px', onclick: () => {
+    el('button', { id: 'gen-report', class: 'btn primary block', style: 'margin-top:12px', onclick: () => {
       const kinds = Object.entries(boxes).filter(([, cb]) => cb.checked).map(([k]) => k);
       if (!kinds.length) { alert('Kies minstens één onderdeel.'); return; }
       start(kinds);
     } }, ic('sparkle'), ' Verslag genereren'),
     el('div', { class: 'or-sep' }, 'of'),
     el('textarea', { id: 'custom-prompt', rows: '3', placeholder: 'Eigen prompt — bijv. "Vat samen in 5 bullets voor het MT." (de context hierboven wordt meegenomen)' }),
-    el('button', { class: 'btn outline block', style: 'margin-top:10px', onclick: () => {
+    el('button', { id: 'gen-prompt', class: 'btn outline block', style: 'margin-top:10px', onclick: () => {
       const t = $('#custom-prompt').value.trim();
       if (!t) { alert('Typ een prompt.'); return; }
       start(null, t);
     } }, 'Voer prompt uit'),
     el('div', { class: 'or-sep' }, 'of'),
     el('textarea', { id: 'tpl-prompt', rows: '3', placeholder: 'Vragen uit een sjabloon (één per regel) — elke vraag wordt beantwoord op basis van het gesprek, in plaats van een verslag.' }),
-    el('button', { class: 'btn outline block', style: 'margin-top:10px', onclick: () => {
+    el('button', { id: 'gen-template', class: 'btn outline block', style: 'margin-top:10px', onclick: () => {
       const t = $('#tpl-prompt').value.trim();
       if (!t) { alert('Plak eerst een of meer vragen.'); return; }
       start(null, null, t);
@@ -1076,6 +1076,7 @@ function buildReportControls(sessionId) {
     // Sprekersnamen alleen meesturen als de gebruiker daar expliciet voor kiest (opt-in).
     const useSpeakers = !!($('#rep-use-speakers') && $('#rep-use-speakers').checked);
     const speaker_names = useSpeakers ? loadSpeakerNames(sessionId) : null;
+    setReportBusy(true);                    // knoppen grijs tijdens het genereren
     try {
       const r = await API.createReport(sessionId, {
         kinds, custom_prompt: custom || null, context, template: template || null,
@@ -1083,7 +1084,8 @@ function buildReportControls(sessionId) {
       });
       REPORTS.push(r);
       layoutReports(sessionId);
-    } catch (e) { alert(e.message); }
+      // Knoppen blijven uitgeschakeld; pollReport zet ze terug zodra het verslag klaar (of mislukt) is.
+    } catch (e) { setReportBusy(false); alert(e.message); }
   }
 
   return wrap;
@@ -1094,9 +1096,21 @@ function buildReportControls(sessionId) {
 // bij aanmaken, pollen, bewerken en verwijderen wordt bijgewerkt.
 let REPORTS = [];
 
+// Schakel de drie 'genereer'-knoppen uit tijdens het maken van een verslag (greyed out via
+// .btn:disabled) en weer aan zodra het klaar is. De knoppen leven in buildReportControls, maar
+// worden hier per id aangestuurd zodat start()/pollReport ze kunnen bedienen.
+function setReportBusy(on) {
+  ['#gen-report', '#gen-prompt', '#gen-template'].forEach((sel) => {
+    const b = $(sel);
+    if (b) b.disabled = !!on;
+  });
+}
+
 function layoutReports(sessionId) {
   const wrap = $('#reports-wrap');
   if (!wrap) return;
+  // Genereer-knoppen grijs zolang er nog een verslag queued/running is (ook na een herlaad).
+  setReportBusy(REPORTS.some((r) => r.status !== 'done' && r.status !== 'failed'));
   wrap.innerHTML = '';
   const sorted = REPORTS.slice().sort((a, b) => (a.created_at < b.created_at ? 1 : -1));  // nieuwste eerst
   if (!sorted.length) return;
@@ -1166,7 +1180,7 @@ async function pollReport(sessionId, reportId) {
       if (r.status === 'done' || r.status === 'failed') {
         const i = REPORTS.findIndex((x) => x.id === reportId);
         if (i >= 0) REPORTS[i] = r; else REPORTS.push(r);
-        layoutReports(sessionId);
+        layoutReports(sessionId);           // zet ook de genereer-knoppen weer actief
         return;
       }
     } catch {}
