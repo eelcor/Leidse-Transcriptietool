@@ -781,6 +781,16 @@ async function loadResult(sessionId) {
       el('a', { class: 'btn outline sm', href: url(`api/sessions/${sessionId}/transcript.txt`) }, ic('download'), ' Download .txt'),
     ),
   ));
+  left.append(el('p', { class: 'muted small',
+    style: 'margin:2px 0 12px;padding:8px 12px;border-left:3px solid var(--accent);line-height:1.5' },
+    el('b', {}, 'Let op: '),
+    'dit transcript is automatisch gemaakt op basis van wat de computer ',
+    el('b', {}, 'hoort'),
+    ', en kan fouten bevatten (namen, getallen of verkeerd verstane woorden). Bij het maken van het ',
+    el('b', {}, 'verslag'),
+    ' worden zulke fouten zoveel mogelijk opgevangen — en door zelf ',
+    el('b', {}, 'context'),
+    ' mee te geven (onderwerp, deelnemers, agenda) maak je het verslag beter.'));
   const tbox = el('div', { class: 'transcript' });
   renderTranscriptBody(tbox, res, loadSpeakerNames(sessionId));
   left.append(tbox);
