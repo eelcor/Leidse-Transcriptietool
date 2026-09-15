@@ -227,12 +227,17 @@ Taak: benoem de aandachts- en risicopunten.
 
 - Zaken die aandacht vragen: openstaande vragen, risico's, zorgen, onduidelijkheden,
   afhankelijkheden, of punten die expliciet zijn geparkeerd.
+- NEEM OPEN EINDES EN ONZEKERHEDEN HIER EXPLICIET OP. Onderwerpen waarover (nog) géén besluit viel,
+  een haalbaarheid/planning/deadline die in het gesprek als onzeker werd benoemd, een tekort of
+  probleem dat nog niet is opgelost, of een meningsverschil dat openbleef — vat dat kort samen als
+  aandachtspunt. Dit zijn feitelijke open eindes uit het gesprek, geen eigen inschatting.
 - Geef per punt kort aan waarom het aandacht vraagt.
 - Neem hier ook tegenstrijdigheden op tussen de meegegeven context en de opname: als de
   context iets stelt (een besluit, bedrag, datum of actiepunt) dat niet uit het transcript
   volgt of het tegenspreekt, benoem die discrepantie kort.
-- Alleen wat in het gesprek naar voren kwam of een aantoonbare context-discrepantie; geen
-  eigen risico-inschatting verzinnen. Geen aandachtspunten? "Geen bijzondere aandachtspunten benoemd."
+- Baseer je op wat in het gesprek open bleef, onzeker werd genoemd of aantoonbaar met de context
+  botst; voeg geen eigen risico-oordeel of kwalificatie toe. Alleen als er écht niets openstond:
+  "Geen bijzondere aandachtspunten benoemd."
 
 Uitvoer:
 ## Aandachtspunten
@@ -334,7 +339,11 @@ organisaties/systemen en concrete voorbeelden; laat "— geen —" staan als er 
 |---|-------|-------------------|----------|
 
 ## Aandachtspunten
-- ... (neem hier ook eventuele tegenstrijdigheden op tussen de meegegeven context en de opname)
+- <open eindes, onzekerheden en risico's die feitelijk in het gesprek bleven liggen: onderwerpen
+  waarover geen besluit viel, een onzekere haalbaarheid/planning/deadline, een nog niet opgelost
+  tekort of probleem, openstaande vragen, afhankelijkheden of expliciet geparkeerde punten — plus
+  eventuele tegenstrijdigheden tussen de meegegeven context en de opname. Formuleer feitelijk (wát
+  bleef open), zonder eigen risico-oordeel. Alleen als er echt niets openstond: "— geen —".>
 ```
 
 ---
