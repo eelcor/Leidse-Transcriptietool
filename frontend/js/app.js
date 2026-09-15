@@ -682,34 +682,16 @@ async function openSession(sessionId) {
   }
 }
 
-// Wacht met het tonen van het resultaat tot transcript + (vooraf gevraagd) verslag klaar zijn.
+// Zodra het transcript klaar is, tonen we het resultaatscherm. Een verslag dat nog draait
+// (tweetraps-flow: op verzoek, of nog bezig na een refresh) krijgt daar zijn eigen 'Bezig…'-kaart
+// die vanzelf bijwerkt — geen apart wachtscherm meer.
 async function finishWhenReady(sessionId) {
   const txt = $('#status-text');
   const spin = $('#status-spinner');
-  const check = async () => {
-    let res;
-    try { res = await API.result(sessionId); }
-    catch { if (txt) txt.textContent = 'Sessie niet gevonden of verlopen.'; if (spin) spin.hidden = true; return; }
-    if (res.status === 'failed') { if (spin) spin.hidden = true; loadResult(sessionId); return; }
-    const pending = (res.reports || []).filter((r) => r.status !== 'done' && r.status !== 'failed');
-    if (pending.length) {
-      const r = pending[0];
-      if (txt) {
-        if (r.status === 'running') {                          // fase 4
-          txt.textContent = 'Verslag wordt gemaakt…';
-        } else {                                                // fase 3 (queued)
-          txt.textContent = r.queue_position
-            ? `Transcript klaar. Verslag is nummer ${r.queue_position} in de wachtrij`
-            : 'Transcript klaar. Verslag staat in de wachtrij';
-        }
-      }
-      setTimeout(check, 2000);
-    } else {
-      if (spin) spin.hidden = true;
-      loadResult(sessionId);
-    }
-  };
-  check();
+  try { await API.result(sessionId); }
+  catch { if (txt) txt.textContent = 'Sessie niet gevonden of verlopen.'; if (spin) spin.hidden = true; return; }
+  if (spin) spin.hidden = true;
+  loadResult(sessionId);
 }
 
 // Toon/actualiseer de transcriptie-voortgangsbalk in de statebar. pct=null verwijdert 'm.
