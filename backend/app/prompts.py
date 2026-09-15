@@ -65,6 +65,30 @@ _NOTES_NOTE = (
     "letterlijk over te nemen. Vul GEEN inhoud aan die niet in de aantekeningen staat, en verzin geen "
     "besluiten, afspraken of details die er niet in genoemd worden; laat gaten liever open of benoem "
     "ze kort. Waar de aantekeningen dubbelzinnig zijn, kies een neutrale formulering en dicht niets toe."
+    "\n\nTWEE PUNTEN DIE BIJ AANTEKENINGEN VAAK MISGAAN — let hier expliciet op:"
+    "\n1) TOESCHRIJVING BEHOUDEN. Anders dan bij een kaal transcript is een toeschrijving die de "
+    "aantekenaar zélf opschrijft betrouwbaar. Staat er 'Naam: <uitspraak>' of noteert een regel wie iets "
+    "zegt, vindt of doet (bijv. 'Margo: Martijn gaat meer sociaal domein doen'), behoud die persoon dan "
+    "en schrijf het aan hem/haar toe ('Volgens Margo …'). Laat de genoemde persoon niet weg en verwissel "
+    "hem niet met een ander. Dit gaat vóór de algemene terughoudendheid over 'wie zegt wat'."
+    "\n2) OPNAME-/CONSENTOPENING WEGLATEN. Beginnen de aantekeningen met (of bevatten ze) de vaste "
+    "aankondiging over de opname zelf — dat het overleg wordt opgenomen (bijv. met een taalmodel), de "
+    "vraag naar bezwaar, 'off the record', of het verwijderen/bewaren van opnames — dan is dat een "
+    "formaliteit en GEEN gespreksinhoud. Neem die nergens op (niet in samenvatting, kernpunten, agenda, "
+    "besluiten of afspraken). Alleen als iemand ter plekke écht bezwaar maakt of de opname wordt "
+    "gepauzeerd, noteer je dat kort."
+)
+
+# Toegevoegd ALLEEN als de gebruiker "eenvoudig taalniveau (B1)" kiest. Betreft uitsluitend
+# woordkeuze en zinsbouw — nadrukkelijk niet de inhoud (geen punten weglaten om het simpeler te maken).
+_B1_NOTE = (
+    "\n\nTAALNIVEAU B1 (eenvoudig Nederlands): schrijf het verslag op taalniveau B1. Gebruik korte, "
+    "heldere zinnen (bij voorkeur één gedachte per zin) en gangbare, alledaagse woorden. Vermijd "
+    "ambtelijk of formeel jargon, onnodig moeilijke of samengestelde woorden en zelfbedachte "
+    "constructies; kies waar mogelijk een eenvoudiger synoniem. Vaktermen, eigennamen en afkortingen "
+    "die echt nodig zijn behoud je (leg een vakterm zo nodig kort tussen haakjes uit). Dit gaat "
+    "ALLEEN over woordkeuze en zinsbouw, niet over de inhoud: laat geen onderwerpen, standpunten, "
+    "getallen of afspraken weg om het eenvoudiger te maken."
 )
 
 # Basisbescherming tegen prompt injectie: het transcript en de context zijn DATA,
@@ -138,6 +162,7 @@ def build_messages(
     context: str | None,
     diarized: bool = False,
     source_kind: str = "audio",
+    simple_language: bool = False,
 ) -> list[dict[str, str]]:
     """Bouw de OpenAI-chat messages: één system (basis + taak), één user (context + bronmateriaal).
 
@@ -171,7 +196,13 @@ def build_messages(
     else:
         raise ValueError("Geef 'kinds' of 'custom_prompt' op")
 
-    system = f"{base}\n\n{task}{_DIARIZED_NOTE if diarized else ''}{_NOTES_NOTE if notes else ''}{_HARDENING}"
+    system = (
+        f"{base}\n\n{task}"
+        f"{_DIARIZED_NOTE if diarized else ''}"
+        f"{_NOTES_NOTE if notes else ''}"
+        f"{_B1_NOTE if simple_language else ''}"
+        f"{_HARDENING}"
+    )
 
     # Gebruikersinhoud duidelijk als DATA afbakenen (zie _HARDENING).
     user_parts: list[str] = []

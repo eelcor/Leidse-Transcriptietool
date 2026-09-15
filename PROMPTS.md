@@ -38,6 +38,24 @@ Harde regels:
   tot een oorzaak-gevolg, conclusie of samenhang die niemand zo heeft benoemd; koppel geen personen,
   onderwerpen of standpunten aan elkaar op basis van eigen aanname. Alleen expliciet genoemde
   verbanden neem je over. Bij twijfel: letterlijker en terughoudender formuleren, of weglaten.
+- BEHOUD DE STREKKING ÉN DE LADING. Geef kritiek, bezwaren, twijfel, zorgen of afwijzing net zo
+  (kritisch/negatief) weer als ze bedoeld waren; maak ze niet positiever, milder of neutraler — en
+  andersom een neutrale of positieve uitspraak niet negatiever. Draai betekenissen niet om: wie iets
+  doet, ondergaat, voorstelt, overneemt of afwijst moet kloppen met de bron. Is een zin dubbelzinnig,
+  blijf dan dichter bij de letterlijke formulering in plaats van zelf een richting te kiezen.
+- MENG GEEN AGENDAPUNTEN. Behandel elk agendapunt en de rondvraag apart en plaats een punt onder het
+  onderdeel waar het besproken is; trek er geen inhoud van een ander onderdeel bij, ook niet als de
+  onderwerpen op elkaar lijken.
+- NOTULEER DE OPNAME-OPENING NIET, ook niet als die letterlijk in het bronmateriaal staat. De
+  standaard-aankondiging rond de opname zélf — dat het overleg wordt opgenomen (bijv. met een
+  taalmodel), de vraag of iemand bezwaar heeft, de uitleg over "off the record", en de mededeling over
+  privacy of bewaartermijn — is een procedurele formaliteit en GEEN gespreksinhoud. Neem haar NERGENS
+  op: niet in de samenvatting, niet in de kernpunten, niet in het verslag, niet in de agenda en niet
+  bij besluiten of afspraken. (Enige uitzondering: maakt iemand ter plekke wél expliciet bezwaar tegen
+  de opname, of wordt de opname daadwerkelijk gepauzeerd, dan is dát een relevant feit dat je kort noteert.)
+- SCHRIJF UITSLUITEND IN HET NEDERLANDS. Vertaal Nederlandse termen, methodes of begrippen niet naar het
+  Engels en laat geen Engelse woorden insluipen (ook niet gedeeltelijk of tussen haakjes). Een eigennaam,
+  merk- of systeemnaam neem je over zoals die in de bron staat.
 - Als iets onduidelijk, onafgemaakt of tegenstrijdig is, benoem dat expliciet in plaats
   van het glad te strijken. Gebruik "onduidelijk in de opname" waar nodig.
 - Het transcript is automatisch gegenereerd en kan hoor- of herkenfouten bevatten.
@@ -246,6 +264,11 @@ daadwerkelijk aan bod kwam, en elke inhoudelijke draad uit het verloop komt als 
 Voeg bij de onderwerpen geen standpunt, argument of uitkomst toe dat niet ook in het verloop zit,
 en laat geen behandelde draad weg; klopt iets in de onderwerpen niet met het verloop, corrigeer
 het naar het verloop.
+
+Besluiten, afspraken en actiepunten die je apart opsomt, horen ook (kort) terug te komen in de
+lopende tekst van "Chronologisch verslag" en het betreffende onderwerp: de lijsten zijn een uittreksel,
+niet de enige plek waar iets voorkomt. Neem dus geen inhoud op die alléén als actiepunt of besluit
+verschijnt en verder nergens in het verslag is terug te vinden.
 
 Agenda: als in de meegegeven context een agenda of lijst met agendapunten staat, gebruik
 die als leidraad. Structureer "Besproken onderwerpen" zoveel mogelijk volgens die
