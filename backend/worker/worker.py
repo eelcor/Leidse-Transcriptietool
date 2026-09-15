@@ -23,7 +23,7 @@ from app.config import get_settings
 from app.db import get_sessionmaker
 from app.diarize.merge import labeled_transcript
 from app.models import Diarization, DiarizationStatus, Report, ReportStatus, Session, SessionStatus
-from app.prompts import build_messages
+from app.prompts import build_messages, pop_simple_language
 from app.queue import DIARIZE_QUEUE
 from app.tokens import new_token
 from app.workdays import compute_expires_at
@@ -303,6 +303,8 @@ async def generate_report(ctx: dict, report_id: str) -> str:
             r.updated_at = _now()
             transcript = sess.transcript
             kinds, custom, context = r.kinds, r.custom_prompt, r.context
+            # B1-sentinel uit kinds halen -> simple_language voor build_messages (migratie-vrij).
+            kinds, simple_language = pop_simple_language(kinds)
             # Bronsoort bepaalt de prompt-framing: 'notes' -> aantekeningen-modus (structureren,
             # niets verzinnen). Diarisatie heeft voorrang (dan is de bron sowieso een opname).
             source_kind = sess.source or "audio"
@@ -324,7 +326,8 @@ async def generate_report(ctx: dict, report_id: str) -> str:
 
         report_started = _now()
         try:
-            messages = build_messages(transcript, kinds, custom, context, diarized=diarized, source_kind=source_kind)
+            messages = build_messages(transcript, kinds, custom, context, diarized=diarized,
+                                      source_kind=source_kind, simple_language=simple_language)
             content = await llm.generate(messages)
         except Exception as exc:
             log.exception("Verslag genereren mislukt voor %s", report_id[:8])

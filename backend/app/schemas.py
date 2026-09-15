@@ -91,6 +91,9 @@ class CreateReportRequest(BaseModel):
     # Alleen bij SPEAKER_NAMES_MODE=direct: koppeling label->naam (bv. {"SPREKER_A": "Jan"}).
     # In placeholder-modus worden deze GENEGEERD zodat namen niet in de database belanden.
     speaker_names: dict[str, str] | None = None
+    # Opt-in: schrijf het verslag richting taalniveau B1 (eenvoudiger woorden/zinnen). Geen
+    # garantie op volledig B1 — het is een sturing, geen filter.
+    simple_language: bool = False
 
 
 class UpdateReportRequest(BaseModel):

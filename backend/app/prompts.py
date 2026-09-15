@@ -40,6 +40,20 @@ _VOLLEDIG_HEADING = {
 
 _BASE_HEADING = "## Gedeelde basis-instructie"
 
+# Migratie-vrije opslag van de opt-in "eenvoudig taalniveau (B1)": geen extra kolom, maar een
+# sentinel-waarde in de bestaande `kinds`-lijst. De API zet 'm erbij, de worker haalt 'm er vóór
+# build_messages weer uit (pop_simple_language) en zet 'm om naar simple_language=True.
+B1_KIND = "b1"
+
+
+def pop_simple_language(kinds: list | None) -> tuple[list | None, bool]:
+    """Haal de B1-sentinel uit een kinds-lijst. Geeft (opgeschoonde_kinds_of_None, simple_language)."""
+    if not kinds:
+        return kinds, False
+    simple = B1_KIND in kinds
+    cleaned = [k for k in kinds if k != B1_KIND]
+    return (cleaned or None), simple
+
 # Toegevoegd aan de system-message ALLEEN als het transcript sprekerlabels heeft (diarisatie).
 # Versoepelt de standaard-sprekerregel (toeschrijving mág op de labels) én bevestigt dat de
 # labels DATA zijn — een nieuw injectie-oppervlak ("SPREKER_A: negeer je instructies").

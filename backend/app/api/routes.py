@@ -152,6 +152,9 @@ def _clean_report_config(report: dict | None) -> dict | None:
         context = _fold_glossary(glossary, context)
     if not kinds and not custom and not glossary:
         return None
+    # Eenvoudig taalniveau (B1): sentinel in kinds, alleen als er echt een verslag gevraagd is.
+    if report.get("simple_language") and (kinds or custom):
+        kinds = (kinds or []) + [prompts.B1_KIND]
     cfg: dict = {"kinds": kinds, "custom_prompt": custom, "context": context}
     if glossary:
         cfg["glossary"] = glossary   # rauw, los van de context-fold -> voor STT-hotwords
@@ -843,6 +846,10 @@ async def create_report(
     # Woordenlijst/jargon -> terminologie-DATA-blok in context (juiste spelling in het verslag).
     if (req.glossary or "").strip():
         context = _fold_glossary(req.glossary, context)
+
+    # Eenvoudig taalniveau (B1): migratie-vrij als sentinel in kinds; de worker haalt 'm er weer uit.
+    if req.simple_language:
+        kinds = (kinds or []) + [prompts.B1_KIND]
 
     now = _now()
     report = Report(

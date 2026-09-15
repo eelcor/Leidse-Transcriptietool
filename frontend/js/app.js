@@ -1050,6 +1050,11 @@ function buildReportControls(sessionId) {
     el('textarea', { id: 'ctx', rows: '3', placeholder: 'Context (optioneel, maar sterk aanbevolen) — onderwerp, datum, deelnemers, aanleiding, achtergrond, of de agenda (dan matchen we de onderwerpen daarop)…' }),
     el('p', { class: 'muted small', style: 'margin:14px 0 6px' }, 'Onderdelen — alles aan = een volledig verslag:'),
     chips,
+    el('label', { class: 'chk', style: 'display:flex;gap:8px;align-items:flex-start;margin:12px 0 2px' },
+      el('input', { type: 'checkbox', id: 'b1-simple' }),
+      el('span', {},
+        el('b', {}, 'Eenvoudiger taalgebruik (richting B1)'), el('br'),
+        el('small', { class: 'muted' }, 'Kortere zinnen en gewonere woorden. Let op: dit is een sturing, geen garantie — het is niet gegarandeerd volledig B1, er kan nog vakjargon of een moeilijk woord in blijven staan.'))),
     el('button', { class: 'btn primary block', style: 'margin-top:12px', onclick: () => {
       const kinds = Object.entries(boxes).filter(([, cb]) => cb.checked).map(([k]) => k);
       if (!kinds.length) { alert('Kies minstens één onderdeel.'); return; }
@@ -1073,8 +1078,9 @@ function buildReportControls(sessionId) {
 
   async function start(kinds, custom, template) {
     const context = ($('#ctx') && $('#ctx').value.trim()) || null;
+    const simple = !!($('#b1-simple') && $('#b1-simple').checked);
     try {
-      const r = await API.createReport(sessionId, { kinds, custom_prompt: custom || null, context, template: template || null });
+      const r = await API.createReport(sessionId, { kinds, custom_prompt: custom || null, context, template: template || null, simple_language: simple });
       REPORTS.push(r);
       layoutReports(sessionId);
     } catch (e) { alert(e.message); }
