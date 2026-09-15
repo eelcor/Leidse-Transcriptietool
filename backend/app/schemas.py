@@ -94,6 +94,9 @@ class CreateReportRequest(BaseModel):
     # Opt-in: schrijf het verslag richting taalniveau B1 (eenvoudiger woorden/zinnen). Geen
     # garantie op volledig B1 — het is een sturing, geen filter.
     simple_language: bool = False
+    # Eigen aantekeningen van de notulist: de punten die zeker terug moeten komen. Sturen het
+    # verslag (namen/termen/nadruk) en gelden als betrouwbare aanvullende bron naast het transcript.
+    notes: str | None = None
 
 
 class UpdateReportRequest(BaseModel):

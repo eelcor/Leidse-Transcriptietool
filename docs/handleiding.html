@@ -121,13 +121,19 @@
       Bovenaan zie je een <b>voortgangsbalk</b> (Kiezen → Verwerken → Transcript &amp; verslag) die
       meeloopt. Er zijn twee manieren om te beginnen: een <b>bestand uploaden</b> of <b>direct opnemen</b>.</p>
     <img class="shot" src="screenshots/home.png" alt="Startpagina" />
-    <h3>Verslag alvast kiezen (aanbevolen)</h3>
-    <p>Onder de twee kaarten kies je of er <b>automatisch een verslag</b> wordt gemaakt zodra de
-      transcriptie klaar is. Zo hoef je niet twee keer te wachten (eerst transcript, dan verslag):
-      alles wordt in één keer ingepland. Kies <b>Volledig verslag</b> (aanbevolen), <b>Geen verslag</b>
-      of <b>Zelf kiezen…</b> (losse secties / eigen prompt / context). Je kunt het later op het
-      resultaatscherm altijd opnieuw draaien met andere opties.</p>
-    <img class="crop" src="screenshots/report-config.png" alt="Verslag-opties" />
+    <h3>Zo werkt het — in twee stappen</h3>
+    <p>De tool werkt in <b>twee stappen</b>:</p>
+    <ol>
+      <li><b>Stap 1 — transcript.</b> Je neemt op of uploadt, en de tool schrijft de opname uit tot
+        een <b>transcript</b>.</li>
+      <li><b>Stap 2 — verslag.</b> Op het resultaatscherm maak je van dat transcript een <b>verslag</b>,
+        met alle opties: context, deelnemers, je <b>eigen aantekeningen</b> en eventueel de
+        <b>sprekersnamen</b> (zie §6).</li>
+    </ol>
+    <p>Waarom apart? Zo kun je ná het transcript rustig de juiste context en aantekeningen meegeven —
+      dat levert een merkbaar beter verslag op. Onder de twee kaarten op het startscherm staat daarom
+      alleen nog wat de <b>transcriptie zélf</b> helpt: een optionele <b>woordenlijst</b> (§6) en
+      <b>sprekersidentificatie</b> (§5).</p>
     <div class="note">Zie je bij de eerste keer een <b>certificaatwaarschuwing</b>? Onderaan de pagina
       staat een linkje <b>“Certificaatwaarschuwing? Installeer ons certificaat”</b> — installeer dat
       eenmalig, dan is de waarschuwing weg. (Verschijnt alleen bij een zelf-ondertekende opzet.)</div>
@@ -144,20 +150,23 @@
         (wav, mp3, m4a, ogg, webm of flac). Alléén audio — een Word/PDF/tekstbestand wordt
         geweigerd (kies daarvoor “Transcript of aantekeningen”).</li>
       <li>Laat <b>Audio optimaliseren voor transcriptie</b> aan staan (aanbevolen — zie §4).</li>
-      <li>Klik op <b>Uploaden &amp; verwerken</b>.</li>
+      <li>Klik op <b>Uploaden &amp; verwerken</b>. Je krijgt eerst een <b>transcript</b> (stap 1); het
+        <b>verslag</b> maak je daarna op het resultaatscherm (stap 2, §6).</li>
     </ol>
     <img class="crop" src="screenshots/upload-card.png" alt="Upload-kaart met sleep-en-neerzet" />
 
     <h3>Transcript of aantekeningen (tekst)</h3>
     <p>Mag je niet opnemen maar heb je wél aantekeningen? Of heb je al een transcript? Kies dan
-      <b>Transcript of aantekeningen</b>. Je maakt zonder audio direct een verslag.</p>
+      <b>Transcript of aantekeningen</b>. Je tekst wordt zonder audio meteen je <b>transcript</b>;
+      het verslag maak je daarna in stap 2.</p>
     <ul>
       <li><b>Plak</b> je tekst in het vak, of <b>upload</b> een bestand: <code>.txt</code>,
         <code>.md</code>, <b>Word (.docx)</b>, <code>.rtf</code> of <code>.odt</code>.</li>
       <li>Kies het soort bron: <b>Ruwe aantekeningen</b> (het model structureert en verheldert
         wat er staat en <b>verzint niets bij</b>) of <b>Woordelijk transcript</b> (behandeld als
         een gewoon transcript).</li>
-      <li>Kies onderaan bij <b>Verslag</b> wat je wilt (zie §6) en klik op <b>Uploaden &amp; verwerken</b>.</li>
+      <li>Klik op <b>Uploaden &amp; verwerken</b>. Je tekst verschijnt als transcript; maak er op het
+        resultaatscherm een verslag van (stap 2, §6).</li>
     </ul>
     <div class="note">De maximale bestandsgrootte staat bovenaan de pagina vermeld (standaard 200 MB),
       met een indicatie van hoeveel uur opname dat ongeveer is.</div>
@@ -229,26 +238,31 @@
     <h2><span class="n">5</span> Wachten op het resultaat</h2>
     <p>Na het versturen zie je een statuspagina die je door de <b>wachtfasen</b> loodst. Zolang je in
       de rij staat, zie je <b>je plek in de wachtrij</b>: <i>“Transcriptie is nummer 3 in de wachtrij”</i>
-      → <i>“Transcriptie wordt gemaakt… 42%”</i> met een <b>voortgangsbalk</b> die meeloopt. Heb je vooraf een verslag gekozen, dan volgt daarna
-      <i>“Transcript klaar. Verslag is nummer N in de wachtrij”</i> → <i>“Verslag wordt gemaakt…”</i>,
-      zodat je niet een half-af scherm te zien krijgt. Het <b>verloopt niet</b>: is de server druk, dan
-      wacht je gewoon even (desnoods tot een dag) in plaats van een foutmelding te krijgen. Zodra alles
-      klaar is, <b>verschijnt het resultaat automatisch</b> — je hoeft niet te verversen of te klikken.
-      Je kunt ook de <b>sessie-code</b> kopiëren en later terugkomen (zie §7).
+      → <i>“Transcriptie wordt gemaakt… 42%”</i> met een <b>voortgangsbalk</b> die meeloopt. Zodra het
+      transcript klaar is, <b>verschijnt het resultaatscherm automatisch</b> — je hoeft niet te
+      verversen of te klikken. Links staat je <b>transcript</b>, rechts het paneel
+      <b>“Stap 2 — maak het verslag”</b> (zie §6). Het transcriptie-proces <b>verloopt niet</b>: is de
+      server druk, dan wacht je gewoon even (desnoods tot een dag) in plaats van een foutmelding te
+      krijgen. Je kunt ook de <b>sessie-code</b> kopiëren en later terugkomen (zie §7).
       Bovenaan staat je code met de knop <b>⬇ Download opname</b> (het originele geluidsbestand).
       Rechts van de bewaartermijn kun je met <b>🗑 Nu verwijderen</b> de audio, het transcript én het
       verslag <b>direct wissen</b>.</p>
     <figure><img class="shot" src="screenshots/result-report.png" alt="Het verslag, netjes opgemaakt" /><figcaption>Het verslag verschijnt netjes opgemaakt naast het transcript.</figcaption></figure>
 
     <h3>Sprekers herkennen <span class="tag">indien ingeschakeld</span></h3>
-    <p>Bij <b>Verslag → Geavanceerde opties</b> staat de schakelaar <b>Sprekersidentificatie</b>
-      (standaard aan als de tool het ondersteunt). Staat die aan, dan verdeelt de tool de opname in
+    <p>Op het startscherm staat onder <b>Transcriptie → Geavanceerde opties</b> de schakelaar
+      <b>Sprekersidentificatie</b> (standaard aan als de tool het ondersteunt) — dit hoort bij stap 1,
+      want het draait mee met de transcriptie. Staat die aan, dan verdeelt de tool de opname in
       sprekers en zie je op het resultaat een blok <b>Sprekers</b> bij het transcript. Per herkende
       spreker (<b>SPREKER&nbsp;A</b>, <b>B</b>, …) kun je een <b>fragment van ~3&nbsp;seconden</b>
       beluisteren om te horen wie het is, en er een <b>naam</b> aan koppelen. Die namen worden
-      <b>lokaal in je browser</b> bewaard en verschijnen in het transcript, het verslag en de export
-      — ze gaan <b>niet naar de server</b>. Het transcript krijgt de labels/namen aan het begin van
+      <b>lokaal in je browser</b> bewaard en verschijnen in het transcript en de export — ze gaan
+      standaard <b>niet naar de server</b>. Het transcript krijgt de labels/namen aan het begin van
       elke beurt.</p>
+    <div class="note"><b>Namen in het verslag zelf?</b> In stap 2 kun je aanvinken dat de toegewezen
+      sprekersnamen óók in het <b>verslag</b> worden gebruikt (dan schrijft het model bijv. “Kim zei…”
+      in plaats van “een deelnemer”). Let op: dan komen die namen in dát opgeslagen verslag terecht.
+      Standaard blijft het verslag anoniem. Zie §6.</div>
     <ul>
       <li><b>Uitzetten kan:</b> zet de schakelaar uit als je alleen een snel transcript wilt (scheelt
         verwerkingstijd). Aan laten maar geen namen invullen mag ook — dan blijft het
@@ -267,16 +281,41 @@
 
   <section id="verslag">
     <h2><span class="n">6</span> Verslag maken &amp; exporteren</h2>
-    <p>Heb je bij de start een verslag gekozen, dan staat het hier al klaar (of is het net klaar),
-      netjes opgemaakt. Wil je een ander verslag? Klap <b>Verslag opnieuw maken</b> uit en kies andere
-      opties:</p>
+    <p><b>Dit is stap 2.</b> Zodra je transcript klaar is, staat rechts op het resultaatscherm het
+      paneel <b>“Stap 2 — maak het verslag”</b> (het staat open zolang er nog geen verslag is). Vul de
+      opties in en genereer je verslag; daarna kun je altijd een <b>nieuw verslag met andere opties</b>
+      maken.</p>
+    <p>Kies eerst wat voor verslag je wilt:</p>
     <ol>
-      <li>Klik op <b>✨ Volledig verslag</b> voor een compleet verslag met <b>samenvatting</b>,
-        <b>besproken onderwerpen</b> (thematisch), een <b>chronologisch verslag</b> (het verloop van
-        het gesprek), <b>besluiten</b>, <b>afspraken</b>, <b>actiepunten</b> en <b>aandachtspunten</b>, of</li>
-      <li>kies losse secties via de <b>chips</b> en klik op <b>Genereer gekozen secties</b>, of</li>
+      <li>Klik op <b>✨ Verslag genereren</b> met alle onderdelen aan voor een compleet verslag met
+        <b>samenvatting</b>, <b>besproken onderwerpen</b> (thematisch), een <b>chronologisch verslag</b>
+        (het verloop van het gesprek), <b>besluiten</b>, <b>afspraken</b>, <b>actiepunten</b> en
+        <b>aandachtspunten</b>, of</li>
+      <li>zet losse onderdelen uit via de <b>chips</b> en genereer alleen die, of</li>
       <li>gebruik <b>Eigen prompt</b> voor een vrije instructie.</li>
     </ol>
+    <p>Daarnaast kun je het verslag <b>sturen</b> met de velden eronder — dat maakt vaak het grootste verschil:</p>
+    <figure><img class="crop" src="screenshots/step2-velden.png" alt="Stuurvelden in stap 2: context, deelnemers, eigen aantekeningen en woordenlijst" /><figcaption>De stuurvelden in stap 2: context, deelnemers, je eigen aantekeningen en de woordenlijst.</figcaption></figure>
+
+    <h3>Deelnemers</h3>
+    <p>Vul <b>wie er meepraten en hun rol</b> in — bijv. <i>“Sam = techniek; Robin = coördinator”</i>.
+      Dit voorkomt de meest voorkomende fout: een uitspraak of taak aan de <b>verkeerde persoon</b>
+      koppelen.</p>
+
+    <h3>Eigen aantekeningen <span class="tag">sturen het verslag</span></h3>
+    <p>Heb je tijdens het overleg zelf iets genoteerd? Zet in <b>Eigen aantekeningen</b> de punten die
+      <b>zeker in het verslag moeten</b>, in je eigen woorden. Het model gebruikt ze om het verslag te
+      <b>sturen</b>: het zorgt dat die punten aan bod komen, neemt jouw <b>namen, termen en nadruk</b>
+      over, en gebruikt de aantekeningen als <b>betrouwbare aanvulling</b> naast de opname (handig om
+      namen te corrigeren of gemiste punten aan te vullen). Feiten volgen bij tegenspraak de opname; er
+      wordt niets verzonnen. In de praktijk geeft “transcript + je eigen aantekeningen” vaak het beste verslag.</p>
+
+    <h3>Sprekersnamen in het verslag <span class="tag">optioneel</span></h3>
+    <p>Heb je in het sprekerspaneel namen ingevuld (§5)? Vink dan <b>Gebruik de toegewezen sprekersnamen
+      in het verslag</b> aan als je wilt dat het verslag ze <b>noemt</b> (bijv. “Kim zei…”) in plaats van
+      neutrale omschrijvingen als “een deelnemer”. Zonder dit vinkje blijft het verslag anoniem.</p>
+    <div class="note"><b>Privacy:</b> zet je dit aan, dan komen die namen in dít opgeslagen verslag (en
+      in de export) terecht. Standaard staat het uit.</div>
 
     <h3>Vragen uit een sjabloon beantwoorden</h3>
     <p>Wil je in plaats van een verslag een <b>vaste set vragen</b> beantwoord hebben? Klap bij de
@@ -318,10 +357,10 @@
     <p><b>Zet daarom in de context:</b></p>
     <ul>
       <li><b>Onderwerp, datum en aanleiding</b> van het overleg.</li>
-      <li><b>Wie er meepraten én hun rol</b> — bijv. <i>"Bob = techniek; Colin = nieuwe coördinator"</i>.
+      <li><b>Wie er meepraten én hun rol</b> — bijv. <i>"Sam = techniek; Robin = nieuwe coördinator"</i>.
         Dit voorkomt de meest voorkomende fout: een uitspraak of taak aan de <b>verkeerde persoon</b> koppelen.</li>
-      <li><b>Naamvarianten die dezelfde persoon zijn</b>, bijv. <i>"Dave = David"</i> of
-        <i>"Mirjam = Miriam"</i> — anders raken die soms door elkaar.</li>
+      <li><b>Naamvarianten die dezelfde persoon zijn</b>, bijv. <i>"Aleks = Alex"</i> of
+        <i>"Sanne = Zanne"</i> — anders raken die soms door elkaar.</li>
       <li>Eventueel de <b>agenda</b> (dan volgt het verslag jouw agendapunten).</li>
     </ul>
     <div class="note"><b>Bekende foutjes van een kleiner model</b> — controleer deze altijd zelf, mét
@@ -361,7 +400,7 @@
         aantekeningen gemaakt (in agenda-format)? Die vullen de opname aan en helpen het model vooral
         met de <b>juiste namen</b> — in de praktijk geeft dit vaak het beste resultaat.</li>
       <li><b>Geef een deelnemerslijst en de afkortingen/terminologie mee.</b> Namen met rol
-        (<i>"Bob = techniek"</i>) in de context, en vakjargon in de <b>woordenlijst</b>. Zo staan namen
+        (<i>"Sam = techniek"</i>) in de context, en vakjargon in de <b>woordenlijst</b>. Zo staan namen
         en termen consequent goed gespeld.</li>
       <li><b>Let op de opname zelf in een fysieke ruimte.</b> Gebruik een <b>goede, centrale microfoon</b>
         (een losse vergadermicrofoon werkt beter dan de laptop verderop) — dat beperkt lege of onverstane

@@ -2,8 +2,9 @@
 
 - build_messages() voegt de sprekerlabel-instructie (data + versoepelde regel) alleen toe
   als diarized=True.
-- create_report(): in placeholder-modus komen sprekernamen NIET in de DB; in direct-modus
-  wel (in de context).
+- create_report(): sprekernamen zijn een per-verslag OPT-IN. Worden ze meegestuurd, dan vouwen ze in
+  de context (en dus de DB) — óók in placeholder-modus (bewuste keuze, tweetraps-flow beslissing 2).
+  Zonder meegestuurde namen komen er geen namen in de payload. In direct-modus is het gedrag gelijk.
 """
 from datetime import datetime, timezone
 
@@ -38,8 +39,10 @@ async def _seed_transcribed(sid: str):
         await db.commit()
 
 
-async def test_report_placeholder_drops_speaker_names(client):
-    """SPEAKER_NAMES_MODE=placeholder (default): namen mogen niet in de opgeslagen payload."""
+async def test_report_placeholder_no_names_without_optin(client):
+    """placeholder (default) zónder opt-in: worden er geen namen meegestuurd, dan staan er ook geen
+    namen in de opgeslagen payload. (De per-verslag opt-in — namen wél meesturen — overrulet dit
+    bewust; dat is gedekt in test_notes_speakers.py.)"""
     from app.db import get_sessionmaker
     from app.models import Report
     from app.tokens import new_token
@@ -48,16 +51,14 @@ async def test_report_placeholder_drops_speaker_names(client):
     await _seed_transcribed(sid)
     r = await client.post(
         f"/api/sessions/{sid}/reports",
-        json={"kinds": ["samenvatting"], "context": "Projectoverleg",
-              "speaker_names": {"SPREKER_A": "Jan", "SPREKER_B": "Marie"}},
+        json={"kinds": ["samenvatting"], "context": "Projectoverleg"},
     )
     assert r.status_code == 200
     rid = r.json()["id"]
     maker = get_sessionmaker()
     async with maker() as db:
         rep = await db.get(Report, rid)
-        assert "Jan" not in (rep.context or "")
-        assert "Marie" not in (rep.context or "")
+        assert "SPREKER_" not in (rep.context or "")
         assert "Projectoverleg" in (rep.context or "")   # eigen context blijft wel bewaard
 
 
@@ -76,14 +77,14 @@ async def test_report_direct_includes_speaker_names(client, monkeypatch):
         r = await client.post(
             f"/api/sessions/{sid}/reports",
             json={"kinds": ["samenvatting"], "context": "Projectoverleg",
-                  "speaker_names": {"SPREKER_A": "Jan"}},
+                  "speaker_names": {"SPREKER_A": "Kim"}},
         )
         assert r.status_code == 200
         rid = r.json()["id"]
         maker = get_sessionmaker()
         async with maker() as db:
             rep = await db.get(Report, rid)
-            assert "SPREKER_A = Jan" in rep.context
+            assert "SPREKER_A = Kim" in rep.context
             assert "Projectoverleg" in rep.context
     finally:
         monkeypatch.delenv("SPEAKER_NAMES_MODE", raising=False)

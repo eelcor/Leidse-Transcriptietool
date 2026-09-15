@@ -178,35 +178,12 @@
 
       <!-- Verslag-opties vooraf: transcriptie -> LLM in één keer inplannen -->
       <div class="card report-config">
-        <h2><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h8l5 5v12a1 1 0 01-1 1H6a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg></span> Verslag <span class="muted" style="font-weight:500;font-size:15px">— automatisch na de transcriptie</span></h2>
-        <p class="sub">Kies wat er meteen na de transcriptie wordt uitgewerkt, zodat je niet twee keer
-          hoeft te wachten. Op het resultaatscherm kun je het later opnieuw draaien met andere opties.</p>
-        <div class="seg" role="radiogroup">
-          <label class="seg-opt"><input type="radio" name="rep-mode" value="none" /><span>Geen verslag</span></label>
-          <label class="seg-opt"><input type="radio" name="rep-mode" value="full" checked /><span>Verslag maken</span></label>
-        </div>
-        <div id="rep-opts" style="margin-top:14px">
-          <p class="context-tip">
-            <strong>Tip — geef context mee.</strong> Een paar regels over onderwerp, datum, deelnemers,
-            aanleiding/achtergrond of de agenda verbeteren het verslag merkbaar: correcte namen, een
-            structuur die je agenda volgt, en minder giswerk.
-          </p>
-          <textarea id="rep-context" rows="3" placeholder="Context (optioneel, maar sterk aanbevolen) — onderwerp, datum, deelnemers, aanleiding, achtergrond, of dingen die goed zijn om te weten. Plak hier ook gerust de agenda (dan matchen we de onderwerpen daarop)."></textarea>
-          <p class="muted small" style="margin:14px 0 6px">Onderdelen — alles aan = een volledig verslag:</p>
-          <div class="chips" id="rep-chips"></div>
-
-          <details class="opts" id="tpl-wrap" style="margin-top:14px">
-            <summary>Of: beantwoord vragen uit een sjabloon</summary>
-            <p class="muted small" style="margin:8px 0">Upload of plak een lijst vragen. In plaats van een verslag wordt
-              <b>elke vraag beantwoord</b> op basis van het gesprek (of je aantekeningen). Staat een antwoord er niet in,
-              dan zegt het model dat expliciet.</p>
-            <label class="field"><input type="file" id="tpl-file" accept=".txt,.md,.markdown,.docx,.rtf,.odt,.doc,.html,.htm" /></label>
-            <textarea id="tpl-text" rows="4" placeholder="1. Wat is er besloten over onderwerp X?&#10;2. Welke acties zijn afgesproken en door wie?&#10;3. Welke risico's zijn genoemd?"></textarea>
-            <p class="muted small" id="tpl-hint" style="margin-top:6px">Zolang hier vragen staan, worden díe beantwoord in plaats van een verslag.</p>
-          </details>
-        </div>
-        <!-- Woordenlijst/jargon: stuurt zowel de transcriptie (herkenning) als het verslag (spelling).
-             Altijd zichtbaar (werkt ook zonder verslag), los van de wel/geen-verslag-keuze. -->
+        <h2><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h8l5 5v12a1 1 0 01-1 1H6a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg></span> Transcriptie <span class="muted" style="font-weight:500;font-size:15px">— extra opties (optioneel)</span></h2>
+        <p class="sub">Eerst maken we een <b>transcript</b>. Het <b>verslag</b> maak je daarna op het
+          resultaatscherm — daar staan álle opties (context, deelnemers, je eigen aantekeningen en
+          eventueel de sprekersnamen). Hieronder alleen wat de <b>transcriptie zelf</b> helpt.</p>
+        <!-- Woordenlijst/jargon: stuurt zowel de transcriptie (herkenning) als straks het verslag (spelling).
+             Blijft in stap 1 omdat de STT-hotwords vóór de transcriptie nodig zijn. -->
         <details class="opts" id="glossary-wrap" style="margin-top:6px">
           <summary>Woordenlijst / jargon (optioneel)</summary>
           <p class="muted small" style="margin:8px 0">Namen, vaktermen en afkortingen die vaak fout gaan — helpt
@@ -214,7 +191,7 @@
           <label class="field"><span>Kies een lijst (vult het vak, pas gerust aan)</span>
             <select id="glossary-preset"><option value="">— geen —</option></select>
           </label>
-          <textarea id="glossary-text" rows="4" placeholder="Bijv.:&#10;Leidse Ring Noord&#10;omgevingsvisie&#10;GGD Hollands Midden&#10;wethouder Van der Meer"></textarea>
+          <textarea id="glossary-text" rows="4" placeholder="Bijv.:&#10;Leidse Ring Noord&#10;omgevingsvisie&#10;GGD Hollands Midden&#10;wethouder Jansen"></textarea>
         </details>
 
         <!-- Geavanceerde opties: sprekersidentificatie (alleen als de server diarisatie aan heeft).

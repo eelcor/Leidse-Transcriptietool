@@ -46,7 +46,7 @@ def test_pop_simple_language_roundtrip():
 
 
 def test_notes_note_preserves_attribution_and_drops_recording_opening():
-    system = build_messages("Margo: Martijn doet sociaal domein.", ["samenvatting"], None, None,
+    system = build_messages("Robin: Sam doet sociaal domein.", ["samenvatting"], None, None,
                             source_kind="notes")[0]["content"]
     assert "TOESCHRIJVING BEHOUDEN" in system
     assert "OPNAME-/CONSENTOPENING WEGLATEN" in system

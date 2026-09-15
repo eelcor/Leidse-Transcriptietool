@@ -23,7 +23,7 @@ def test_clean_report_config_no_b1_without_a_report():
 
 @pytest.mark.asyncio
 async def test_create_report_stores_b1_sentinel(client):
-    files = {"file": ("t.txt", b"Jan zegt dat project X doorgaat.", "text/plain")}
+    files = {"file": ("t.txt", b"Kim zegt dat project X doorgaat.", "text/plain")}
     sid = (await client.post("/api/sessions/text", data={"source_kind": "transcript"}, files=files)).json()["id"]
 
     r = await client.post(f"/api/sessions/{sid}/reports",

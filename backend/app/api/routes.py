@@ -126,6 +126,16 @@ def _fold_glossary(glossary: str | None, context: str | None) -> str | None:
     return (block + "\n\n" + context).strip() if context else block
 
 
+def _fold_notes(notes: str | None, context: str | None) -> str | None:
+    """Eigen aantekeningen van de notulist als DATA-blok vóór in de context. Sturen het verslag
+    (belangrijke punten/namen/termen) en gelden als betrouwbare aanvullende bron; zie de
+    basis-instructie. Migratie-vrij: landt in de bestaande context-kolom."""
+    block = prompts.notes_block(notes)
+    if not block:
+        return context
+    return (block + "\n\n" + context).strip() if context else block
+
+
 def _clean_report_config(report: dict | None) -> dict | None:
     """Valideer/normaliseer een verslag-config voor auto-generatie na transcriptie.
     Geeft een schone dict terug, of None als er geen (geldig) verslag/glossary gevraagd is.
@@ -525,8 +535,8 @@ async def create_text_session(
             auto_report = _clean_report_config(json.loads(report))
         except (ValueError, TypeError):
             auto_report = None
-    if auto_report is None:  # tekst -> verslag is het hele doel; standaard een volledig verslag
-        auto_report = {"kinds": ["volledig"], "custom_prompt": None, "context": None}
+    # Tweetraps-flow: standaard GEEN automatisch verslag. De aangeleverde tekst is stap 1 (het
+    # 'transcript'); het verslag maak je in stap 2 op het resultaatscherm.
 
     now = _now()
     obj = Session(
@@ -544,19 +554,23 @@ async def create_text_session(
         updated_at=now,
     )
     db.add(obj)
-    auto_report_id = new_token()
-    db.add(Report(
-        id=auto_report_id, session_id=obj.id,
-        kinds=auto_report.get("kinds"), custom_prompt=auto_report.get("custom_prompt"),
-        context=auto_report.get("context"), status=ReportStatus.QUEUED,
-        created_at=now, updated_at=now,
-    ))
+    # Alleen een verslag inplannen als de caller er expliciet om vroeg (kinds/custom_prompt).
+    auto_report_id = None
+    if auto_report and (auto_report.get("kinds") or auto_report.get("custom_prompt")):
+        auto_report_id = new_token()
+        db.add(Report(
+            id=auto_report_id, session_id=obj.id,
+            kinds=auto_report.get("kinds"), custom_prompt=auto_report.get("custom_prompt"),
+            context=auto_report.get("context"), status=ReportStatus.QUEUED,
+            created_at=now, updated_at=now,
+        ))
     await stats.record_event(
         db, "transcribed", source=src, language=obj.language,
         words=len(body_text.split()), report_mode=stats.report_mode(auto_report),
     )
     await db.commit()
-    await queue.enqueue_report(auto_report_id)
+    if auto_report_id:
+        await queue.enqueue_report(auto_report_id)
     return CreateSessionResponse(id=obj.id, status=obj.status)
 
 
@@ -829,13 +843,14 @@ async def create_report(
     if req.kinds and not set(req.kinds).issubset(valid):
         raise HTTPException(status_code=422, detail="Onbekende sectie(s) opgegeven.")
 
-    # Sprekernamen: alleen in direct-modus meenemen (dan komen ze in de context/DB); in
-    # placeholder-modus genegeerd zodat namen niet in de database belanden.
+    # Sprekersnamen: per-verslag opt-in. Worden ze meegestuurd, dan vouwen we ze in — óók als de
+    # server op 'placeholder' staat. Bewuste keuze: de gebruiker kiest dan expliciet dat de namen in
+    # DIT verslag (en dus in de DB) komen. De frontend stuurt ze alleen als de 'namen in verslag'-
+    # toggle aan staat; zonder toggle blijft alles anoniem (labels in DB, namen enkel client-side).
     context = req.context
-    if get_settings().speaker_names_mode == "direct":
-        names_block = _speaker_names_block(req.speaker_names)
-        if names_block:
-            context = (names_block + "\n\n" + (context or "")).strip()
+    names_block = _speaker_names_block(req.speaker_names)
+    if names_block:
+        context = (names_block + "\n\n" + (context or "")).strip()
 
     # Sjabloon met vragen -> vervangt het verslag (kinds vervallen); vragen als DATA-blok in context.
     kinds = req.kinds
@@ -846,6 +861,9 @@ async def create_report(
     # Woordenlijst/jargon -> terminologie-DATA-blok in context (juiste spelling in het verslag).
     if (req.glossary or "").strip():
         context = _fold_glossary(req.glossary, context)
+    # Eigen aantekeningen van de notulist -> DATA-blok in context (stuurt het verslag + aanvullende bron).
+    if (req.notes or "").strip():
+        context = _fold_notes(req.notes, context)
 
     # Eenvoudig taalniveau (B1): migratie-vrij als sentinel in kinds; de worker haalt 'm er weer uit.
     if req.simple_language:

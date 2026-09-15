@@ -41,16 +41,21 @@ net zo laagdrempelig is. En heb je geen dictafoon of memorecorder? Dan doe je he
 - **Verslag-LLM:** een **bestaand, OpenAI-compatibel LLM-endpoint** (er wordt geen LLM
   gehost). Wijs `LLM_BASE_URL` naar je eigen laag — op prod bijv. een **LiteLLM-proxy**,
   of vLLM/Ollama/llama.cpp/een externe API. Endpoint en modelnaam komen uit de env.
-- **Verslag-opties:** een **Volledig verslag** (samenvatting, thematische onderwerpen,
+- **Tweetraps-werkwijze:** **stap 1** levert het **transcript** (opnemen/uploaden), **stap 2** maakt
+  daar op het resultaatscherm een **verslag** van. Zo geef je context en aantekeningen ná het transcript
+  mee — dat levert een beter verslag op. Er wordt niet meer automatisch een verslag gestart.
+- **Verslag-opties (stap 2):** een **Volledig verslag** (samenvatting, thematische onderwerpen,
   een **chronologisch gespreksverslag**, besluiten, afspraken, actiepunten, aandachtspunten),
   losse secties, of een eigen prompt — met **Word (.docx)/Markdown**-export. Geef een
-  **agenda** mee bij de context en de onderwerpen worden daarop gematcht. De modelnamen komen
-  uit de env en worden in de app getoond (`/api/config`).
+  **agenda** mee bij de context en de onderwerpen worden daarop gematcht. Je kunt het verslag
+  **sturen** met **deelnemers**, je **eigen aantekeningen** (belangrijke punten/namen/nadruk), en
+  optioneel **eenvoudiger taalgebruik (richting B1)**. De modelnamen komen uit de env en worden in
+  de app getoond (`/api/config`).
 - **Bronmateriaal — audio óf tekst:** naast audio (opnemen/uploaden) kun je ook **tekst als bron**
   aanleveren: plak of upload een **transcript** of je **aantekeningen** (`.txt`/`.md`/**Word `.docx`**/
-  `.rtf`/`.odt`, gelezen via pandoc) en de tool maakt er zonder STT een verslag van. Handig als
-  opnemen niet mag maar je wél aantekeningen hebt. In de aantekeningen-modus structureert het model
-  wat er staat en verzint niets bij.
+  `.rtf`/`.odt`, gelezen via pandoc). Dat wordt zonder STT je **transcript**; het verslag maak je
+  daarna in stap 2. Handig als opnemen niet mag maar je wél aantekeningen hebt. In de
+  aantekeningen-modus structureert het model wat er staat en verzint niets bij.
 - **Sjabloon met vragen:** upload of plak een **lijst vragen**; in plaats van een verslag wordt
   **elke vraag beantwoord** op basis van het gesprek, met een expliciet "niet in het materiaal
   besproken" waar het antwoord ontbreekt.
@@ -58,7 +63,8 @@ net zo laagdrempelig is. En heb je geen dictafoon of memorecorder? Dan doe je he
   Die sturen zowel de **transcriptie** (betere herkenning) als het **verslag** (juiste spelling).
 - **Sprekerherkenning (optioneel, standaard uit):** met `DIARIZE_BACKEND=pyannote` krijgt het
   transcript sprekerlabels (`SPREKER_A/B/…`) en kun je in de app namen invullen en een fragment
-  per spreker beluisteren. Draait als aparte, opt-in worker (torch/pyannote); modellen 3.1 of het
+  per spreker beluisteren. Namen blijven standaard lokaal; in stap 2 kun je ze **optioneel in het
+  verslag** laten gebruiken (opt-in — dan komen ze in dat verslag). Draait als aparte, opt-in worker (torch/pyannote); modellen 3.1 of het
   nauwkeurigere **community-1** (pyannote 4.x). Zie [`deploy/DEPLOY.md`](deploy/DEPLOY.md) en
   [`docs/test-sprekers.md`](docs/test-sprekers.md). Zónder aanzetten verandert er niets.
 - **Bewaartermijn:** alles wordt automatisch verwijderd **2 werkdagen ná de

@@ -34,7 +34,7 @@ def test_clean_report_config_folds_template_and_drops_kinds():
 @pytest.mark.asyncio
 async def test_create_report_with_template(client):
     # sessie met transcript via het tekst-endpoint
-    files = {"file": ("t.txt", b"Jan zegt dat project X doorgaat. Over budget is niets gezegd.", "text/plain")}
+    files = {"file": ("t.txt", b"Kim zegt dat project X doorgaat. Over budget is niets gezegd.", "text/plain")}
     sid = (await client.post("/api/sessions/text", data={"source_kind": "transcript"}, files=files)).json()["id"]
 
     r = await client.post(f"/api/sessions/{sid}/reports",

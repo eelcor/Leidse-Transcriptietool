@@ -151,9 +151,8 @@ async function init() {
 }
 
 // -------------------------------------------------------------------------
-// Verslag-opties op het startscherm (auto-verslag na transcriptie)
+// Stap 1: woordenlijst (STT-hotwords) op het startscherm; verslag-opties zitten in stap 2.
 // -------------------------------------------------------------------------
-const repBoxes = {};
 // Consent: toon de (configureerbare) consent-tekst in de opnamekaart. Opnemen wordt geblokkeerd
 // tot de gebruiker bevestigt dat de deelnemers zijn geïnformeerd (gate in setupRecorder). Leeg -> geen stap.
 function setupConsent() {
@@ -187,40 +186,8 @@ function setupConsent() {
 }
 
 function setupReportConfig() {
-  const chips = $('#rep-chips');
-  SECTIONS.filter((s) => s.key !== 'volledig').forEach((s) => {
-    const cb = el('input', { type: 'checkbox' });
-    cb.checked = true;                                  // alle onderdelen standaard aan (= volledig verslag)
-    repBoxes[s.key] = cb;
-    const chip = el('label', { class: 'chip on' }, cb, s.label);
-    cb.addEventListener('change', () => chip.classList.toggle('on', cb.checked));
-    chips.append(chip);
-  });
-  const applyRepMode = () => {
-    const mode = (document.querySelector('input[name="rep-mode"]:checked') || {}).value || 'none';
-    const opts = $('#rep-opts');
-    if (opts) opts.hidden = mode === 'none';             // context + onderdelen bij 'Verslag maken'
-  };
-  document.querySelectorAll('input[name="rep-mode"]').forEach((r) => r.addEventListener('change', applyRepMode));
-  applyRepMode();
-
-  // Sjabloonbestand (.txt/.md/.docx/…) inlezen naar het vragen-tekstvak (docx via de server).
-  const tplFile = $('#tpl-file');
-  const tplText = $('#tpl-text');
-  if (tplFile && tplText) {
-    tplFile.addEventListener('change', async () => {
-      const f = tplFile.files[0];
-      if (!f) return;
-      try {
-        tplText.value = 'Bezig met inlezen…';
-        tplText.value = await API.extractText(f);
-        const w = $('#tpl-wrap'); if (w) w.open = true;
-      } catch (e) {
-        tplText.value = '';
-        alert('Kon het sjabloonbestand niet lezen: ' + e.message);
-      }
-    });
-  }
+  // Tweetraps-flow: stap 1 (startscherm) heeft geen verslag-config meer — alleen de woordenlijst
+  // (voor STT-hotwords). De verslag-onderdelen/context/sjabloon zitten nu in stap 2 (resultaatscherm).
 
   // Woordenlijsten uit de plugin-map (GET /api/glossaries) in de dropdown vullen.
   const gpre = $('#glossary-preset');
@@ -268,21 +235,11 @@ function getGlossary() {
 }
 
 function getReportConfig() {
+  // Tweetraps-flow: stap 1 maakt alleen een transcript. We sturen hooguit de woordenlijst mee
+  // (voor de STT-hotwords) — nooit kinds/custom/context. Zo blijft session.auto_report zonder
+  // verslag-opdracht en genereert de worker géén automatisch verslag. Het verslag maak je in stap 2.
   const glossary = getGlossary();
-  const mode = (document.querySelector('input[name="rep-mode"]:checked') || {}).value || 'none';
-  // Geen verslag, maar wél een woordenlijst? Stuur alleen de glossary mee (voor de transcriptie).
-  if (mode === 'none') return glossary ? { glossary } : null;
-  const context = ($('#rep-context').value || '').trim() || null;
-  // Sjabloon met vragen heeft voorrang: dan worden de vragen beantwoord i.p.v. een verslag.
-  const template = (($('#tpl-text') || {}).value || '').trim();
-  const cfg = template ? { template, context }
-    : (() => {
-      const kinds = Object.entries(repBoxes).filter(([, cb]) => cb.checked).map(([k]) => k);
-      return kinds.length ? { kinds, context } : null;
-    })();
-  if (!cfg) return glossary ? { glossary } : null;       // niets aangevinkt -> hooguit de glossary
-  if (glossary) cfg.glossary = glossary;
-  return cfg;
+  return glossary ? { glossary } : null;
 }
 
 // Gevraagd aantal deelnemers (voor sprekerherkenning); null als leeg/onzin.
@@ -854,7 +811,7 @@ async function loadResult(sessionId) {
   layoutReports(sessionId);
 
   const controls = el('details', { class: 'opts', id: 'report-controls-box', style: 'margin-top:14px' },
-    el('summary', {}, hasReports ? 'Verslag opnieuw maken' : 'Verslag maken'),
+    el('summary', {}, hasReports ? 'Nog een verslag maken (andere opties)' : 'Stap 2 — maak het verslag'),
     buildReportControls(sessionId),
   );
   if (!hasReports) controls.open = true;  // niets klaar -> meteen open
@@ -1036,6 +993,9 @@ function buildReportControls(sessionId) {
   const wrap = el('div', { class: 'report-controls' });
   const chips = el('div', { class: 'chips' });
   const boxes = {};
+  // Sprekers-in-verslag-toggle alleen tonen als er een afgeronde diarisatie met segmenten is.
+  const diarDone = !!(CURRENT_RES && CURRENT_RES.diarization && CURRENT_RES.diarization.status === 'done'
+    && (CURRENT_RES.diarization.segments || []).length);
   SECTIONS.filter((s) => s.key !== 'volledig').forEach((s) => {
     const cb = el('input', { type: 'checkbox' });
     cb.checked = true;                                  // alles aan = volledig verslag
@@ -1047,7 +1007,18 @@ function buildReportControls(sessionId) {
   wrap.append(
     el('p', { class: 'context-tip' }, el('strong', {}, 'Tip — geef context mee.'),
       ' Onderwerp, datum, deelnemers, aanleiding/achtergrond of de agenda verbeteren het verslag merkbaar: correcte namen, structuur volgens je agenda en minder giswerk.'),
-    el('textarea', { id: 'ctx', rows: '3', placeholder: 'Context (optioneel, maar sterk aanbevolen) — onderwerp, datum, deelnemers, aanleiding, achtergrond, of de agenda (dan matchen we de onderwerpen daarop)…' }),
+    el('textarea', { id: 'ctx', rows: '3', placeholder: 'Context (optioneel, maar sterk aanbevolen) — onderwerp, datum, aanleiding, achtergrond, of de agenda (dan matchen we de onderwerpen daarop)…' }),
+    el('p', { class: 'muted small', style: 'margin:12px 0 4px' }, 'Deelnemers (optioneel)'),
+    el('textarea', { id: 'rep-deelnemers', rows: '2', placeholder: 'Deelnemers en rol — bijv. "Sam = techniek; Robin = coördinator". Voorkomt dat een taak aan de verkeerde persoon wordt gekoppeld.' }),
+    el('p', { class: 'muted small', style: 'margin:12px 0 4px' }, 'Eigen aantekeningen (optioneel — sturen het verslag)'),
+    el('textarea', { id: 'rep-notes', rows: '3', placeholder: 'De punten die zeker in het verslag moeten — in jouw woorden. Het model stuurt hierop (belangrijke punten, namen, nadruk, structuur) en gebruikt ze als betrouwbare aanvulling naast de opname.' }),
+    el('p', { class: 'muted small', style: 'margin:12px 0 4px' }, 'Woordenlijst / jargon (optioneel)'),
+    el('textarea', { id: 'rep-glossary', rows: '2', placeholder: 'Namen, vaktermen of afkortingen (één per regel) voor de juiste spelling in het verslag.' }),
+    el('label', { class: 'chk', style: (diarDone ? 'display:flex' : 'display:none') + ';gap:8px;align-items:flex-start;margin:12px 0 2px' },
+      el('input', { type: 'checkbox', id: 'rep-use-speakers' }),
+      el('span', {},
+        el('b', {}, 'Gebruik de toegewezen sprekersnamen in het verslag'), el('br'),
+        el('small', { class: 'muted' }, 'Neemt de namen uit het sprekerspaneel mee, zodat het verslag ze noemt (bijv. "Kim zei…"). Let op: dan komen die namen in dít opgeslagen verslag terecht — standaard blijft het verslag anoniem.'))),
     el('p', { class: 'muted small', style: 'margin:14px 0 6px' }, 'Onderdelen — alles aan = een volledig verslag:'),
     chips,
     el('label', { class: 'chk', style: 'display:flex;gap:8px;align-items:flex-start;margin:12px 0 2px' },
@@ -1077,10 +1048,24 @@ function buildReportControls(sessionId) {
   );
 
   async function start(kinds, custom, template) {
-    const context = ($('#ctx') && $('#ctx').value.trim()) || null;
+    // Deelnemers gaan als aparte regel de context in (samen met het vrije context-veld).
+    const parts = [];
+    const deel = ($('#rep-deelnemers') && $('#rep-deelnemers').value.trim()) || '';
+    if (deel) parts.push('Deelnemers: ' + deel);
+    const ctx = ($('#ctx') && $('#ctx').value.trim()) || '';
+    if (ctx) parts.push(ctx);
+    const context = parts.join('\n\n') || null;
+    const notes = ($('#rep-notes') && $('#rep-notes').value.trim()) || null;
+    const glossary = ($('#rep-glossary') && $('#rep-glossary').value.trim()) || null;
     const simple = !!($('#b1-simple') && $('#b1-simple').checked);
+    // Sprekersnamen alleen meesturen als de gebruiker daar expliciet voor kiest (opt-in).
+    const useSpeakers = !!($('#rep-use-speakers') && $('#rep-use-speakers').checked);
+    const speaker_names = useSpeakers ? loadSpeakerNames(sessionId) : null;
     try {
-      const r = await API.createReport(sessionId, { kinds, custom_prompt: custom || null, context, template: template || null, simple_language: simple });
+      const r = await API.createReport(sessionId, {
+        kinds, custom_prompt: custom || null, context, template: template || null,
+        notes, glossary, simple_language: simple, speaker_names,
+      });
       REPORTS.push(r);
       layoutReports(sessionId);
     } catch (e) { alert(e.message); }
