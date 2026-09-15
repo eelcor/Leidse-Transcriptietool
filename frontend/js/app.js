@@ -135,7 +135,12 @@ async function init() {
   }
 
   // Navigatie
-  $('#nav-new').addEventListener('click', () => { releaseRecorder(); show('home'); });
+  $('#nav-new').addEventListener('click', () => {
+    releaseRecorder();
+    if (sse) { sse.close(); sse = null; }                                 // eventstream van de vorige sessie stoppen
+    history.replaceState(null, '', location.pathname + location.search);   // sessiecode uit de URL wissen -> schone start
+    show('home');
+  });
   $('#nav-retrieve').addEventListener('click', () => show('retrieve'));
 
   setupConsent();
