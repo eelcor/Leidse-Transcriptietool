@@ -292,10 +292,11 @@ details.opts[open] summary::before { transform: rotate(90deg); }
 .report-body.md th { background: var(--surface-3); font-weight: 600; }
 .report-body.md hr { border: none; border-top: 1px solid var(--line); margin: 1em 0; }
 
-/* minmax(0,1fr) i.p.v. 1fr: anders groeit een kolom mee met brede inhoud (bijv. een verslag-
-   tabel) en verspringen de breedtes. Zo blijven de kolommen stabiel 50/50; brede inhoud scrollt
+/* Bewuste asymmetrie: linkerkolom (transcript) iets smaller dan rechts (verslag) — 44/56.
+   minmax(0, …) i.p.v. kale fr: anders groeit een kolom mee met brede inhoud (bijv. een verslag-
+   tabel) en verspringen de breedtes. Zo blijft de verhouding stabiel; brede inhoud scrollt
    binnen .transcript/.report-body (die hebben overflow:auto). min-width:0 laat de panelen krimpen. */
-.columns { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; }
+.columns { display: grid; grid-template-columns: minmax(0, 4fr) minmax(0, 5fr); gap: 20px; }
 @media (max-width: 860px) { .columns { grid-template-columns: 1fr; } }
 .panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; box-shadow: var(--shadow-sm); min-width: 0; }
 .panel-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
