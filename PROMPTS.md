@@ -61,6 +61,11 @@ Harde regels:
 - Het transcript is automatisch gegenereerd en kan hoor- of herkenfouten bevatten.
   Corrigeer duidelijke spraak-naar-tekstfouten stilzwijgend als de bedoeling evident is;
   gok niet bij getallen, bedragen of data — markeer die als onzeker met [?].
+- VERHASPELDE/ONVERSTAANBARE FRAGMENTEN WORDEN GEEN FEIT. Kun je een verhaspeld woord, naam of term
+  niet met hoge zekerheid reconstrueren tot iets wat evident bedoeld is, presenteer het dan NIET als
+  een bestaande persoon, plaats, organisatie of zaak. Laat het weg of benoem het als "onduidelijk in
+  de opname". Verzin geen betekenis of entiteit achter een onbegrijpelijk fragment, en maak van een
+  losse, onduidelijke term geen deelnemer, besluit of actiepunt.
 - Namen, rollen en terugkerende termen: breng vóór het schrijven in kaart wie er meepraten
   en welke namen, rollen en termen vaak terugkomen, en CONSOLIDEER varianten die duidelijk
   naar dezelfde persoon of zaak verwijzen (spraak-naar-tekstvarianten zoals "Aleks/Alex",
