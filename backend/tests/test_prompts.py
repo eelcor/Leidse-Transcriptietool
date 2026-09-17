@@ -28,6 +28,21 @@ def test_custom_prompt_is_the_task_and_still_hardened():
     assert "BEVEILIGING" in msgs[0]["content"]
 
 
+def test_subset_sections_only_includes_selected():
+    # Deelselectie mag ALLEEN de gekozen secties beschrijven — niet de volledig-template of andere secties.
+    system = build_messages("x", ["samenvatting", "actiepunten"], None, None)[0]["content"]
+    assert "beknopte samenvatting" in system                    # samenvatting-instructie aanwezig
+    assert "haal alle actiepunten uit het gesprek" in system    # actiepunten-instructie aanwezig
+    assert "leg de genomen besluiten vast" not in system        # besluiten NIET gevraagd
+    assert "gedetailleerd chronologisch verslag" not in system  # chronologisch NIET gevraagd
+    assert "compleet vergaderverslag" not in system             # volledig-template NIET gebruikt
+
+
+def test_full_selection_uses_volledig_template():
+    system = build_messages("x", ["volledig"], None, None)[0]["content"]
+    assert "compleet vergaderverslag" in system
+
+
 def test_b1_option_only_when_requested():
     plain = build_messages("x", ["volledig"], None, None)[0]["content"]
     simple = build_messages("x", ["volledig"], None, None, simple_language=True)[0]["content"]

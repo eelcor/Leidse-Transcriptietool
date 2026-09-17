@@ -209,13 +209,20 @@ def build_messages(
         if "volledig" in kinds or set(wanted) == set(_VOLLEDIG_ORDER):
             task = vol  # alle secties -> het complete verslag
         elif wanted:
-            headings = [_VOLLEDIG_HEADING[k] for k in wanted]
-            task = vol + (
-                "\n\nSECTIEKEUZE (belangrijk): behoud de kop (# Verslag met onderwerp, datum en "
-                "deelnemers) en lever daarna UITSLUITEND de volgende secties op, in deze volgorde en "
-                "in de hierboven beschreven stijl: " + ", ".join(headings) + ". Laat alle overige "
-                "secties volledig weg."
+            # Deelselectie: bouw de taak UITSLUITEND op uit de gekozen secties (elk met z'n eigen
+            # instructie uit PROMPTS.md), i.p.v. de volledige-verslag-template + een 'laat de rest
+            # weg'-zin. Die zin werd onbetrouwbaar overruled door de dominante template, waardoor
+            # niet-gekozen secties tóch verschenen. Nu noemt de prompt de andere secties niet eens.
+            lead = (
+                "Taak: stel één verslag samen dat UITSLUITEND bestaat uit de secties die hieronder "
+                "beschreven staan, in de gegeven volgorde. Voeg GEEN andere secties toe — dus geen "
+                "samenvatting, chronologisch verslag, besproken onderwerpen, besluiten, afspraken, "
+                "actiepunten of aandachtspunten die hieronder niet beschreven staan. Begin met een kop "
+                "'# Verslag' met onderwerp, datum en deelnemers voor zover betrouwbaar bekend, en gebruik "
+                "per sectie exact de kop en vorm zoals hieronder aangegeven. Hieronder de instructie per "
+                "gevraagde sectie:"
             )
+            task = lead + "\n\n" + "\n\n".join(section_task(k) for k in wanted)
         else:
             raise ValueError("Geen geldige secties opgegeven")
     else:

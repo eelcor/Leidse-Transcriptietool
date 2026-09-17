@@ -1026,10 +1026,20 @@ function buildReportControls(sessionId) {
     el('button', { id: 'gen-report', class: 'btn primary block', style: 'margin-top:12px', onclick: () => {
       const kinds = Object.entries(boxes).filter(([, cb]) => cb.checked).map(([k]) => k);
       if (!kinds.length) { alert('Kies minstens één onderdeel.'); return; }
+      // Footgun: deze knop gebruikt de aangevinkte onderdelen, NIET het 'Eigen prompt'-veld.
+      // Heeft de gebruiker daar iets ingevuld, waarschuw dan i.p.v. de prompt stil te negeren.
+      const cp = ($('#custom-prompt') && $('#custom-prompt').value.trim()) || '';
+      if (cp && !confirm('Let op: je hebt hieronder een "Eigen prompt" ingevuld. Deze knop maakt een '
+        + 'verslag van de aangevinkte onderdelen en gebruikt die eigen prompt NIET.\n\n'
+        + 'Wil je juist je eigen prompt gebruiken (die bepaalt zelf de indeling)? Klik dan op Annuleren '
+        + 'en daarna op "Voer prompt uit".\n\nDoorgaan met de aangevinkte onderdelen?')) return;
       start(kinds);
     } }, ic('sparkle'), ' Verslag genereren'),
     el('div', { class: 'or-sep' }, 'of'),
-    el('textarea', { id: 'custom-prompt', rows: '3', placeholder: 'Eigen prompt — bijv. "Vat samen in 5 bullets voor het MT." (de context hierboven wordt meegenomen)' }),
+    el('p', { class: 'muted small', style: 'margin:2px 0 4px' },
+      'Of bepaal de indeling zélf met een eigen prompt. Die ', el('b', {}, 'vervangt de onderdelen hierboven'),
+      ' en is leidend voor de lay-out. Gebruik de knop ', el('b', {}, '"Voer prompt uit"'), ' (niet de knop hierboven).'),
+    el('textarea', { id: 'custom-prompt', rows: '3', placeholder: 'Eigen prompt — bijv. "Maak beknopte notulen met alleen besluiten en actiepunten, geen samenvatting." (de context/aantekeningen hierboven worden meegenomen)' }),
     el('button', { id: 'gen-prompt', class: 'btn outline block', style: 'margin-top:10px', onclick: () => {
       const t = $('#custom-prompt').value.trim();
       if (!t) { alert('Typ een prompt.'); return; }
