@@ -96,13 +96,23 @@ _NOTES_NOTE = (
 # Toegevoegd ALLEEN als de gebruiker "eenvoudig taalniveau (B1)" kiest. Betreft uitsluitend
 # woordkeuze en zinsbouw — nadrukkelijk niet de inhoud (geen punten weglaten om het simpeler te maken).
 _B1_NOTE = (
-    "\n\nTAALNIVEAU B1 (eenvoudig Nederlands): schrijf het verslag op taalniveau B1. Gebruik korte, "
-    "heldere zinnen (bij voorkeur één gedachte per zin) en gangbare, alledaagse woorden. Vermijd "
-    "ambtelijk of formeel jargon, onnodig moeilijke of samengestelde woorden en zelfbedachte "
-    "constructies; kies waar mogelijk een eenvoudiger synoniem. Vaktermen, eigennamen en afkortingen "
-    "die echt nodig zijn behoud je (leg een vakterm zo nodig kort tussen haakjes uit). Dit gaat "
-    "ALLEEN over woordkeuze en zinsbouw, niet over de inhoud: laat geen onderwerpen, standpunten, "
-    "getallen of afspraken weg om het eenvoudiger te maken."
+    "\n\nTAALNIVEAU B1 (eenvoudig Nederlands): schrijf het verslag zo dat vrijwel iedere volwassen "
+    "lezer met een gemiddelde taalvaardigheid het in één keer begrijpt. 'B1' is het Europese "
+    "taalniveau voor eenvoudig, alledaags taalgebruik (het niveau waarop de meeste Nederlanders "
+    "vlot lezen). Concreet betekent dat:\n"
+    "- Gebruik korte zinnen: streef naar ongeveer 10–15 woorden per zin en één gedachte per zin. "
+    "Hak lange samengestelde zinnen op in meerdere korte zinnen.\n"
+    "- Gebruik gangbare, alledaagse woorden die je ook in gesproken taal hoort. Vermijd ambtelijk, "
+    "formeel of abstract jargon, moeilijke of lange samengestelde woorden en zelfbedachte "
+    "constructies; kies steeds het meest voor de hand liggende synoniem (bijv. 'gebruiken' i.p.v. "
+    "'hanteren', 'genoeg' i.p.v. 'toereikend', 'daarom' i.p.v. 'derhalve', 'over' i.p.v. "
+    "'aangaande').\n"
+    "- Schrijf actief en persoonlijk (noem wie iets doet) in plaats van lijdend/naamwoordstijl "
+    "('we spreken af' i.p.v. 'er wordt afgesproken').\n"
+    "- Vaktermen, eigennamen en afkortingen die echt nodig zijn behoud je; leg een onvermijdelijke "
+    "vakterm de eerste keer kort tussen haakjes uit in gewone woorden.\n"
+    "Dit gaat ALLEEN over woordkeuze en zinsbouw, niet over de inhoud: laat geen onderwerpen, "
+    "standpunten, getallen, nuances of afspraken weg om het eenvoudiger te maken."
 )
 
 # Basisbescherming tegen prompt injectie: het transcript en de context zijn DATA,
