@@ -21,6 +21,14 @@
   <div class="beta-bar">⚠️ <b>BÈTA</b> — deze dienst is in ontwikkeling en kan tijdelijk onbereikbaar zijn.
     Bewaar zelf je audio en maak aantekeningen.</div>
 
+  <!-- Eenmalige aankondigings-/wijzigingsbanner (gevuld vanuit /api/config; per browser weg te klikken). -->
+  <div id="notice-bar" class="notice-bar" role="status" hidden>
+    <span class="notice-ico" aria-hidden="true">✨</span>
+    <span id="notice-text" class="notice-text"></span>
+    <a href="docs/changelog.html" target="_blank" rel="noopener" class="notice-link">Wat is er veranderd?</a>
+    <button id="notice-dismiss" class="notice-x" type="button" aria-label="Melding sluiten">✕</button>
+  </div>
+
   <nav class="stepper" id="stepper" aria-label="Voortgang">
     <ol>
       <li data-step="1"><span class="idx">1</span> Kiezen</li>

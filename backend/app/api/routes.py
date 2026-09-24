@@ -9,6 +9,7 @@ Ontwerp-uitgangspunten:
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import os
 import re
@@ -198,6 +199,7 @@ async def get_config() -> dict:
     s = get_settings()
     backend_label = _STT_BACKEND_LABEL.get(s.stt_backend, s.stt_backend)
     stt_label = f"{backend_label} {s.stt_model}".strip() if s.stt_model else backend_label
+    notice_text = _read_notice()
     return {
         "max_upload_mb": s.max_upload_mb,
         "retention_workdays": s.retention_workdays,
@@ -215,6 +217,10 @@ async def get_config() -> dict:
         "speaker_names_mode": s.speaker_names_mode,
         # Consent-tekst (markdown) om vóór het opnemen te tonen/voorlezen; leeg -> geen consent-stap.
         "consent_text": _read_consent(),
+        # Eenmalige aankondigings-/wijzigingsbanner; leeg -> geen banner. De versie is een korte
+        # hash van de inhoud, zodat de frontend weet wanneer een nieuwe melding moet verschijnen.
+        "notice_text": notice_text,
+        "notice_version": _hash8(notice_text) if notice_text else "",
     }
 
 
@@ -224,6 +230,19 @@ def _read_consent() -> str:
             return f.read().strip()
     except OSError:
         return ""
+
+
+def _read_notice() -> str:
+    try:
+        with open(get_settings().notice_file, encoding="utf-8") as f:
+            return f.read().strip()
+    except OSError:
+        return ""
+
+
+def _hash8(text: str) -> str:
+    """Korte, stabiele hash van de tekst — dient als banner-versie (wijzigt de tekst, dan de versie)."""
+    return hashlib.sha1(text.encode("utf-8")).hexdigest()[:8]
 
 
 def _glossary_name_from_filename(fn: str) -> str:

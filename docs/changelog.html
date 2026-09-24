@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Wat is er veranderd — Vertrouwelijk transcriberen</title>
+<style>
+  @font-face{font-family:"Archivo";src:url("fonts/archivo-var-latin.woff2") format("woff2");font-weight:100 900;font-stretch:62% 125%;font-display:swap}
+  @font-face{font-family:"IBM Plex Mono";src:url("fonts/plexmono-400-latin.woff2") format("woff2");font-weight:400;font-display:swap}
+  @font-face{font-family:"IBM Plex Mono";src:url("fonts/plexmono-500-latin.woff2") format("woff2");font-weight:500;font-display:swap}
+  :root{
+    --bg:#fff; --surface:#fff; --surface-2:#f2f2f2; --text:#000; --soft:#333; --muted:#666;
+    --line:#d0d0d0; --line-strong:#000; --accent:#e10600; --accent-soft:#fff0f0; --ok:#0f8a3b;
+    --font:"Exchange",Georgia,"Times New Roman",serif;
+    --display:"Archivo","Arial Black",Impact,sans-serif;
+    --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  }
+  @media (prefers-color-scheme:dark){:root{
+    --bg:#0a0a0a;--surface:#0f0f0f;--surface-2:#1a1a1a;--text:#fff;--soft:#ccc;--muted:#999;
+    --line:#333;--line-strong:#fff;--accent:#ff3b36;--accent-soft:#2a0f0f;}}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:var(--font);color:var(--text);line-height:1.6;background:var(--bg);
+    -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+  .wrap{max-width:760px;margin:0 auto;padding:44px 22px 70px}
+  header.hero{text-align:center;margin-bottom:30px;border-bottom:2px solid var(--line-strong);padding-bottom:26px}
+  .logo{width:52px;height:52px;display:inline-grid;place-items:center;background:var(--text);color:var(--bg);margin-bottom:14px}
+  .logo svg{width:28px;height:28px}
+  h1{font-family:var(--display);font-weight:850;font-stretch:120%;font-size:clamp(28px,5vw,40px);letter-spacing:-.02em;margin:.1em 0;line-height:1}
+  .eyebrow{font-family:var(--mono);font-size:12px;text-transform:uppercase;letter-spacing:.14em;color:var(--accent);margin-bottom:8px}
+  .lede{color:var(--soft);font-size:16px;max-width:560px;margin:8px auto 0}
+  section{background:var(--surface);border:1px solid var(--line-strong);padding:22px 26px;margin:18px 0}
+  .date{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+  h2{font-family:var(--display);font-weight:800;font-stretch:112%;font-size:21px;letter-spacing:-.01em;margin:4px 0 14px}
+  h3{font-family:var(--display);font-weight:800;font-size:15px;margin:18px 0 4px}
+  p{color:var(--soft);font-size:14.5px}
+  ul{color:var(--soft);padding-left:20px;font-size:14.5px} li{margin:8px 0}
+  b,strong{color:var(--text)}
+  .win{color:var(--ok);font-weight:700}
+  .ask{color:var(--accent);font-weight:700}
+  .tag{display:inline-block;background:var(--surface);color:var(--text);border:1px solid var(--line-strong);
+    font-family:var(--mono);font-size:.8em;padding:1px 8px;white-space:nowrap}
+  .note{background:var(--surface-2);border:1px solid var(--line-strong);border-left:4px solid var(--accent);
+    padding:12px 16px;margin:14px 0;color:var(--text);font-size:14px}
+  a{color:var(--accent)}
+  .backlink{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;
+    text-transform:uppercase;letter-spacing:.08em;text-decoration:none;color:var(--text);
+    background:var(--surface);border:1px solid var(--line-strong);padding:7px 13px;margin-bottom:20px}
+  .backlink:hover{background:var(--text);color:var(--bg)}
+  footer{text-align:center;color:var(--muted);font-family:var(--mono);font-size:11px;text-transform:uppercase;
+    letter-spacing:.08em;margin-top:34px;border-top:2px solid var(--line-strong);padding-top:22px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="backlink" href="../">← Terug naar de app</a>
+  <header class="hero">
+    <div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 12h1M8 8v8M12 5v14M16 9v6M20 11v2"/></svg></div>
+    <div class="eyebrow">Wat is er veranderd</div>
+    <h1>Nieuw in de transcriptietool</h1>
+    <p class="lede">De belangrijkste verbeteringen op een rij — wat het oplevert en wat het van je
+      vraagt. De volledige uitleg met screenshots staat in de
+      <a href="handleiding.html">handleiding</a>.</p>
+  </header>
+
+  <section>
+    <div class="date">Update · september 2026</div>
+    <h2>Werken in twee stappen, met meer grip op het verslag</h2>
+
+    <h3>1. Eerst het transcript, daarna zelf het verslag (stap 2)</h3>
+    <p>Je krijgt nu eerst het <b>transcript</b>. Het <b>verslag</b> maak je daarna zelf op het
+      resultaatscherm — het gebeurt niet meer automatisch.</p>
+    <ul>
+      <li><span class="win">Voordeel:</span> je kunt ná het transcript rustig <b>context, deelnemers</b>
+        en je <b>eigen aantekeningen</b> meegeven. Dat levert een merkbaar beter verslag op — dit is
+        de grootste kwaliteitswinst.</li>
+      <li><span class="ask">Wat het vraagt:</span> maak het verslag zelf in stap 2 en vul waar mogelijk
+        de context en deelnemers in. Tien seconden invullen loont bijna altijd.</li>
+    </ul>
+
+    <h3>2. Onderdelen aan/uit werken nu zoals verwacht</h3>
+    <p>Vink je onderdelen uit (samenvatting, besluiten, actiepunten…), dan komen die er nu ook echt
+      <b>niet</b> meer in. Het verslag bevat precies wat je aanvinkt.</p>
+    <ul>
+      <li><span class="win">Voordeel:</span> geen ongewenste secties meer in je verslag.</li>
+    </ul>
+
+    <h3>3. Eigen prompt heeft een eigen knop</h3>
+    <p>Wil je de indeling <b>helemaal zelf</b> bepalen? Typ een <b>eigen prompt</b> en gebruik de knop
+      <span class="tag">Voer prompt uit</span>. Die vervangt de aangevinkte onderdelen en is leidend
+      voor de lay-out.</p>
+    <div class="note"><b>Welke knop hoort bij wat?</b> <span class="tag">✨ Verslag genereren</span>
+      werkt met de <b>aangevinkte onderdelen</b> en gebruikt het eigen-prompt-veld niet.
+      <span class="tag">Voer prompt uit</span> gebruikt juist <b>jouw prompt</b>. Context, deelnemers
+      en aantekeningen tellen bij beide mee.</div>
+
+    <h3>4. Eenvoudiger taalgebruik (richting B1) verbeterd</h3>
+    <p>Zet het vinkje <b>Eenvoudiger taalgebruik</b> aan voor kortere zinnen en gewonere woorden —
+      handig voor een brede lezersgroep. Het is een sturing, geen garantie: lees het na als strikt
+      B1 nodig is.</p>
+
+    <h3>5. Transcript met een duidelijke disclaimer</h3>
+    <p>Boven het transcript staat nu een melding dat de tekst <b>automatisch</b> is gemaakt en dus
+      fouten kan bevatten. Bij het maken van het verslag worden die zoveel mogelijk opgevangen —
+      en met goede context stuur je zelf mee.</p>
+    <div class="note"><span class="ask">Blijf controleren:</span> namen, bedragen en data zijn de
+      klassieke foutjes van automatische transcriptie. Onzekere namen/getallen staan met
+      <span class="tag">[?]</span> gemarkeerd.</div>
+  </section>
+
+  <footer>Vertrouwelijk transcriberen · wat is er veranderd</footer>
+</div>
+</body>
+</html>

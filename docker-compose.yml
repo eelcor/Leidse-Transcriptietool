@@ -57,6 +57,9 @@ services:
       - ./glossaries:/glossaries:ro
       # Consent-tekst die vóór het opnemen wordt getoond/voorgelezen; pas dit bestand aan naar wens.
       - ./consent.md:/consent.md:ro
+      # Eenmalige aankondigings-/wijzigingsbanner; leeg bestand -> geen banner. Wijzig de tekst en de
+      # banner verschijnt vanzelf opnieuw (de versie is een hash van de inhoud).
+      - ./notice.md:/notice.md:ro
     restart: unless-stopped
 
   worker:

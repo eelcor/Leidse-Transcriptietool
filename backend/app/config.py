@@ -78,6 +78,12 @@ class Settings(BaseSettings):
     # geen consent-stap. De frontend eist een expliciete bevestiging vóór het opnemen kan starten.
     consent_file: str = "/consent.md"
 
+    # Aankondigings-/wijzigingsbanner (markdown/plat) die eenmalig bovenaan de app verschijnt.
+    # Bind-mount een eigen bestand om de tekst aan te passen; leeg bestand/ontbreekt -> geen banner.
+    # De frontend onthoudt per browser (localStorage) welke versie is weggeklikt; omdat de versie
+    # een hash van de inhoud is, verschijnt de banner vanzelf opnieuw zodra je dit bestand wijzigt.
+    notice_file: str = "/notice.md"
+
     # --- Beveiliging ---
     # Swagger-UI en OpenAPI-schema standaard UIT in productie (kleiner aanvalsoppervlak;
     # het schema somt anders alle endpoints op). Zet EXPOSE_API_DOCS=true voor lokaal debuggen.

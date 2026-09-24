@@ -374,6 +374,19 @@ h1, h2, .hero h1, .card h2, .panel-head h3, .statebar .txt {
 .beta-bar { background: var(--surface-2); color: var(--text-soft); border-bottom: 1px solid var(--line-strong); border-left: 4px solid var(--accent); font-family: var(--mono); font-size: 12px; }
 @media (prefers-color-scheme: dark){ .beta-bar { background: var(--surface-2); color: var(--text-soft); border-bottom-color: var(--line-strong); } }
 
+/* Eenmalige aankondigings-/wijzigingsbanner: valt op naast de grijze BÈTA-balk (accent-look). */
+.notice-bar { display: flex; align-items: center; gap: 10px; padding: 9px 16px; font-size: 13px;
+  background: var(--accent-soft); color: var(--text); border-bottom: 1px solid var(--line-strong);
+  border-left: 4px solid var(--accent); }
+.notice-bar .notice-ico { flex: 0 0 auto; }
+.notice-bar .notice-text { flex: 1 1 auto; min-width: 0; }
+.notice-bar .notice-link { flex: 0 0 auto; font-family: var(--mono); font-size: 11px; text-transform: uppercase;
+  letter-spacing: .04em; color: var(--accent); text-decoration: underline; white-space: nowrap; }
+.notice-bar .notice-x { flex: 0 0 auto; background: none; border: none; color: var(--text-soft);
+  font-size: 15px; line-height: 1; cursor: pointer; padding: 4px 6px; }
+.notice-bar .notice-x:hover { color: var(--text); }
+@media (max-width: 560px) { .notice-bar { flex-wrap: wrap; } .notice-bar .notice-text { flex-basis: 100%; } }
+
 /* Knoppen: mono uppercase, scherp, 2px rand, hover = invert */
 .btn { font-family: var(--mono); font-weight: 500; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; border-width: 2px; border-color: var(--line-strong); border-radius: 0; }
 .btn:hover { transform: none; background: var(--text); color: var(--accent-ink); }

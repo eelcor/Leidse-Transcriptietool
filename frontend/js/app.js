@@ -93,6 +93,28 @@ const STATUS_LABEL = {
 
 // -------------------------------------------------------------------------
 // Init
+// Eenmalige aankondigings-/wijzigingsbanner. Toont CONFIG.notice_text zolang de gebruiker de
+// huidige versie (hash van de inhoud) nog niet heeft weggeklikt. Per browser onthouden via
+// localStorage; wijzigt notice.md, dan verandert de versie en verschijnt de banner opnieuw.
+const NOTICE_KEY = 'tt_notice_seen';
+function renderNotice() {
+  const bar = $('#notice-bar');
+  if (!bar) return;
+  const text = (CONFIG.notice_text || '').trim();
+  const version = CONFIG.notice_version || '';
+  if (!text) return;                                   // geen melding ingesteld
+  let seen = null;
+  try { seen = localStorage.getItem(NOTICE_KEY); } catch {}
+  if (seen === version) return;                        // deze versie al weggeklikt
+  const t = $('#notice-text'); if (t) t.textContent = text;   // platte tekst (geen HTML-injectie)
+  bar.hidden = false;
+  const x = $('#notice-dismiss');
+  if (x) x.addEventListener('click', () => {
+    bar.hidden = true;
+    try { localStorage.setItem(NOTICE_KEY, version); } catch {}
+  });
+}
+
 // -------------------------------------------------------------------------
 async function init() {
   try { CONFIG = await API.config(); } catch {}
@@ -117,6 +139,8 @@ async function init() {
     fm.textContent = parts.join(' · ');
     fm.hidden = false;
   }
+
+  renderNotice();
 
   // Toon het "certificaat installeren"-linkje alleen als er een interne CA beschikbaar is
   // (dus bij een self-signed opzet; op prod met een echt certificaat blijft het verborgen).
