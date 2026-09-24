@@ -45,8 +45,10 @@ net zo laagdrempelig is. En heb je geen dictafoon of memorecorder? Dan doe je he
   daar op het resultaatscherm een **verslag** van. Zo geef je context en aantekeningen ná het transcript
   mee — dat levert een beter verslag op. Er wordt niet meer automatisch een verslag gestart.
 - **Verslag-opties (stap 2):** een **Volledig verslag** (samenvatting, thematische onderwerpen,
-  een **chronologisch gespreksverslag**, besluiten, afspraken, actiepunten, aandachtspunten),
-  losse secties, of een eigen prompt — met **Word (.docx)/Markdown**-export. Geef een
+  een **chronologisch gespreksverslag**, besluiten, afspraken, actiepunten, aandachtspunten) of
+  **alleen de aangevinkte onderdelen** (uitgezette onderdelen komen niet in het verslag) via de knop
+  **Verslag genereren**, óf de indeling **zelf voorschrijven** met een **eigen prompt** via de aparte
+  knop **Voer prompt uit** (die vervangt de onderdelen) — met **Word (.docx)/Markdown**-export. Geef een
   **agenda** mee bij de context en de onderwerpen worden daarop gematcht. Je kunt het verslag
   **sturen** met **deelnemers**, je **eigen aantekeningen** (belangrijke punten/namen/nadruk), en
   optioneel **eenvoudiger taalgebruik (richting B1)**. De modelnamen komen uit de env en worden in
