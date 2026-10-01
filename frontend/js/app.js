@@ -780,11 +780,18 @@ async function loadResult(sessionId) {
   area.append(cols);
 
   // Transcript
+  // Kopiëren/downloaden gebeurt op de GETOONDE tekst (incl. sprekersnamen). Met diarisatie
+  // kent de server de client-side namen niet -> client-side downloaden; anders de server-.txt.
+  const dlTxt = isDiarized(res)
+    ? el('button', { class: 'btn outline sm', onclick: () =>
+        downloadBlob(new Blob([transcriptText(res, loadSpeakerNames(sessionId))], { type: 'text/plain;charset=utf-8' }),
+          `transcript-${sessionId.slice(0, 8)}.txt`) }, ic('download'), ' Download .txt')
+    : el('a', { class: 'btn outline sm', href: url(`api/sessions/${sessionId}/transcript.txt`) }, ic('download'), ' Download .txt');
   left.append(el('div', { class: 'panel-head' },
     el('h3', {}, ic('transcript', 16), ' Transcript'),
     el('div', { class: 'panel-actions' },
-      el('button', { class: 'btn outline sm', onclick: () => copy(res.transcript) }, ic('copy'), ' Kopieer'),
-      el('a', { class: 'btn outline sm', href: url(`api/sessions/${sessionId}/transcript.txt`) }, ic('download'), ' Download .txt'),
+      el('button', { class: 'btn outline sm', onclick: () => copy(transcriptText(res, loadSpeakerNames(sessionId))) }, ic('copy'), ' Kopieer'),
+      dlTxt,
     ),
   ));
   left.append(el('p', { class: 'muted small',
@@ -892,6 +899,27 @@ function playSnippet(audio, start, seconds = 3) {
   audio.pause();
   if (audio.readyState >= 1) { go(); }          // metadata al binnen -> direct seeken
   else { audio.preload = 'metadata'; audio.addEventListener('loadedmetadata', go, { once: true }); audio.load(); }
+}
+
+// Platte-tekstversie van het transcript ZOALS getoond: met diarisatie elke beurt als
+// "Naam: tekst" (ingevulde sprekersnamen of anders het label), zonder diarisatie de ruwe
+// transcriptie. Gebruikt voor Kopiëren en Download .txt, zodat de namen meegaan (die staan
+// client-side en komen bewust niet op de server).
+function transcriptText(res, names) {
+  const diar = res && res.diarization;
+  if (diar && diar.status === 'done' && diar.segments && diar.segments.length) {
+    return diar.segments
+      .map((seg) => (seg.speaker ? ((names && names[seg.speaker]) || seg.speaker) + ': ' : '') + (seg.text || ''))
+      .join('\n');
+  }
+  return (res && res.transcript) || '';
+}
+
+// Is er een afgeronde diarisatie met segmenten? Dan bevat de weergave sprekerlabels/namen die
+// de server-download (ruwe transcriptie) niet kent -> client-side exporteren.
+function isDiarized(res) {
+  const d = res && res.diarization;
+  return !!(d && d.status === 'done' && d.segments && d.segments.length);
 }
 
 // Vul de transcript-box: met diarisatie -> sprekerlabels/namen per beurt; anders platte tekst.
